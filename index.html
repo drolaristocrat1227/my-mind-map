@@ -260,6 +260,7 @@ body.multi[data-panes="split"][data-eside="right"] #pane2{left:0;right:50%;borde
 .iconbtn:hover{background:var(--btn-hover);color:var(--ink);}
 .iconbtn:active{background:var(--btn-active);}
 .iconbtn:disabled{opacity:.3;pointer-events:none;}
+.iconbtn.active{background:color-mix(in srgb,var(--accent) 15%,transparent);color:var(--accent);}
 .iconbtn svg{width:19px;height:19px;stroke:currentColor;stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round;}
 
 /* ============================================================
@@ -569,6 +570,19 @@ kbd{
   <button class="iconbtn" id="wireTextBtn" title="テキストを追加">
     <svg viewBox="0 0 24 24"><path d="M6 6.5h12M12 6.5V19"/></svg>
   </button>
+  <button class="iconbtn" id="wireImgBtn" title="画像を追加(Ctrl+Vで貼り付けも可)">
+    <svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="M4.5 17l4.5-4.5 3 3 3.5-3.5 4 4"/></svg>
+  </button>
+  <div class="sep"></div>
+  <button class="iconbtn" id="wireMultiBtn" title="複数選択モード(Shift+クリックでも可)">
+    <svg viewBox="0 0 24 24"><rect x="4" y="4" width="12" height="12" rx="2" stroke-dasharray="3 3"/><path d="M17.5 14v7M14 17.5h7"/></svg>
+  </button>
+  <button class="iconbtn" id="wireGroupBtn" title="グループ化">
+    <svg viewBox="0 0 24 24"><path d="M3 5V3h2M19 3h2v2M21 19v2h-2M5 21H3v-2"/><rect x="6" y="6" width="7" height="7" rx="1.5"/><rect x="11" y="11" width="7" height="7" rx="1.5"/></svg>
+  </button>
+  <button class="iconbtn" id="wireLockBtn" title="固定(移動・変形・削除を禁止)">
+    <svg viewBox="0 0 24 24"><rect x="5.5" y="10.5" width="13" height="9" rx="2"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/></svg>
+  </button>
   <div class="sep"></div>
   <button class="iconbtn" id="wireFillBtn" title="塗りの色(テキストは文字色)">
     <svg viewBox="0 0 24 24"><path d="M12 4.5s5.5 6 5.5 9.7a5.5 5.5 0 0 1-11 0C6.5 10.5 12 4.5 12 4.5z"/></svg>
@@ -608,6 +622,7 @@ kbd{
   <div class="swatches" id="fillSwatches"></div>
 </div>
 <input id="wireTextInput" spellcheck="false" autocomplete="off">
+<input type="file" id="wireImgInput" accept="image/*" hidden>
 
 <!-- ドロワー -->
 <div id="drawerWrap">
@@ -803,7 +818,10 @@ let saveTimer=null;
 function save(){
   curDoc().updated=Date.now();
   clearTimeout(saveTimer);
-  saveTimer=setTimeout(()=>{try{localStorage.setItem(STORE_KEY,JSON.stringify(doc));}catch(e){}},250);
+  saveTimer=setTimeout(()=>{
+    try{localStorage.setItem(STORE_KEY,JSON.stringify(doc));}
+    catch(e){toast('保存できませんでした(容量不足の可能性があります。画像を減らしてください)');}
+  },250);
 }
 function cur(){return doc.maps.find(m=>m.id===doc.current)||doc.maps[0];}
 function curDoc(){
@@ -857,7 +875,8 @@ function applySnap(s){
   const d=JSON.parse(s);
   if(d.shapes){
     curDoc().shapes=d.shapes;
-    wireSel=d.sel&&d.shapes.some(x=>x.id===d.sel)?d.sel:null;
+    const sel=Array.isArray(d.sel)?d.sel:(d.sel?[d.sel]:[]);
+    wireSel=sel.filter(id=>d.shapes.some(x=>x.id===id));
     save();renderWire();updateHistBtns();
     return;
   }
@@ -2179,11 +2198,11 @@ function downloadCanvas(cv,format){
     toast('PNG画像を保存しました');
   }
 }
-function exportImage(format){
+async function exportImage(format){
   if(isWire()){
     const w=curDoc();
     if(!w.shapes.length){toast('図形がありません');return;}
-    downloadCanvas(makeWireCanvas(w),format);
+    downloadCanvas(await makeWireCanvas(w),format);
     return;
   }
   downloadCanvas(makeMapCanvas(),format);
@@ -2283,9 +2302,29 @@ function makeMapCanvas(){
   });
   return cv;
 }
+/* 画像キャッシュ(Canvas書き出し用) */
+const wImgCache=new Map();
+function loadImg(src){
+  if(wImgCache.has(src))return wImgCache.get(src);
+  const p=new Promise((res,rej)=>{
+    const im=new Image();
+    im.onload=()=>res(im);
+    im.onerror=rej;
+    im.src=src;
+  });
+  wImgCache.set(src,p);
+  return p;
+}
 /* ワイヤーフレーム → Canvas */
-function makeWireCanvas(w){
+async function makeWireCanvas(w){
   const tc=THEME_COLORS[doc.theme]||THEME_COLORS.light;
+  /* 画像を先に読み込む */
+  const imgs=new Map();
+  await Promise.all(
+    w.shapes.filter(s=>s.type==='image').map(s=>
+      loadImg(s.src).then(im=>imgs.set(s.id,im)).catch(()=>{})
+    )
+  );
   const{x1,y1,x2,y2}=wireBBox(w.shapes);
   const pad=60,scale=2;
   const W=(x2-x1)+pad*2,H=(y2-y1)+pad*2;
@@ -2312,6 +2351,9 @@ function makeWireCanvas(w){
       ctx.stroke();
     }else if(s.type==='line'){
       ctx.beginPath();ctx.moveTo(-s.w/2,0);ctx.lineTo(s.w/2,0);ctx.stroke();
+    }else if(s.type==='image'){
+      const im=imgs.get(s.id);
+      if(im)ctx.drawImage(im,-s.w/2,-s.h/2,s.w,s.h);
     }else if(s.type==='text'){
       ctx.font=`500 ${s.fs}px system-ui,-apple-system,"Segoe UI","Hiragino Sans","Yu Gothic UI","Meiryo",sans-serif`;
       ctx.fillStyle=s.fill||tc.ink; /* fillは文字色 */
@@ -2345,9 +2387,20 @@ function toast(msg){
    ============================================================ */
 const wireView=$('#wireView'),wireWorld=$('#wireWorld');
 let wpx=innerWidth/2,wpy=innerHeight/2,wz=1;
-let wireSel=null;
+let wireSel=[];      /* 選択中の図形id(複数) */
+let wMulti=false;    /* 複数選択モード */
 let wDrag=null,wLpTimer=null;
 const wirePointers=new Map();
+
+function selShapes(){
+  const sh=curShapes();
+  return sh?wireSel.map(id=>sh.find(s=>s.id===id)).filter(Boolean):[];
+}
+function oneSel(){const ss=selShapes();return ss.length===1?ss[0]:null;}
+function groupIds(s){
+  const sh=curShapes();
+  return s.gid?sh.filter(x=>x.gid===s.gid).map(x=>x.id):[s.id];
+}
 
 function curShapes(){const d=curDoc();return d.shapes||null;}
 function shapeById(id){const s=curShapes();return s?s.find(x=>x.id===id):null;}
@@ -2374,6 +2427,8 @@ function shapeSvg(s){
     return`<g data-id="${s.id}" ${tr}><ellipse rx="${s.w/2}" ry="${s.h/2}" fill="${fill}" stroke="var(--ink)" stroke-width="2"/></g>`;
   if(s.type==='line')
     return`<g data-id="${s.id}" ${tr}><line x1="${-s.w/2}" x2="${s.w/2}" y1="0" y2="0" stroke="var(--ink)" stroke-width="2" stroke-linecap="round"/><line x1="${-s.w/2}" x2="${s.w/2}" y1="0" y2="0" stroke="transparent" stroke-width="${16/wz}"/></g>`;
+  if(s.type==='image')
+    return`<g data-id="${s.id}" ${tr}><image href="${s.src}" x="${-s.w/2}" y="${-s.h/2}" width="${s.w}" height="${s.h}" preserveAspectRatio="none"/></g>`;
   /* テキスト(fillは文字色として使う) */
   return`<g data-id="${s.id}" ${tr}><rect x="${-s.w/2-6}" y="${-s.h/2-3}" width="${s.w+12}" height="${s.h+6}" fill="transparent"/><text font-size="${s.fs}" fill="${s.fill||'var(--ink)'}" text-anchor="middle" dominant-baseline="central" font-weight="500" style="user-select:none">${escXml(s.text)}</text></g>`;
 }
@@ -2384,6 +2439,10 @@ function handlesFor(s){
 }
 function selSvg(s){
   const hw=s.w/2,hh=s.h/2,r=7/wz,sw=1.5/wz,pad=5/wz;
+  if(s.locked){
+    /* 固定中: グレー枠のみ(ハンドルなし) */
+    return`<g transform="translate(${s.x} ${s.y}) rotate(${s.rot||0})" pointer-events="none"><rect x="${-hw-pad}" y="${-hh-pad}" width="${s.w+pad*2}" height="${s.h+pad*2}" fill="none" stroke="var(--ink-soft)" stroke-width="${sw}" stroke-dasharray="${5/wz} ${4/wz}"/></g>`;
+  }
   let h=`<g data-id="${s.id}" transform="translate(${s.x} ${s.y}) rotate(${s.rot||0})">`;
   h+=`<rect x="${-hw-pad}" y="${-hh-pad}" width="${s.w+pad*2}" height="${s.h+pad*2}" fill="none" stroke="var(--accent)" stroke-width="${sw}" stroke-dasharray="${5/wz} ${4/wz}"/>`;
   /* 回転ハンドル */
@@ -2397,21 +2456,55 @@ function selSvg(s){
 function renderWire(){
   const d=curDoc();if(!d.shapes)return;
   wireViewApply();
+  wireSel=wireSel.filter(id=>d.shapes.some(s=>s.id===id));
   let html='';
   d.shapes.forEach(s=>html+=shapeSvg(s));
-  const s=shapeById(wireSel);
-  if(s)html+=selSvg(s);
+  d.shapes.forEach(s=>{if(s.locked)html+=lockSvg(s);});
+  const ss=selShapes();
+  if(ss.length===1)html+=selSvg(ss[0]);
+  else if(ss.length>1)html+=multiSelSvg(ss);
   wireWorld.innerHTML=html;
   $('#nodeCount').textContent=d.shapes.length+' 図形';
-  const on=!!s;
-  ['wireDupBtn','wireDelBtn','wireFillBtn','wireUpBtn','wireDownBtn'].forEach(i=>$('#'+i).disabled=!on);
+  updateWireBtns();
+}
+function updateWireBtns(){
+  const ss=selShapes();
+  const any=ss.length>0;
+  ['wireDupBtn','wireDelBtn','wireFillBtn','wireUpBtn','wireDownBtn','wireLockBtn'].forEach(i=>$('#'+i).disabled=!any);
+  const g=$('#wireGroupBtn');
+  const grouped=ss.length>=2&&ss.every(s=>s.gid&&s.gid===ss[0].gid);
+  g.disabled=ss.length<2;
+  g.classList.toggle('active',grouped);
+  g.title=grouped?'グループを解除':'グループ化';
+  $('#wireLockBtn').classList.toggle('active',any&&ss.every(s=>s.locked));
+  $('#wireMultiBtn').classList.toggle('active',wMulti);
+}
+/* 複数選択時の全体枠 */
+function multiSelSvg(ss){
+  let x1=1e9,y1=1e9,x2=-1e9,y2=-1e9;
+  ss.forEach(s=>{
+    const r=Math.hypot(s.w,Math.max(s.h,s.fs||0))/2+6;
+    x1=Math.min(x1,s.x-r);x2=Math.max(x2,s.x+r);
+    y1=Math.min(y1,s.y-r);y2=Math.max(y2,s.y+r);
+  });
+  const sw=1.5/wz;
+  return`<rect x="${x1}" y="${y1}" width="${x2-x1}" height="${y2-y1}" fill="none" stroke="var(--accent)" stroke-width="${sw}" stroke-dasharray="${5/wz} ${4/wz}" pointer-events="none"/>`;
+}
+/* 固定中の鍵マーク */
+function lockSvg(s){
+  const r=Math.hypot(s.w,Math.max(s.h,s.fs||0))/2;
+  const k=1/wz;
+  return`<g transform="translate(${s.x} ${s.y-r-12/wz}) scale(${k})" pointer-events="none" opacity="0.8">
+    <rect x="-5.5" y="-3" width="11" height="8.5" rx="2" fill="var(--ink-soft)"/>
+    <path d="M-3 -3v-2a3 3 0 0 1 6 0v2" fill="none" stroke="var(--ink-soft)" stroke-width="2"/>
+  </g>`;
 }
 
 function openWire(id){
   if(editingId)commitEdit();
   finishWireText();
   doc.current=id;
-  wireSel=null;
+  wireSel=[];
   document.body.classList.add('wire-mode');
   $('#mapTitle').value=curDoc().name;
   save();
@@ -2462,42 +2555,92 @@ function addShape(type){
   else if(type==='ellipse')s={id:uid(),type,x:c.x,y:c.y,w:120,h:120,rot:0,fill:null};
   else{s={id:uid(),type:'text',x:c.x,y:c.y,w:0,h:0,rot:0,fill:null,text:'テキスト',fs:18};measureWText(s);}
   d.shapes.push(s);
-  wireSel=s.id;
+  wireSel=[s.id];
   save();renderWire();
   if(type==='text')beginWireText(s);
 }
-function dupShape(){
-  const s=shapeById(wireSel);if(!s)return;
+function dupSel(){
+  const ss=selShapes();if(!ss.length)return;
   pushUndo();
   const d=curDoc();
-  const c={...s,id:uid(),x:s.x+18,y:s.y+18};
-  d.shapes.splice(d.shapes.indexOf(s)+1,0,c);
-  wireSel=c.id;
+  const gidMap=new Map();
+  const copies=ss.map(s=>{
+    const c={...s,id:uid(),x:s.x+18,y:s.y+18};
+    delete c.locked;
+    if(s.gid){
+      if(!gidMap.has(s.gid))gidMap.set(s.gid,uid());
+      c.gid=gidMap.get(s.gid);
+    }
+    return c;
+  });
+  d.shapes.push(...copies);
+  wireSel=copies.map(c=>c.id);
   save();renderWire();
   toast('複製しました');
 }
-function delShape(){
-  const s=shapeById(wireSel);if(!s)return;
+function delSel(){
+  const ss=selShapes();if(!ss.length)return;
+  const del=ss.filter(s=>!s.locked);
+  if(!del.length){toast('固定された図形は削除できません');return;}
   pushUndo();
   const d=curDoc();
-  d.shapes.splice(d.shapes.indexOf(s),1);
-  wireSel=null;
+  d.shapes=d.shapes.filter(s=>!del.includes(s));
+  wireSel=[];
   save();renderWire();
+  if(del.length<ss.length)toast('固定された図形は残しました');
 }
-function layerShape(dir){
-  const d=curDoc(),s=shapeById(wireSel);if(!s)return;
-  const i=d.shapes.indexOf(s),j=i+dir;
-  if(j<0||j>=d.shapes.length){toast(dir>0?'すでに一番前面です':'すでに一番背面です');return;}
+function layerSel(dir){
+  const d=curDoc();
+  const ss=selShapes().filter(s=>!s.locked);if(!ss.length)return;
+  const selSet=new Set(ss.map(s=>s.id));
+  const idx=ss.map(s=>d.shapes.indexOf(s)).sort((a,b)=>a-b);
   pushUndo();
-  [d.shapes[i],d.shapes[j]]=[d.shapes[j],d.shapes[i]];
+  let moved=false;
+  if(dir>0){
+    for(let k=idx.length-1;k>=0;k--){
+      const i=idx[k],j=i+1;
+      if(j>=d.shapes.length||selSet.has(d.shapes[j].id))continue;
+      [d.shapes[i],d.shapes[j]]=[d.shapes[j],d.shapes[i]];moved=true;
+    }
+  }else{
+    for(let k=0;k<idx.length;k++){
+      const i=idx[k],j=i-1;
+      if(j<0||selSet.has(d.shapes[j].id))continue;
+      [d.shapes[i],d.shapes[j]]=[d.shapes[j],d.shapes[i]];moved=true;
+    }
+  }
+  if(!moved){
+    histOf().undo.pop();updateHistBtns();
+    toast(dir>0?'すでに一番前面です':'すでに一番背面です');
+    return;
+  }
   save();renderWire();
   toast(dir>0?'前面へ移動しました':'背面へ移動しました');
 }
 function setFill(color){
-  const s=shapeById(wireSel);if(!s)return;
+  const ss=selShapes().filter(s=>!s.locked);if(!ss.length)return;
   pushUndo();
-  s.fill=color;
+  ss.forEach(s=>{s.fill=color;});
   save();renderWire();
+}
+/* グループ化/解除 */
+function groupToggle(){
+  const ss=selShapes();if(ss.length<2)return;
+  const grouped=ss.every(s=>s.gid&&s.gid===ss[0].gid);
+  pushUndo();
+  if(grouped)ss.forEach(s=>{delete s.gid;});
+  else{const g=uid();ss.forEach(s=>{s.gid=g;});}
+  save();renderWire();
+  toast(grouped?'グループを解除しました':'グループ化しました');
+}
+/* 固定/解除 */
+function lockToggle(){
+  const ss=selShapes();if(!ss.length)return;
+  pushUndo();
+  const lock=!ss.every(s=>s.locked);
+  ss.forEach(s=>{if(lock)s.locked=true;else delete s.locked;});
+  save();renderWire();
+  toast(lock?'固定しました(移動・変形・削除ができなくなります)':'固定を解除しました');
 }
 
 /* ---------- ポインタ操作 ---------- */
@@ -2519,7 +2662,7 @@ wireView.addEventListener('pointerdown',e=>{
   try{wireView.setPointerCapture(e.pointerId);}catch(err){}
   const handle=e.target.closest('[data-handle]');
   if(handle){
-    const s=shapeById(wireSel);if(!s)return;
+    const s=oneSel();if(!s||s.locked)return;
     pushUndo();
     const hv=handle.dataset.handle;
     if(hv==='rot')wDrag={mode:'rotate',s};
@@ -2529,34 +2672,50 @@ wireView.addEventListener('pointerdown',e=>{
   const gid=e.target.closest('g[data-id]');
   if(gid){
     const s=shapeById(gid.dataset.id);if(!s)return;
-    const was=wireSel===s.id;
-    wireSel=s.id;renderWire();
-    /* 端の近くを長押し → リサイズ */
-    const p=s2w(e.clientX,e.clientY);
-    const lp=rotV({x:p.x-s.x,y:p.y-s.y},-(s.rot||0));
-    const t=14/wz;
-    let sx=0,sy=0;
-    if(s.type==='line'){sx=lp.x>s.w/2-t?1:(lp.x<-s.w/2+t?-1:0);}
-    else{
-      if(lp.x>s.w/2-t)sx=1;else if(lp.x<-s.w/2+t)sx=-1;
-      if(lp.y>s.h/2-t)sy=1;else if(lp.y<-s.h/2+t)sy=-1;
-      if(s.type==='text'&&(sx||sy)){sx=sx||(lp.x>0?1:-1);sy=0;} /* テキストはコーナー相当の等倍 */
+    const grp=groupIds(s);
+    const additive=wMulti||e.shiftKey;
+    const wasIn=wireSel.includes(s.id);
+    const wasSingle=wasIn&&wireSel.length===1;
+    if(additive){
+      /* 追加選択モード: グループ単位で選択に加える/外す */
+      if(wasIn)wireSel=wireSel.filter(id=>!grp.includes(id));
+      else wireSel=[...new Set([...wireSel,...grp])];
+      renderWire();
+      if(wasIn){wDrag=null;return;}
+    }else if(!wasIn){
+      wireSel=[...grp];
+      renderWire();
     }
-    wDrag={mode:'maybe',s,startX:e.clientX,startY:e.clientY,was,edge:(sx||sy)?[sx,sy]:null,moved:false};
-    if(wDrag.edge){
+    /* 端の近くを長押し → リサイズ(単一選択・非固定のみ) */
+    let edge=null;
+    if(wireSel.length===1&&!s.locked){
+      const p=s2w(e.clientX,e.clientY);
+      const lp=rotV({x:p.x-s.x,y:p.y-s.y},-(s.rot||0));
+      const t=14/wz;
+      let sx=0,sy=0;
+      if(s.type==='line'){sx=lp.x>s.w/2-t?1:(lp.x<-s.w/2+t?-1:0);}
+      else{
+        if(lp.x>s.w/2-t)sx=1;else if(lp.x<-s.w/2+t)sx=-1;
+        if(lp.y>s.h/2-t)sy=1;else if(lp.y<-s.h/2+t)sy=-1;
+        if(s.type==='text'&&(sx||sy)){sx=sx||(lp.x>0?1:-1);sy=0;} /* テキストはコーナー相当の等倍 */
+      }
+      if(sx||sy)edge=[sx,sy];
+    }
+    wDrag={mode:'maybe',s,startX:e.clientX,startY:e.clientY,was:wasSingle,edge,moved:false};
+    if(edge){
       clearTimeout(wLpTimer);
       wLpTimer=setTimeout(()=>{
         if(wDrag&&wDrag.mode==='maybe'&&!wDrag.moved){
           if(navigator.vibrate)navigator.vibrate(12);
           pushUndo();
-          wDrag=startResize(s,wDrag.edge[0],wDrag.edge[1]);
+          wDrag=startResize(s,edge[0],edge[1]);
         }
       },350);
     }
     return;
   }
   /* 背景: 選択解除 + パン */
-  if(wireSel){wireSel=null;renderWire();}
+  if(wireSel.length){wireSel=[];renderWire();}
   wDrag={mode:'pan',x:e.clientX,y:e.clientY,px:wpx,py:wpy};
 });
 wireView.addEventListener('pointermove',e=>{
@@ -2581,12 +2740,15 @@ wireView.addEventListener('pointermove',e=>{
   if(wDrag.mode==='maybe'){
     if(Math.hypot(e.clientX-wDrag.startX,e.clientY-wDrag.startY)>6){
       wDrag.moved=true;clearTimeout(wLpTimer);
+      /* 固定されていない選択図形をまとめて移動 */
+      const movable=selShapes().filter(x=>!x.locked);
+      if(!movable.length){wDrag=null;return;}
       pushUndo();
-      wDrag={mode:'move',s:wDrag.s,ox:wDrag.s.x-p.x,oy:wDrag.s.y-p.y};
+      wDrag={mode:'move',items:movable.map(x=>({s:x,ox:x.x-p.x,oy:x.y-p.y}))};
     }else return;
   }
   if(wDrag.mode==='move'){
-    wDrag.s.x=p.x+wDrag.ox;wDrag.s.y=p.y+wDrag.oy;
+    wDrag.items.forEach(it=>{it.s.x=p.x+it.ox;it.s.y=p.y+it.oy;});
     renderWire();return;
   }
   if(wDrag.mode==='rotate'){
@@ -2621,8 +2783,8 @@ function wireUp(e){
   if(wDrag.mode==='pinch'){if(wirePointers.size<2)wDrag=null;return;}
   const dg=wDrag;wDrag=null;
   if(dg.mode==='maybe'&&!dg.moved){
-    /* 選択済みテキストの再タップ → 編集 */
-    if(dg.was&&dg.s.type==='text')beginWireText(dg.s);
+    /* 選択済みテキストの再タップ → 編集(固定中は不可) */
+    if(dg.was&&dg.s.type==='text'&&!dg.s.locked)beginWireText(dg.s);
   }
   if(dg.mode==='move'||dg.mode==='resize'||dg.mode==='rotate')save();
 }
@@ -2632,7 +2794,7 @@ wireView.addEventListener('dblclick',e=>{
   const g=e.target.closest('g[data-id]');
   if(!g)return;
   const s=shapeById(g.dataset.id);
-  if(s&&s.type==='text')beginWireText(s);
+  if(s&&s.type==='text'&&!s.locked)beginWireText(s);
 });
 wireView.addEventListener('wheel',e=>{
   e.preventDefault();
@@ -2678,24 +2840,28 @@ function wireKeydown(e){
   const ctrl=e.ctrlKey||e.metaKey;
   if(ctrl&&e.key.toLowerCase()==='z'&&!e.shiftKey){e.preventDefault();undo();return;}
   if(ctrl&&(e.key.toLowerCase()==='y'||(e.key.toLowerCase()==='z'&&e.shiftKey))){e.preventDefault();redo();return;}
-  if(ctrl&&e.key.toLowerCase()==='d'){e.preventDefault();dupShape();return;}
+  if(ctrl&&e.key.toLowerCase()==='d'){e.preventDefault();dupSel();return;}
+  if(ctrl&&e.key.toLowerCase()==='g'){e.preventDefault();groupToggle();return;}
   if(ctrl&&e.key==='0'){e.preventDefault();fitWire();return;}
   if(ctrl&&(e.key==='+'||e.key==='=')){e.preventDefault();wireZoomAt(viewW()/2,viewH()/2,1.2);return;}
   if(ctrl&&e.key==='-'){e.preventDefault();wireZoomAt(viewW()/2,viewH()/2,1/1.2);return;}
   if(ctrl)return;
-  const s=shapeById(wireSel);
+  const s=oneSel();
   switch(e.key){
-    case 'Delete':case 'Backspace':e.preventDefault();delShape();break;
-    case 'Escape':wireSel=null;renderWire();break;
-    case 'F2':if(s&&s.type==='text'){e.preventDefault();beginWireText(s);}break;
+    case 'Delete':case 'Backspace':e.preventDefault();delSel();break;
+    case 'Escape':wireSel=[];renderWire();break;
+    case 'F2':if(s&&s.type==='text'&&!s.locked){e.preventDefault();beginWireText(s);}break;
     case 'ArrowUp':case 'ArrowDown':case 'ArrowLeft':case 'ArrowRight':{
-      if(!s)break;
+      const mv=selShapes().filter(x=>!x.locked);
+      if(!mv.length)break;
       e.preventDefault();
       const d=e.shiftKey?10:2;
-      if(e.key==='ArrowUp')s.y-=d;
-      if(e.key==='ArrowDown')s.y+=d;
-      if(e.key==='ArrowLeft')s.x-=d;
-      if(e.key==='ArrowRight')s.x+=d;
+      mv.forEach(x=>{
+        if(e.key==='ArrowUp')x.y-=d;
+        if(e.key==='ArrowDown')x.y+=d;
+        if(e.key==='ArrowLeft')x.x-=d;
+        if(e.key==='ArrowRight')x.x+=d;
+      });
       save();renderWire();
       break;
     }
@@ -2707,10 +2873,67 @@ $('#wireLineBtn').onclick=()=>addShape('line');
 $('#wireRectBtn').onclick=()=>addShape('rect');
 $('#wireEllipseBtn').onclick=()=>addShape('ellipse');
 $('#wireTextBtn').onclick=()=>addShape('text');
-$('#wireDupBtn').onclick=dupShape;
-$('#wireDelBtn').onclick=delShape;
-$('#wireUpBtn').onclick=()=>layerShape(1);
-$('#wireDownBtn').onclick=()=>layerShape(-1);
+$('#wireDupBtn').onclick=dupSel;
+$('#wireDelBtn').onclick=delSel;
+$('#wireUpBtn').onclick=()=>layerSel(1);
+$('#wireDownBtn').onclick=()=>layerSel(-1);
+$('#wireGroupBtn').onclick=groupToggle;
+$('#wireLockBtn').onclick=lockToggle;
+$('#wireMultiBtn').onclick=()=>{
+  wMulti=!wMulti;
+  updateWireBtns();
+  toast(wMulti?'複数選択モード: タップで選択を追加/解除':'複数選択モードを終了');
+};
+/* 画像の追加(ファイル選択 / Ctrl+V貼り付け) */
+$('#wireImgBtn').onclick=()=>$('#wireImgInput').click();
+$('#wireImgInput').addEventListener('change',e=>{
+  const f=e.target.files[0];
+  if(f)addImageFromBlob(f);
+  e.target.value='';
+});
+addEventListener('paste',e=>{
+  if(!isWire())return;
+  const tag=document.activeElement?document.activeElement.tagName:'';
+  if(tag==='INPUT'||tag==='TEXTAREA')return;
+  const items=e.clipboardData&&e.clipboardData.items;
+  if(!items)return;
+  for(const it of items){
+    if(it.type.startsWith('image/')){
+      e.preventDefault();
+      addImageFromBlob(it.getAsFile());
+      return;
+    }
+  }
+});
+function addImageFromBlob(blob){
+  const reader=new FileReader();
+  reader.onload=()=>{
+    const img=new Image();
+    img.onload=()=>{
+      /* 大きい画像は縮小して保存容量を抑える */
+      const maxD=1200;
+      const k=Math.min(1,maxD/Math.max(img.width,img.height));
+      const cv=document.createElement('canvas');
+      cv.width=Math.max(1,Math.round(img.width*k));
+      cv.height=Math.max(1,Math.round(img.height*k));
+      cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
+      let url=cv.toDataURL('image/png');
+      if(url.length>700000)url=cv.toDataURL('image/jpeg',0.85);
+      const d=curDoc();if(!d.shapes)return;
+      pushUndo();
+      const c=s2w(viewW()/2,viewH()/2);
+      const dk=Math.min(1,280/Math.max(cv.width,cv.height));
+      const s={id:uid(),type:'image',x:c.x,y:c.y,w:cv.width*dk,h:cv.height*dk,rot:0,fill:null,src:url};
+      d.shapes.push(s);
+      wireSel=[s.id];
+      save();renderWire();
+      toast('画像を追加しました');
+    };
+    img.onerror=()=>toast('画像を読み込めませんでした');
+    img.src=reader.result;
+  };
+  reader.readAsDataURL(blob);
+}
 $('#wireUndoBtn').onclick=undo;
 $('#wireRedoBtn').onclick=redo;
 $('#wireZoomInBtn').onclick=()=>wireZoomAt(viewW()/2,viewH()/2,1.2);
@@ -2731,7 +2954,7 @@ $('#wireFitBtn').onclick=fitWire;
   });
 })();
 $('#wireFillBtn').onclick=e=>{
-  if(!shapeById(wireSel))return;
+  if(!selShapes().length)return;
   const menu=$('#fillMenu');
   const was=menu.classList.contains('on');
   hideMenus();
@@ -2784,7 +3007,7 @@ function editInPane(id){
   }
   applyMulti();
 }
-function renderP2(){
+async function renderP2(){
   const home=!p2doc||!(mapById(p2doc)||wireById(p2doc));
   if(home)p2doc=null;
   $('#p2list').style.display=home?'block':'none';
@@ -2798,7 +3021,7 @@ function renderP2(){
   }else{
     const d=mapById(p2doc)||wireById(p2doc);
     $('#p2title').textContent=d.name;
-    $('#p2img').src=previewDataURL(p2doc);
+    $('#p2img').src=await previewDataURL(p2doc);
   }
 }
 function renderP2Home(){
@@ -2829,9 +3052,9 @@ function renderP2Home(){
   });
 }
 /* 任意のドキュメントをプレビュー画像化 */
-function previewDataURL(id){
+async function previewDataURL(id){
   const w=wireById(id);
-  if(w)return w.shapes.length?makeWireCanvas(w).toDataURL():'';
+  if(w)return w.shapes.length?(await makeWireCanvas(w)).toDataURL():'';
   const m=mapById(id);if(!m)return'';
   if(editingId)commitEdit();
   const prevId=doc.current;
