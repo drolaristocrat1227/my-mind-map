@@ -247,6 +247,29 @@ body.wire-mode.rulers #rulerTop,body.wire-mode.rulers #rulerLeft,body.wire-mode.
 }
 .numRow input:focus,#fillMenu select:focus{outline:none;border-color:var(--accent);}
 .numRow .unit{font-size:11px;font-weight:600;color:var(--ink-soft);flex:none;}
+/* 折りたたみセクション(色とスタイルを見やすく整理) */
+.coll{border-top:1px solid var(--panel-border);}
+.collHead{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:8px 12px;cursor:pointer;user-select:none;
+  font-size:12px;font-weight:700;color:var(--ink);
+}
+.collHead:hover{background:var(--btn-hover);}
+.collHead .collChev{
+  width:13px;height:13px;flex:none;color:var(--ink-soft);
+  stroke:currentColor;stroke-width:2.2;fill:none;stroke-linecap:round;stroke-linejoin:round;
+  transition:transform .15s;transform:rotate(90deg);
+}
+.coll.closed .collHead .collChev{transform:rotate(0deg);}
+.coll.closed .collBody{display:none;}
+/* 見出しはヘッダーに出すので、本文先頭の区切り線と重複見出しを隠す */
+.collBody>hr:first-child{display:none;}
+.collBody>hr:first-child+.menu-label{display:none;}
+.collBody>.menu-label:first-child{display:none;}
+/* 色とスタイルは項目が多いので少し詰める */
+#fillMenu .segRow{padding:5px 12px;}
+#fillMenu .radRow{padding:2px 12px;}
+#fillMenu .menu-label{padding-top:3px;}
 /* グラデーションの色バー */
 #gradBar{
   position:relative;height:24px;margin:8px 16px 16px;border-radius:6px;
@@ -556,6 +579,14 @@ body.text-mode #docBar{display:flex;}
 .iconbtn:disabled{opacity:.3;pointer-events:none;}
 .iconbtn.active{background:color-mix(in srgb,var(--accent) 15%,transparent);color:var(--accent);}
 .iconbtn svg{width:19px;height:19px;stroke:currentColor;stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round;}
+/* ツールバーの表示/非表示 */
+body.wirebar-off #wireBar{display:none;}
+body:not(.wire-mode) #wireBarToggleBtn{display:none;}
+/* 右クリックのメニュー: 使えない項目は暗くしてクリック不可 */
+.menu .mi.disabled{opacity:.32;pointer-events:none;color:var(--ink-soft);}
+.menu .mi.disabled svg{opacity:.45;}
+#wireCtxMenu{max-height:88vh;overflow-y:auto;min-width:212px;}
+#wireCtxMenu .mi .kbd{margin-left:auto;font-size:10px;color:var(--ink-soft);font-weight:600;}
 
 /* ============================================================
    トップバー
@@ -809,6 +840,9 @@ kbd{
   <input id="mapTitle" spellcheck="false" autocomplete="off">
   <span id="nodeCount"></span>
   <div class="spacer"></div>
+  <button class="iconbtn" id="wireBarToggleBtn" title="下のツールバーを表示 / 非表示">
+    <svg viewBox="0 0 24 24"><rect x="3" y="15" width="18" height="5" rx="1.5"/><path d="M6.5 17.5h3M13 17.5h5M12 4v7M12 11l-3-3M12 11l3-3"/></svg>
+  </button>
   <button class="iconbtn" id="multiBtn" title="2画面(マルチモード)">
     <svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="14" rx="2.5"/><path d="M12 5v14"/></svg>
   </button>
@@ -923,11 +957,17 @@ kbd{
   <button class="iconbtn" id="wireFillBtn" title="塗りの色(テキストは文字色)">
     <svg viewBox="0 0 24 24"><path d="M12 4.5s5.5 6 5.5 9.7a5.5 5.5 0 0 1-11 0C6.5 10.5 12 4.5 12 4.5z"/></svg>
   </button>
+  <button class="iconbtn" id="wireFrontBtn" title="最前面へ移動">
+    <svg viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="2"/><path d="M12 3.5l3 3M12 3.5l-3 3M4 12H2.6M21.4 12H20M12 21.4V20"/></svg>
+  </button>
   <button class="iconbtn" id="wireUpBtn" title="前面へ移動">
     <svg viewBox="0 0 24 24"><rect x="8.5" y="4" width="11.5" height="11.5" rx="2"/><path d="M15.5 20H6a2 2 0 0 1-2-2V8.5"/></svg>
   </button>
   <button class="iconbtn" id="wireDownBtn" title="背面へ移動">
     <svg viewBox="0 0 24 24"><rect x="4" y="8.5" width="11.5" height="11.5" rx="2"/><path d="M8.5 4H18a2 2 0 0 1 2 2v9.5"/></svg>
+  </button>
+  <button class="iconbtn" id="wireBackBtn" title="最背面へ移動">
+    <svg viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="2"/><path d="M12 20.5l3-3M12 20.5l-3-3M4 12H2.6M21.4 12H20M12 2.6V4"/></svg>
   </button>
   <button class="iconbtn" id="wireDupBtn" title="複製 (Ctrl+D)">
     <svg viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>
@@ -959,11 +999,10 @@ kbd{
   <div id="frameSec">
     <div class="menu-label">フレーム</div>
     <div class="numRow"><span class="radLbl">名前</span><input type="text" id="frName" spellcheck="false" autocomplete="off" placeholder="フレーム"></div>
-    <div class="numRow">
-      <span class="radLbl">幅</span><input type="number" id="frW" min="1" max="20000" step="1"><span class="unit">px</span>
-      <span class="radLbl">高さ</span><input type="number" id="frH" min="1" max="20000" step="1"><span class="unit">px</span>
-    </div>
+    <div class="numRow"><span class="radLbl">幅</span><input type="number" id="frW" min="1" max="20000" step="1"><span class="unit">px</span></div>
+    <div class="numRow"><span class="radLbl">高さ</span><input type="number" id="frH" min="1" max="20000" step="1"><span class="unit">px</span></div>
     <div class="numRow"><span class="radLbl">定型</span><select id="frPreset"></select></div>
+    <div class="numRow"><span class="radLbl">外観</span><select id="frDevice"></select></div>
     <div class="segRow"><button class="seg" id="frSwap">縦横を入れ替え</button></div>
     <div class="menu-label">大きさ</div>
     <div class="segRow" id="frLockRow">
@@ -971,6 +1010,13 @@ kbd{
       <button class="seg" data-frlock="0">自由に変える</button>
     </div>
     <div class="segRow"><button class="seg" id="frClip">はみ出しを隠す</button></div>
+    <hr>
+  </div>
+  <div id="sizeSec">
+    <div class="menu-label">大きさ (px)</div>
+    <div class="numRow"><span class="radLbl">幅</span><input type="number" id="szW" min="1" max="20000" step="1"><span class="unit">px</span></div>
+    <div class="numRow" id="szHRow"><span class="radLbl">高さ</span><input type="number" id="szH" min="1" max="20000" step="1"><span class="unit">px</span></div>
+    <div class="segRow" id="szLinkRow"><button class="seg" id="szLink">縦横比を保つ</button></div>
     <hr>
   </div>
   <div class="segRow" id="paintTargetRow">
@@ -1034,8 +1080,8 @@ kbd{
       <button class="seg" data-sh="off">なし</button>
     </div>
     <div id="shadowEdit">
-      <div class="radRow"><span class="radLbl">位置X</span><input type="range" id="shX" min="-60" max="60" step="1" value="4"><input type="number" class="radNum" id="shXV" min="-300" max="300" value="4"></div>
-      <div class="radRow"><span class="radLbl">位置Y</span><input type="range" id="shY" min="-60" max="60" step="1" value="6"><input type="number" class="radNum" id="shYV" min="-300" max="300" value="6"></div>
+      <div class="radRow"><span class="radLbl">角度</span><input type="range" id="shAng" min="0" max="359" step="1" value="56"><input type="number" class="radNum" id="shAngV" min="-720" max="720" value="56"></div>
+      <div class="radRow"><span class="radLbl">距離</span><input type="range" id="shDist" min="0" max="60" step="1" value="7"><input type="number" class="radNum" id="shDistV" min="0" max="500" value="7"></div>
       <div class="radRow"><span class="radLbl">ぼかし</span><input type="range" id="shB" min="0" max="80" step="1" value="12"><input type="number" class="radNum" id="shBV" min="0" max="300" value="12"></div>
       <div class="radRow"><span class="radLbl">濃さ</span><input type="range" id="shA" min="0" max="100" step="1" value="35"><input type="number" class="radNum" id="shAV" min="0" max="100" value="35"></div>
       <div class="colRow"><span class="radLbl">色</span><input type="color" id="shC" value="#000000"><input type="text" id="shCHex" spellcheck="false" autocomplete="off" maxlength="7" value="#000000"></div>
@@ -1110,37 +1156,51 @@ kbd{
       <button class="seg" data-it="12">斜体</button>
     </div>
     <div class="radRow" id="txItRow"><span class="radLbl">傾き</span><input type="range" id="txIt" min="0" max="45" step="1" value="12"><input type="number" class="radNum" id="txItV" min="0" max="45" value="12"></div>
-    <div class="menu-label">ふちどり(色は上の「ふち1」「ふち2」タブで)</div>
-    <div class="segRow" id="olOnRow">
-      <button class="seg" data-ol="on">あり</button>
-      <button class="seg" data-ol="off">なし</button>
+    <div id="txWeightSec">
+      <div class="menu-label">太さ(ウェイト)</div>
+      <div class="segRow">
+        <button class="seg" data-fw="100">Thin</button>
+        <button class="seg" data-fw="200">ExLight</button>
+        <button class="seg" data-fw="300">Light</button>
+      </div>
+      <div class="segRow">
+        <button class="seg" data-fw="400">Regular</button>
+        <button class="seg" data-fw="500">Medium</button>
+        <button class="seg" data-fw="600">SemiBold</button>
+      </div>
+      <div class="segRow">
+        <button class="seg" data-fw="700">Bold</button>
+        <button class="seg" data-fw="800">ExBold</button>
+        <button class="seg" data-fw="900">Heavy</button>
+      </div>
     </div>
-    <div id="olEdit">
-      <div class="radRow"><span class="radLbl">太さ</span><input type="range" id="olW" min="0.5" max="20" step="0.5" value="2"><input type="number" class="radNum" id="olWV" min="0.5" max="60" step="0.5" value="2"></div>
+    <div id="txOlSec">
+      <div class="menu-label">ふちどり</div>
+      <div class="menu-label" style="font-weight:600;opacity:.8">内側(色は上の「ふち1」タブ)</div>
+      <div class="segRow" id="olOnRow">
+        <button class="seg" data-ol="on">あり</button>
+        <button class="seg" data-ol="off">なし</button>
+      </div>
+      <div id="olEdit">
+        <div class="radRow"><span class="radLbl">太さ</span><input type="range" id="olW" min="0.5" max="20" step="0.5" value="2"><input type="number" class="radNum" id="olWV" min="0.5" max="60" step="0.5" value="2"></div>
+      </div>
+      <div class="menu-label" style="font-weight:600;opacity:.8">外側・二重(色は上の「ふち2」タブ)</div>
+      <div class="segRow" id="ol2OnRow">
+        <button class="seg" data-ol="on">あり</button>
+        <button class="seg" data-ol="off">なし</button>
+      </div>
+      <div id="ol2Edit">
+        <div class="radRow"><span class="radLbl">太さ</span><input type="range" id="ol2W" min="0.5" max="20" step="0.5" value="2"><input type="number" class="radNum" id="ol2WV" min="0.5" max="60" step="0.5" value="2"></div>
+      </div>
     </div>
-    <div class="menu-label">二重のふちどり(外側)</div>
-    <div class="segRow" id="ol2OnRow">
-      <button class="seg" data-ol="on">あり</button>
-      <button class="seg" data-ol="off">なし</button>
-    </div>
-    <div id="ol2Edit">
-      <div class="radRow"><span class="radLbl">太さ</span><input type="range" id="ol2W" min="0.5" max="20" step="0.5" value="2"><input type="number" class="radNum" id="ol2WV" min="0.5" max="60" step="0.5" value="2"></div>
-    </div>
-    <div class="menu-label">太さ(ウェイト)</div>
-    <div class="segRow">
-      <button class="seg" data-fw="100">Thin</button>
-      <button class="seg" data-fw="200">ExLight</button>
-      <button class="seg" data-fw="300">Light</button>
-    </div>
-    <div class="segRow">
-      <button class="seg" data-fw="400">Regular</button>
-      <button class="seg" data-fw="500">Medium</button>
-      <button class="seg" data-fw="600">SemiBold</button>
-    </div>
-    <div class="segRow">
-      <button class="seg" data-fw="700">Bold</button>
-      <button class="seg" data-fw="800">ExBold</button>
-      <button class="seg" data-fw="900">Heavy</button>
+    <div id="txPosSec">
+      <div class="menu-label" id="txPosLabel">文字ごとの位置・角度(文字を選んでから)</div>
+      <div id="txPosEdit">
+        <div class="radRow"><span class="radLbl">回転</span><input type="range" id="txRot" min="-180" max="180" step="1" value="0"><input type="number" class="radNum" id="txRotV" min="-360" max="360" value="0"></div>
+        <div class="radRow"><span class="radLbl">横位置</span><input type="range" id="txDx" min="-60" max="60" step="1" value="0"><input type="number" class="radNum" id="txDxV" min="-300" max="300" value="0"></div>
+        <div class="radRow"><span class="radLbl">縦位置</span><input type="range" id="txDy" min="-60" max="60" step="1" value="0"><input type="number" class="radNum" id="txDyV" min="-300" max="300" value="0"></div>
+        <div class="segRow"><button class="seg" id="txPosReset">位置・角度をリセット</button></div>
+      </div>
     </div>
   </div>
   <div id="toPathSec">
@@ -1184,6 +1244,8 @@ kbd{
     <button class="seg" data-es="44">太い</button>
   </div>
 </div>
+<!-- 右クリックのメニュー(ツールバーと同じ操作) -->
+<div id="wireCtxMenu" class="menu glass"></div>
 <textarea id="wireTextInput" spellcheck="false" autocomplete="off" rows="1"></textarea>
 <input type="file" id="wireImgInput" accept="image/*" hidden>
 <input type="file" id="imgFillInput" accept="image/*" hidden>
@@ -1389,10 +1451,22 @@ kbd{
     <div class="shortcut"><span>レイアウト切り替え</span><span class="keys"><kbd>上部のレイアウトボタン</kbd></span></div>
     <h3>ワイヤーフレーム(一覧の「＋ワイヤー」から)</h3>
     <div class="shortcut"><span>フレーム(媒体の大きさ)を置く</span><span class="keys"><kbd>ツールバー左端</kbd>＝定型サイズ</span></div>
+    <div class="shortcut"><span>端末モックアップ(ノートPC/タブレット/スマホ)</span><span class="keys">フレーム一覧の<kbd>モックアップ</kbd></span></div>
+    <div class="shortcut"><span>色とスタイルの項目を開閉</span><span class="keys">見出し(<kbd>シャドウ</kbd>等)をクリック</span></div>
+    <div class="shortcut"><span>右クリックで操作メニュー</span><span class="keys">キャンバスを<kbd>右クリック</kbd></span></div>
+    <div class="shortcut"><span>最前面 / 最背面へ</span><span class="keys">ツールバー or 右クリック</span></div>
+    <div class="shortcut"><span>下のツールバーを隠す / 表示</span><span class="keys">上部の<kbd>ツールバー</kbd>ボタン</span></div>
     <div class="shortcut"><span>フレームのピクセル指定</span><span class="keys"><kbd>色とスタイル</kbd>の上部</span></div>
+    <div class="shortcut"><span>図形・画像の大きさをpx指定</span><span class="keys"><kbd>色とスタイル</kbd>の<kbd>大きさ(px)</kbd></span></div>
+    <div class="shortcut"><span>縦横比を保って拡大縮小</span><span class="keys"><kbd>Shift</kbd>＋四隅をドラッグ</span></div>
     <div class="shortcut"><span>フレームごと動かす</span><span class="keys"><kbd>名前をつかんでドラッグ</kbd></span></div>
     <div class="shortcut"><span>フレーム・図形だけ書き出す</span><span class="keys"><kbd>保存メニュー</kbd>の<kbd>書き出す範囲</kbd></span></div>
     <div class="shortcut"><span>ロゴ・アイコンの書き出し</span><span class="keys"><kbd>SVG</kbd>(ベクター) / <kbd>WebP</kbd></span></div>
+    <div class="shortcut"><span>手書きをきれいに整える</span><span class="keys">描き終えて<kbd>1〜2秒そのまま保持</kbd></span></div>
+    <div class="shortcut"><span>文字ごとの回転・位置ずらし</span><span class="keys"><kbd>文字を選ぶ</kbd>→回転・横位置・縦位置</span></div>
+    <div class="shortcut"><span>影の向き・長さ</span><span class="keys">シャドウの<kbd>角度</kbd>・<kbd>距離</kbd></span></div>
+    <div class="shortcut"><span>文字の形で画像を切り抜く</span><span class="keys">テキストを選んで<kbd>画像を入れる</kbd></span></div>
+    <div class="shortcut"><span>文字の形で型抜き(背景が透ける)</span><span class="keys">図形の上にテキストを重ねて<kbd>切り取り</kbd></span></div>
     <div class="shortcut"><span>図形を追加</span><span class="keys"><kbd>下のツールバー</kbd></span></div>
     <div class="shortcut"><span>大きさを変える</span><span class="keys"><kbd>ハンドル</kbd> / <kbd>端を長押し</kbd></span></div>
     <div class="shortcut"><span>ペンで描く</span><span class="keys"><kbd>クリック</kbd>＝点 / <kbd>ドラッグ</kbd>＝曲線</span></div>
@@ -1588,6 +1662,88 @@ async function idbSet(key,val){
     tx.onabort=()=>rej(tx.error);
   });
 }
+async function idbDel(key){
+  const db=await idbOpen();
+  return new Promise((res,rej)=>{
+    const tx=db.transaction('kv','readwrite');
+    tx.objectStore('kv').delete(key);
+    tx.oncomplete=()=>res();
+    tx.onerror=()=>rej(tx.error);
+  });
+}
+async function idbKeys(){
+  const db=await idbOpen();
+  return new Promise((res,rej)=>{
+    const rq=db.transaction('kv','readonly').objectStore('kv').getAllKeys();
+    rq.onsuccess=()=>res(rq.result||[]);
+    rq.onerror=()=>rej(rq.error);
+  });
+}
+/* ---------- 画像本体の別保存 ----------
+   大きな画像(スクショの模写素材など)をdocに直接入れると、アンドゥ(全図形のJSON化)や
+   自動保存のたびに数十MBの文字列処理が走って動かなくなる。
+   そこで画像本体は 'img:ID' キーでIndexedDBに別保存し、
+   図形の src / imgFill.src には 'idb:ID' という短い参照だけを持たせる */
+const imgData=new Map();   /* id -> dataURL(元画像を無劣化のまま保持) */
+const imgObjUrl=new Map(); /* id -> 画面表示用の短い blob: URL */
+const isImgRef=src=>typeof src==='string'&&src.startsWith('idb:');
+function dataURLtoBlob(u){
+  const i=u.indexOf(',');
+  const mime=u.slice(5,i).split(';')[0]||'image/png';
+  const bin=atob(u.slice(i+1));
+  const a=new Uint8Array(bin.length);
+  for(let j=0;j<bin.length;j++)a[j]=bin.charCodeAt(j);
+  return new Blob([a],{type:mime});
+}
+function objUrlOf(id){
+  if(!imgObjUrl.has(id)&&imgData.has(id))imgObjUrl.set(id,URL.createObjectURL(dataURLtoBlob(imgData.get(id))));
+  return imgObjUrl.get(id)||'';
+}
+let svgInlineImages=false; /* SVGファイル書き出し中はblob:ではなくdataURLを埋め込む */
+function imgHref(src){
+  if(!isImgRef(src))return src||'';
+  const id=src.slice(4);
+  return svgInlineImages?(imgData.get(id)||''):objUrlOf(id);
+}
+async function storeImage(dataURL){
+  const id=uid();
+  imgData.set(id,dataURL);
+  try{await idbSet('img:'+id,dataURL);}catch(e){}
+  return'idb:'+id;
+}
+/* doc内の全画像参照(ワイヤーの画像図形と図形の中の画像)を列挙する */
+function eachImageSrc(d,fn){
+  (d.wires||[]).forEach(w=>(w.shapes||[]).forEach(s=>{
+    if(s.src)fn(s,'src');
+    if(s.imgFill&&s.imgFill.src)fn(s.imgFill,'src');
+  }));
+}
+/* 参照された画像本体をIndexedDBから読み込む。
+   旧形式(インラインの大きなdataURL)は別保存へ移し替える */
+async function hydrateImages(d){
+  const jobs=[];
+  eachImageSrc(d,(o,k)=>{
+    const src=o[k];
+    if(isImgRef(src)){
+      const id=src.slice(4);
+      if(!imgData.has(id))jobs.push(idbGet('img:'+id).then(u=>{if(u)imgData.set(id,u);}).catch(()=>{}));
+    }else if(typeof src==='string'&&src.startsWith('data:')&&src.length>300000){
+      jobs.push(storeImage(src).then(ref=>{o[k]=ref;}));
+    }
+  });
+  await Promise.all(jobs);
+}
+/* どの図形からも参照されなくなった画像を消す(起動時のみ。
+   セッション中はアンドゥで図形が戻る可能性があるため消さない) */
+async function gcImages(d){
+  try{
+    const used=new Set();
+    eachImageSrc(d,(o,k)=>{if(isImgRef(o[k]))used.add(o[k].slice(4));});
+    for(const key of await idbKeys()){
+      if(typeof key==='string'&&key.startsWith('img:')&&!used.has(key.slice(4)))idbDel(key).catch(()=>{});
+    }
+  }catch(e){}
+}
 /* 古い形式のデータを今の形式へそろえる(有効なデータでなければnull) */
 function normalizeDoc(d){
   if(!(d&&d.maps&&d.maps.length))return null;
@@ -1595,8 +1751,8 @@ function normalizeDoc(d){
   if(!d.tree)d.tree=d.maps.map(m=>({t:'m',id:m.id}));
   if(!d.wires)d.wires=[];
   if(!d.texts)d.texts=[];
-  /* 旧形式のふちどりを新形式へ(migrateOlは巻き上げで使える) */
-  d.wires.forEach(w=>(w.shapes||[]).forEach(migrateOl));
+  /* 旧形式のふちどり・シャドウを新形式へ(巻き上げで使える) */
+  d.wires.forEach(w=>(w.shapes||[]).forEach(s=>{migrateOl(s);migrateSh(s);}));
   /* 旧フォルダ(children=id文字列配列)→新ネスト(children=node配列)へ移行 */
   const typeOf=id=>d.maps.some(m=>m.id===id)?'m':(d.wires.some(w=>w.id===id)?'w':'t');
   d.tree.forEach(e=>{
@@ -3029,7 +3185,11 @@ function fmtStamp(d){
 function backupAll(){
   /* savedAtは前回保存時刻の記録なので書き出しには含めない(復元時に上書きされる) */
   const{savedAt,...clean}=doc;
-  const blob=new Blob([JSON.stringify(clean)],{type:'application/json'});
+  /* 別保存の画像本体も埋め込み、このファイル1つでどの端末でも復元できるようにする
+     (復元後の初回起動時に再び別保存へ移し替えられる) */
+  const full=structuredClone(clean);
+  eachImageSrc(full,(o,k)=>{if(isImgRef(o[k]))o[k]=imgData.get(o[k].slice(4))||o[k];});
+  const blob=new Blob([JSON.stringify(full)],{type:'application/json'});
   download(`ひらめきマップ_バックアップ_${fmtStamp(new Date())}.json`,URL.createObjectURL(blob));
   toast('全データをバックアップしました');
 }
@@ -3359,6 +3519,8 @@ $('#exportBack').onclick=closeExportDlg;
    画面用のshapeSvg/グラデ/シャドウ/クリップをそのまま使い、
    テーマ依存のvar(--ink)だけライト配色の実色に置き換える */
 function makeWireSvg(shapes,box,pad,bgMode){
+  svgInlineImages=true;   /* 書き出すSVG単体で画像が表示できるようdataURLを埋め込む */
+  try{
   const tc=THEME_COLORS.light;
   const{x1,y1,x2,y2}=box;
   const W=Math.max(1,Math.round((x2-x1)+pad*2)),H=Math.max(1,Math.round((y2-y1)+pad*2));
@@ -3379,6 +3541,7 @@ function makeWireSvg(shapes,box,pad,bgMode){
   /* 古いツールでも画像が読めるよう xlink:href も併記する */
   out=out.replace(/<image href="([^"]*)"/g,'<image href="$1" xlink:href="$1"');
   return out;
+  }finally{svgInlineImages=false;}
 }
 /* 保存するファイル名(どの範囲を出したか分かるように) */
 function expName(){
@@ -3553,10 +3716,60 @@ function loadImg(src){
     const im=new Image();
     im.onload=()=>res(im);
     im.onerror=rej;
-    im.src=src;
+    im.src=imgHref(src);   /* 別保存の参照(idb:)はblob URLに解決してから読む */
   });
   wImgCache.set(src,p);
   return p;
+}
+/* テキストの中に画像(文字の形で画像を切り抜く)をCanvasに描く。
+   Canvasに「文字の形でクリップ」する直接の手段が無いので、別キャンバスで
+   画像→destination-inで文字マスク、の順に合成してから本canvasへ1回で貼る
+   (destination-inは合成先の全体に効いてしまうため、他の図形を巻き込まないよう分離する) */
+function drawTextImageFill(ctx,s,im2,base,fa,L){
+  L=L||textLayout(s);
+  const f=s.imgFill,q=imgFillRect(s);
+  const pad=8;
+  const bw=Math.max(L.w,q.w+Math.abs(q.x)*2)+pad*2;
+  const bh=Math.max(L.h,q.h+Math.abs(q.y)*2)+pad*2;
+  const S=2;   /* 品質のため2倍で描いてから貼る */
+  const tmp=document.createElement('canvas');
+  tmp.width=Math.max(1,Math.ceil(bw*S));tmp.height=Math.max(1,Math.ceil(bh*S));
+  const tctx=tmp.getContext('2d');
+  tctx.scale(S,S);
+  tctx.translate(bw/2,bh/2);   /* このオフスクリーン内での「シェイプ中心」 */
+  if(hasImgFx(s))tctx.filter=fxCss(s);
+  tctx.drawImage(im2,q.x,q.y,q.w,q.h);
+  tctx.filter='none';
+  if(!f.show){
+    /* 文字の形をマスクにする。destination-inは「新しく描いた分との積」になるので、
+       文字ごとに順番に呼ぶと2文字目以降がすべて消えてしまう(前の文字と重ならないため)。
+       先に全文字を1枚のマスク用canvasにまとめて描き、それを使って一度だけ合成する */
+    const mask=document.createElement('canvas');
+    mask.width=tmp.width;mask.height=tmp.height;
+    const mctx=mask.getContext('2d');
+    mctx.scale(S,S);
+    mctx.translate(bw/2,bh/2);
+    mctx.fillStyle='#000';
+    L.chars.forEach(c=>{
+      mctx.save();
+      if(s.vert){mctx.translate(c.cx,c.cy);mctx.textAlign='center';mctx.textBaseline='middle';}
+      else{mctx.translate(c.cx,c.by);mctx.textAlign='left';mctx.textBaseline='alphabetic';}
+      if(c.a.rot)mctx.rotate(c.a.rot*Math.PI/180);
+      if(c.a.it)mctx.transform(1,0,-Math.tan(c.a.it*Math.PI/180),1,0,0);
+      mctx.font=fontCss(c.a);
+      mctx.fillText(c.ch,0,0);
+      mctx.restore();
+    });
+    tctx.save();
+    tctx.setTransform(1,0,0,1,0,0);   /* maskは既にtmpと同じ device px なのでそのまま重ねる */
+    tctx.globalCompositeOperation='destination-in';
+    tctx.drawImage(mask,0,0);
+    tctx.restore();
+  }
+  ctx.save();
+  ctx.globalAlpha=base*fa;
+  ctx.drawImage(tmp,-bw/2,-bh/2,bw,bh);
+  ctx.restore();
 }
 /* ワイヤーフレーム → Canvas */
 /* opt: {shapes:描く図形(既定=全部), box:範囲, pad:余白, scale:倍率} */
@@ -3616,10 +3829,11 @@ async function makeWireCanvas(w,opt){
     let shOn=false;
     const shSet=()=>{
       if(!s.sh)return;
+      const off=shOffset(s.sh);
       ctx.shadowColor=rgba(s.sh.c,s.sh.a);
       ctx.shadowBlur=s.sh.b*scale;
-      ctx.shadowOffsetX=s.sh.x*scale;
-      ctx.shadowOffsetY=s.sh.y*scale;
+      ctx.shadowOffsetX=off.x*scale;
+      ctx.shadowOffsetY=off.y*scale;
       shOn=true;
     };
     /* 最初のひと塗りにだけ影を付ける(塗り+枠線の両方に付くと二重に濃くなる) */
@@ -3650,6 +3864,10 @@ async function makeWireCanvas(w,opt){
       ctx.restore();
     };
     if(isRectish(s)){
+      if(isFrame(s)&&s.device){   /* デバイス外装(画面の裏)。影は付けない */
+        ctx.save();ctx.shadowColor='transparent';ctx.shadowBlur=0;ctx.shadowOffsetX=0;ctx.shadowOffsetY=0;
+        devPartsCanvas(ctx,deviceGeom(s).back);ctx.restore();
+      }
       const p2=new Path2D();p2.roundRect(-s.w/2,-s.h/2,s.w,s.h,rectRadii(s));
       doFill(()=>ctx.fill(p2));
       drawImgFill(p2);
@@ -3689,39 +3907,69 @@ async function makeWireCanvas(w,opt){
       }
       if(strokeW(s)>0)doStroke(paint||tc.ink,fa,()=>ctx.strokeRect(-s.w/2,-s.h/2,s.w,s.h));
     }else if(s.type==='text'){
-      /* 画面と同じ文字組みで1文字ずつ描く(サイズ・太さ・フォント・字間・斜体) */
-      ctx.globalAlpha=base*fa;
-      ctx.fillStyle=paint||tc.ink; /* 文字色 */
-      /* ふちどり(外→内→本体)。影は一番外の層にだけ掛ける(重ねると濃くなるため) */
+      /* 画面と同じ文字組みで1文字ずつ描く(サイズ・太さ・フォント・字間・斜体・回転・位置) */
       const w1=olW1(s),w2=olW2(s);
       const passes=[];
       if(w2)passes.push({w:(w1+w2)*2,p:paintCv(s,'ol2')||'#FFFFFF',a:alphaOf(s,'ol2')});
       if(w1)passes.push({w:w1*2,p:paintCv(s,'ol')||'#FFFFFF',a:alphaOf(s,'ol')});
-      textLayout(s).chars.forEach(c=>{
-        ctx.save();
+      const L=textLayout(s);
+      const setupChar=c=>{
         if(s.vert){ctx.translate(c.cx,c.cy);ctx.textAlign='center';ctx.textBaseline='middle';}
         else{ctx.translate(c.cx,c.by);ctx.textAlign='left';ctx.textBaseline='alphabetic';}
+        if(c.a.rot)ctx.rotate(c.a.rot*Math.PI/180);
         if(c.a.it)ctx.transform(1,0,-Math.tan(c.a.it*Math.PI/180),1,0,0);
         ctx.font=fontCss(c.a);
-        let firstDone=false;
-        const noSh=fn=>{   /* 2層目以降は影なしで描く */
-          if(!firstDone||!s.sh){fn();firstDone=true;return;}
-          ctx.save();
-          ctx.shadowColor='transparent';ctx.shadowBlur=0;ctx.shadowOffsetX=0;ctx.shadowOffsetY=0;
-          fn();ctx.restore();
-        };
-        passes.forEach(ps=>{
-          ctx.strokeStyle=ps.p;ctx.lineWidth=ps.w;ctx.lineJoin='round';ctx.miterLimit=2;
-          ctx.globalAlpha=base*ps.a;
-          noSh(()=>ctx.strokeText(c.ch,0,0));
+      };
+      /* ふちどり(外→内)。影は文字ごとに、その文字の一番外の層にだけ掛ける(重ねると濃くなるため) */
+      if(passes.length){
+        L.chars.forEach(c=>{
+          ctx.save();setupChar(c);
+          let firstDone=false;
+          passes.forEach(ps=>{
+            ctx.strokeStyle=ps.p;ctx.lineWidth=ps.w;ctx.lineJoin='round';ctx.miterLimit=2;
+            ctx.globalAlpha=base*ps.a;
+            if(!firstDone||!s.sh){ctx.strokeText(c.ch,0,0);firstDone=true;}
+            else{
+              ctx.save();
+              ctx.shadowColor='transparent';ctx.shadowBlur=0;ctx.shadowOffsetX=0;ctx.shadowOffsetY=0;
+              ctx.strokeText(c.ch,0,0);
+              ctx.restore();
+            }
+          });
+          ctx.restore();
         });
-        ctx.globalAlpha=base*fa;
-        noSh(()=>ctx.fillText(c.ch,0,0));
-        ctx.restore();
-      });
+      }
+      /* 文字色 or 図形の中の画像。ふちどりが無い時だけ影を付ける(ふちどりが既に影を出している場合は重ねない) */
+      ctx.globalAlpha=base*fa;
+      const withSh=fn=>{
+        if(!passes.length||!s.sh){fn();return;}
+        ctx.save();
+        ctx.shadowColor='transparent';ctx.shadowBlur=0;ctx.shadowOffsetX=0;ctx.shadowOffsetY=0;
+        fn();ctx.restore();
+      };
+      if(s.imgFill){
+        const im2=fillImgs.get(s.id);
+        if(im2)withSh(()=>drawTextImageFill(ctx,s,im2,base,fa,L));
+      }else{
+        ctx.fillStyle=paint||tc.ink;
+        L.chars.forEach(c=>{
+          ctx.save();setupChar(c);
+          withSh(()=>ctx.fillText(c.ch,0,0));
+          ctx.restore();
+        });
+      }
       ctx.globalAlpha=base;
     }
     ctx.restore();
+  });
+  /* デバイス外装で画面の上に載る部分(ノッチ等)は、中身の後にまとめて描く */
+  shapes.forEach(s=>{
+    if(isFrame(s)&&s.device){
+      ctx.save();
+      ctx.translate(s.x,s.y);ctx.rotate((s.rot||0)*Math.PI/180);
+      devPartsCanvas(ctx,deviceGeom(s).front);
+      ctx.restore();
+    }
   });
   return cv;
 }
@@ -3751,6 +3999,8 @@ let wpx=innerWidth/2,wpy=innerHeight/2,wz=1;
 let wireSel=[];      /* 選択中の図形id(複数) */
 let wMulti=false;    /* 複数選択モード */
 let penMode=false,penShape=null;  /* ペン(パス)ツール */
+let freehandIdleTimer=null;        /* 手書き: 描き終えて止まった時の自動整形タイマー */
+const FREEHAND_HOLD_MS=1400;
 let penKind='node';               /* 'node'=点を置いて描く / 'free'=手書き */
 let wBrush=null;                  /* 部分的な太さのブラシ: 'up'|'down' */
 let eraseMode=false,eraseSize=20,eraseStroke=null;  /* 消しゴム */
@@ -4255,6 +4505,9 @@ const GRAD_OK=s=>true;
 const strokeW=s=>s.sw===undefined?(s.type==='image'?0:2):s.sw;
 /* 塗りと枠線の2色を持てる図形 */
 const canTwoPaints=s=>s.type==='rect'||s.type==='frame'||s.type==='ellipse'||(s.type==='path'&&s.closed);
+/* 図形の中の画像はテキストにも入れられる(文字の形で画像を切り抜く)。
+   枠線あり/なし・角丸など他のcanTwoPaints用途とは別の判定にする */
+const canImgFill=s=>canTwoPaints(s)||s.type==='text';
 
 /* ---------- フレーム(媒体の大きさを表す下地) ----------
    Figmaと同じ「フレーム」。中に置いた図形はフレームの子として扱い(判定は
@@ -4400,6 +4653,7 @@ function gradDefs(s){
 function clipEl(s){
   if(isRectish(s))return`<path d="${roundRectPath(s.w,s.h,rectRadii(s))}"/>`;
   if(s.type==='ellipse')return`<ellipse rx="${s.w/2}" ry="${s.h/2}"/>`;
+  if(s.type==='text')return textCharsSvg(s,null,()=>' fill="#000"');
   return`<path d="${pathD(s)}" clip-rule="evenodd"/>`;
 }
 /* ---------- 画像の補正(明るさ・コントラスト・彩度) ----------
@@ -4430,7 +4684,7 @@ function imgFillSvg(s){
   const f=s.imgFill,q=imgFillRect(s);
   const a=alphaOf(s,'fill');
   const fx=hasImgFx(s)?` filter="url(#wfx_${s.id})"`:'';
-  const img=`<image href="${f.src}" x="${q.x}" y="${q.y}" width="${q.w}" height="${q.h}" preserveAspectRatio="none"${a<1?` opacity="${a}"`:''}${fx}/>`;
+  const img=`<image href="${imgHref(f.src)}" x="${q.x}" y="${q.y}" width="${q.w}" height="${q.h}" preserveAspectRatio="none"${a<1?` opacity="${a}"`:''}${fx}/>`;
   return f.show?img:`<g clip-path="url(#wc_${s.id})">${img}</g>`;
 }
 /* 図形の複製用に、書き換わる部分をしっかりコピーする */
@@ -4446,6 +4700,7 @@ function cloneShape(s){
   if(s.wp)c.wp=s.wp.slice();
   if(s.cattr)c.cattr=s.cattr.map(a=>a?{...a}:a);
   if(s.sh)c.sh={...s.sh};
+  if(s.device)c.device={...s.device};
   if(s.imgFx)c.imgFx={...s.imgFx};
   if(s.olg)c.olg=JSON.parse(JSON.stringify(s.olg));
   if(s.ol2g)c.ol2g=JSON.parse(JSON.stringify(s.ol2g));
@@ -4453,10 +4708,24 @@ function cloneShape(s){
   return c;
 }
 /* ---------- シャドウ ----------
-   s.sh={x,y,b,c,a} (位置px・ぼかし・色・濃さ)。SVGはfeDropShadowのフィルター。
-   図形が回転していても影の向きは画面基準のままにする(Canvas書き出しと同じ挙動)ため、
-   オフセットを図形の回転ぶん逆回しにして渡す */
-const SH_DEF={x:4,y:6,b:12,c:'#000000',a:0.35};
+   s.sh={ang,dist,b,c,a}(角度・距離px・ぼかし・色・濃さ)。角度・距離で指定するのは
+   「光がどの向きからどれだけ離れて影を落とすか」という実際の影の付き方に合わせるため。
+   SVGはfeDropShadowのフィルター。図形が回転していても影の向きは画面基準のまま
+   (Canvas書き出しと同じ挙動)にするため、オフセットを図形の回転ぶん逆回しにして渡す */
+const SH_DEF={ang:56,dist:7,b:12,c:'#000000',a:0.35};
+/* 万一migrateSh前の旧形式(x/yのみ)が来てもNaNにならないようにする */
+const shOffset=sh=>{
+  if(sh.dist===undefined&&sh.x!==undefined)return{x:sh.x,y:sh.y};
+  const r=(sh.ang||0)*Math.PI/180;
+  return{x:(sh.dist||0)*Math.cos(r),y:(sh.dist||0)*Math.sin(r)};
+};
+/* 旧形式(x/y)を角度・距離へ移す */
+function migrateSh(s){
+  if(s.sh&&s.sh.x!==undefined&&s.sh.ang===undefined){
+    const{x,y,b,c,a}=s.sh;
+    s.sh={ang:(Math.atan2(y,x)*180/Math.PI+360)%360,dist:Math.hypot(x,y),b,c,a};
+  }
+}
 /* 旧形式のふちどり s.ol={w,c} を新形式(olw/olc)へ移す */
 function migrateOl(s){
   if(s.ol&&typeof s.ol==='object'){
@@ -4466,8 +4735,9 @@ function migrateOl(s){
 }
 function shadowDefs(s){
   const sh=s.sh;
-  const o=rotV({x:sh.x,y:sh.y},-(s.rot||0));
-  const R=Math.max(s.w,s.h,s.fs||0)/2+Math.abs(sh.x)+Math.abs(sh.y)+sh.b*2+40;
+  const off=shOffset(sh);
+  const o=rotV(off,-(s.rot||0));
+  const R=Math.max(s.w,s.h,s.fs||0)/2+sh.dist+sh.b*2+40;
   return `<filter id="wsh_${s.id}" filterUnits="userSpaceOnUse" x="${-R}" y="${-R}" width="${R*2}" height="${R*2}"><feDropShadow dx="${o.x}" dy="${o.y}" stdDeviation="${sh.b/2}" flood-color="${sh.c}" flood-opacity="${sh.a}"/></filter>`;
 }
 /* 図形の中身だけをフィルターの掛かったgで包む(選択枠などには掛けない)。
@@ -4483,6 +4753,111 @@ const strokePaintOf=s=>s.sgrad?`url(#wgs_${s.id})`:(s.sc||null);
 /* 線・開いたパス・画像の枠は「主の色」がそのまま線の色になる */
 const paintsStroke=s=>s.type==='line'||s.type==='image'||(s.type==='path'&&!s.closed);
 
+/* ============================================================
+   デバイスモックアップ(PC/タブレット/スマホ, リアル/デフォルメ)
+   フレームに f.device={kind,style} を持たせると、画面(=f.w×f.h)の
+   周りに端末の外装(ベゼル・ノッチ・ブラウザバー等)を描く。
+   外装は「部品(rrect/circle/line/path)の配列」で表し、SVGとCanvasの
+   両方から同じ定義で描けるようにする(画面表示と書き出しを一致させるため)。
+   ============================================================ */
+const DEV_COL={body:'#23262D',body2:'#0E1014',btn:'#3C414B',island:'#0A0B0E',bar:'#4A4F59',
+  out:'#2C313B',winBar:'#EDEFF2',winLine:'#D3D7DE',winAddr:'#FFFFFF',
+  tl:['#FF5F57','#FEBC2E','#28C840']};
+/* ツールバー・パネルで使うモックアップ一覧(端末の実物イメージ。1種ずつ) */
+const DEVICES=[
+  {k:'phone', kind:'phone', n:'スマホ',    w:390, h:844, r:44},
+  {k:'tablet',kind:'tablet',n:'タブレット',w:820, h:1180,r:20},
+  {k:'pc',    kind:'pc',    n:'ノートPC',  w:1280,h:800, r:8}
+];
+const deviceKey=f=>f.device?f.device.kind:'';
+/* 外装の部品配列と、画面からのはみ出し量(margin)を返す。局所座標(画面中心=原点) */
+function deviceGeom(f){
+  const dev=f.device; if(!dev)return null;
+  const w=Math.max(f.w,1),h=Math.max(f.h,1),hw=w/2,hh=h/2;
+  const back=[],front=[];
+  let margin={l:0,t:0,r:0,b:0};
+  const kind=dev.kind;
+  const C=DEV_COL;
+  if(kind==='phone'||kind==='tablet'){
+    const tablet=kind==='tablet';
+    const m=clamp(Math.min(w,h)*(tablet?0.05:0.055),tablet?14:9,tablet?42:24);
+    const R=(f.r||0)+m;
+    back.push({t:'rrect',x:-hw-m,y:-hh-m,w:w+2*m,h:h+2*m,r:R,fill:C.body,stroke:C.body2,sw:Math.max(1.2,m*0.1)});
+    if(tablet){
+      front.push({t:'circle',cx:0,cy:-hh-m*0.5,r:Math.max(2.5,m*0.12),fill:C.btn});
+      margin={l:m,t:m,r:m,b:m};
+    }else{
+      /* サイドボタン(電源・音量) */
+      back.push({t:'rrect',x:hw+m-1,y:-hh*0.12,w:m*0.42,h:h*0.12,r:m*0.2,fill:C.btn});
+      back.push({t:'rrect',x:-hw-m-m*0.42+1,y:-hh*0.3,w:m*0.42,h:h*0.08,r:m*0.2,fill:C.btn});
+      back.push({t:'rrect',x:-hw-m-m*0.42+1,y:-hh*0.18,w:m*0.42,h:h*0.08,r:m*0.2,fill:C.btn});
+      /* ダイナミックアイランド */
+      const iw=Math.min(w*0.32,120),ih=Math.max(m*0.85,11);
+      front.push({t:'rrect',x:-iw/2,y:-hh+m*0.42,w:iw,h:ih,r:ih/2,fill:C.island});
+      /* ホームインジケータ */
+      front.push({t:'rrect',x:-w*0.17,y:hh-m*0.55,w:w*0.34,h:Math.max(3,m*0.2),r:99,fill:C.bar});
+      margin={l:m+m*0.42,t:m,r:m+m*0.42,b:m};
+    }
+  }else{ /* pc = ノートパソコン(画面＋ヒンジ＋キーボード土台。上のバーは無し) */
+    const bez=clamp(Math.min(w,h)*0.022,6,18);          /* 画面まわりのベゼル */
+    const R=(f.r||0)+bez*0.7;
+    /* 画面本体(ベゼル) */
+    back.push({t:'rrect',x:-hw-bez,y:-hh-bez,w:w+2*bez,h:h+2*bez,r:R,fill:C.body,stroke:C.body2,sw:Math.max(1.2,bez*0.16)});
+    /* 上部のインカメラ */
+    front.push({t:'circle',cx:0,cy:-hh-bez*0.5,r:Math.max(2,bez*0.2),fill:C.btn});
+    /* キーボード土台(画面より左右に広く、手前ほど広がる台形。底の角は丸める) */
+    const topY=hh+bez, deckH=clamp(h*0.05,22,52), over=w*0.13;
+    const tl=-hw-bez, trx=hw+bez, bl=tl-over, br=trx+over, by=topY+deckH, cr=Math.min(deckH*0.7,over*0.5,16);
+    back.push({t:'path',
+      d:`M${tl} ${topY}L${trx} ${topY}L${br} ${by-cr}Q${br} ${by} ${br-cr} ${by}L${bl+cr} ${by}Q${bl} ${by} ${bl} ${by-cr}Z`,
+      fill:C.body,stroke:C.body2,sw:Math.max(1,bez*0.12)});
+    /* ヒンジ(画面と土台のつなぎ目) */
+    back.push({t:'rrect',x:-hw*0.5,y:topY-Math.max(1.5,bez*0.14),w:hw,h:Math.max(2,bez*0.28),r:99,fill:C.body2});
+    /* 手前中央のくぼみ(開閉ノッチ) */
+    front.push({t:'rrect',x:-w*0.055,y:by-deckH*0.34,w:w*0.11,h:Math.max(3,deckH*0.16),r:99,fill:C.btn});
+    margin={l:bez+over,t:bez,r:bez+over,b:bez+deckH};
+  }
+  return{margin,back,front};
+}
+/* 外装を含めた局所座標のバウンディングボックス(画面中心=原点) */
+function frameFullLocalBox(f){
+  const g=f.device?deviceGeom(f):null;
+  const m=g?g.margin:{l:0,t:0,r:0,b:0};
+  return{x1:-f.w/2-m.l,y1:-f.h/2-m.t,x2:f.w/2+m.r,y2:f.h/2+m.b};
+}
+/* 部品配列 → SVG文字列(呼び出し側で <g transform> に入れる) */
+function devPartsSvg(parts){
+  return parts.map(p=>{
+    const f=p.fill!==undefined?p.fill:'none',st=p.stroke!==undefined?p.stroke:'none';
+    const sw=p.sw!==undefined?p.sw:0,op=p.opacity!==undefined?` opacity="${p.opacity}"`:'';
+    if(p.t==='rrect')return`<rect x="${p.x}" y="${p.y}" width="${Math.max(0,p.w)}" height="${Math.max(0,p.h)}" rx="${Math.max(0,p.r)}" ry="${Math.max(0,p.r)}" fill="${f}" stroke="${st}" stroke-width="${sw}"${op}/>`;
+    if(p.t==='circle')return`<circle cx="${p.cx}" cy="${p.cy}" r="${Math.max(0,p.r)}" fill="${f}" stroke="${st}" stroke-width="${sw}"${op}/>`;
+    if(p.t==='path')return`<path d="${p.d}" fill="${f}" stroke="${st}" stroke-width="${sw}" stroke-linejoin="round" stroke-linecap="round"${op}/>`;
+    return'';
+  }).join('');
+}
+/* 部品配列 → Canvas(ctxは既にフレーム中心へ translate/rotate 済み) */
+function devPartsCanvas(ctx,parts){
+  parts.forEach(p=>{
+    ctx.save();
+    ctx.globalAlpha=(p.opacity!==undefined?p.opacity:1);
+    if(p.t==='rrect'){
+      const pa=new Path2D();pa.roundRect(p.x,p.y,Math.max(0,p.w),Math.max(0,p.h),Math.max(0,p.r));
+      if(p.fill!==undefined&&p.fill!=='none'){ctx.fillStyle=p.fill;ctx.fill(pa);}
+      if(p.stroke!==undefined&&p.stroke!=='none'&&p.sw){ctx.strokeStyle=p.stroke;ctx.lineWidth=p.sw;ctx.stroke(pa);}
+    }else if(p.t==='circle'){
+      ctx.beginPath();ctx.arc(p.cx,p.cy,Math.max(0,p.r),0,Math.PI*2);
+      if(p.fill!==undefined&&p.fill!=='none'){ctx.fillStyle=p.fill;ctx.fill();}
+      if(p.stroke!==undefined&&p.stroke!=='none'&&p.sw){ctx.strokeStyle=p.stroke;ctx.lineWidth=p.sw;ctx.stroke();}
+    }else if(p.t==='path'){
+      const pa=new Path2D(p.d);ctx.lineJoin='round';ctx.lineCap='round';
+      if(p.fill!==undefined&&p.fill!=='none'){ctx.fillStyle=p.fill;ctx.fill(pa);}
+      if(p.stroke!==undefined&&p.stroke!=='none'&&p.sw){ctx.strokeStyle=p.stroke;ctx.lineWidth=p.sw;ctx.stroke(pa);}
+    }
+    ctx.restore();
+  });
+}
+
 function shapeSvg(s){
   const tr=`transform="translate(${s.x} ${s.y}) rotate(${s.rot||0})"`;
   const paint=paintOf(s);
@@ -4492,10 +4867,12 @@ function shapeSvg(s){
   const sw=strokeW(s);
   /* 中に画像がある場合は 塗り → 画像 → 枠線 の順に重ねる */
   const im=s.imgFill?imgFillSvg(s):'';
+  /* デバイスの外装(画面の裏に描く本体・ベゼル) */
+  const devBack=(isFrame(s)&&s.device)?devPartsSvg(deviceGeom(s).back):'';
   if(isRectish(s)){
     const d=roundRectPath(s.w,s.h,rectRadii(s));
-    if(!im)return`<g data-id="${s.id}" ${tr}><path d="${d}" fill="${fill}" fill-opacity="${fa}" stroke="${stroke}" stroke-opacity="${sa}" stroke-width="${sw}"/></g>`;
-    return`<g data-id="${s.id}" ${tr}><path d="${d}" fill="${fill}" fill-opacity="${fa}"/>${im}<path d="${d}" fill="none" stroke="${stroke}" stroke-opacity="${sa}" stroke-width="${sw}"/></g>`;
+    if(!im)return`<g data-id="${s.id}" ${tr}>${devBack}<path d="${d}" fill="${fill}" fill-opacity="${fa}" stroke="${stroke}" stroke-opacity="${sa}" stroke-width="${sw}"/></g>`;
+    return`<g data-id="${s.id}" ${tr}>${devBack}<path d="${d}" fill="${fill}" fill-opacity="${fa}"/>${im}<path d="${d}" fill="none" stroke="${stroke}" stroke-opacity="${sa}" stroke-width="${sw}"/></g>`;
   }
   if(s.type==='ellipse'){
     const el=`<ellipse rx="${s.w/2}" ry="${s.h/2}"`;
@@ -4521,10 +4898,10 @@ function shapeSvg(s){
     /* 枠線(太さ0で枠なし)。色はグラデーションも使える */
     const fr=sw>0?`<rect x="${-s.w/2}" y="${-s.h/2}" width="${s.w}" height="${s.h}" fill="none" stroke="${paint||'var(--ink)'}" stroke-opacity="${fa}" stroke-width="${sw}"/>`:'';
     const fx=hasImgFx(s)?` filter="url(#wfx_${s.id})"`:'';
-    return`<g data-id="${s.id}" ${tr}><image href="${s.src}" x="${-s.w/2}" y="${-s.h/2}" width="${s.w}" height="${s.h}" preserveAspectRatio="none" opacity="${fa}"${fx}/>${fr}</g>`;
+    return`<g data-id="${s.id}" ${tr}><image href="${imgHref(s.src)}" x="${-s.w/2}" y="${-s.h/2}" width="${s.w}" height="${s.h}" preserveAspectRatio="none" opacity="${fa}"${fx}/>${fr}</g>`;
   }
   /* テキスト(色は文字色として使う)。文字ごとにサイズ・太さ・フォント・
-     字間・斜体を変えられるよう、1文字ずつ置いていく */
+     字間・斜体・回転・位置を変えられるよう、1文字ずつ置いていく */
   const col=paint||'var(--ink)';
   const L=textLayout(s);
   /* ふちどりは 外側(ふち2)→内側(ふち1)→文字本体 の順に重ねる。
@@ -4534,22 +4911,31 @@ function shapeSvg(s){
   if(w2)passes.push({w:(w1+w2)*2,p:olPaintOf(s,'ol2'),a:alphaOf(s,'ol2')});
   if(w1)passes.push({w:w1*2,p:olPaintOf(s,'ol'),a:alphaOf(s,'ol')});
   let t=`<g data-id="${s.id}" ${tr}><rect x="${-L.w/2-6}" y="${-L.h/2-3}" width="${L.w+12}" height="${L.h+6}" fill="transparent"/>`;
-  const charSvg=(c,extra)=>{
-    const sk=c.a.it?` skewX(${-c.a.it})`:'';
-    const g=s.vert?`translate(${c.cx} ${c.cy})${sk}`:`translate(${c.cx} ${c.by})${sk}`;
-    return`<g transform="${g}"><text x="0" y="0" font-size="${c.a.fs}" font-weight="${c.a.fw}" font-family='${fontStack(c.a.ff)}'${extra} text-anchor="${s.vert?'middle':'start'}"${s.vert?' dominant-baseline="central"':''} style="user-select:none;white-space:pre">${escXml(c.ch)}</text></g>`;
-  };
   passes.forEach(ps=>{
-    L.chars.forEach(c=>{t+=charSvg(c,` fill="none" stroke="${ps.p}" stroke-width="${ps.w}" stroke-opacity="${ps.a}" stroke-linejoin="round"`);});
+    t+=textCharsSvg(s,L,()=>` fill="none" stroke="${ps.p}" stroke-width="${ps.w}" stroke-opacity="${ps.a}" stroke-linejoin="round"`);
   });
-  L.chars.forEach(c=>{t+=charSvg(c,` fill="${col}" fill-opacity="${fa}"`);});
+  t+=s.imgFill?imgFillSvg(s):textCharsSvg(s,L,()=>` fill="${col}" fill-opacity="${fa}"`);
   return t+'</g>';
+}
+/* 文字1つぶんの<g><text>...(通常の文字色描画・ふちどり・図形中の画像のクリップ型のいずれにも使う共有ヘルパー) */
+function textCharsSvg(s,L,extraFn){
+  L=L||textLayout(s);
+  /* ⚠️transformは<text>要素自身に直接付けること。<g transform=...><text>...</text></g>と
+     包むと、clipPath内で使った時にChromiumが描画してくれない(クリップが空になる)。
+     text要素はtransform属性を自分でも持てるので、包まなくても位置・回転・斜体は付けられる */
+  return L.chars.map(c=>{
+    const sk=c.a.it?` skewX(${-c.a.it})`:'';
+    const rot=c.a.rot?` rotate(${c.a.rot})`:'';
+    const g=s.vert?`translate(${c.cx} ${c.cy})${rot}${sk}`:`translate(${c.cx} ${c.by})${rot}${sk}`;
+    return`<text transform="${g}" x="0" y="0" font-size="${c.a.fs}" font-weight="${c.a.fw}" font-family='${fontStack(c.a.ff)}'${extraFn?extraFn(c):''} text-anchor="${s.vert?'middle':'start'}"${s.vert?' dominant-baseline="central"':''} style="user-select:none;white-space:pre">${escXml(c.ch)}</text>`;
+  }).join('');
 }
 /* フレームの名前とピクセル数(上に表示)。図形で覆われても
    ここを押せばフレーム自体を選べる(Figmaと同じ) */
 function frameLabelSvg(f){
-  /* 選択枠(図形の 5〜6/wz 上)と重ならない高さに置く */
-  const fs=12/wz,y=-f.h/2-11/wz;
+  /* 選択枠(図形の 5〜6/wz 上)と重ならない高さに置く。デバイスは外装の上に出す */
+  const top=f.device?frameFullLocalBox(f).y1:-f.h/2;
+  const fs=12/wz,y=top-11/wz;
   const on=wireSel.includes(f.id);
   return`<g data-id="${f.id}" transform="translate(${f.x} ${f.y}) rotate(${f.rot||0})" style="cursor:pointer">
     <rect x="${-f.w/2}" y="${y-fs}" width="${f.w}" height="${fs+4/wz}" fill="transparent"/>
@@ -4568,15 +4954,18 @@ function handlesFor(s){
 }
 function selSvg(s){
   const hw=s.w/2,hh=s.h/2,r=7/wz,sw=1.5/wz,pad=5/wz;
+  /* デバイスは外装まで含めた枠を出す(ハンドル位置は画面の端のまま) */
+  const lb=(isFrame(s)&&s.device)?frameFullLocalBox(s):{x1:-hw-pad,y1:-hh-pad,x2:hw+pad,y2:hh+pad};
+  const ox=lb.x1,oy=lb.y1,ow=lb.x2-lb.x1,oh=lb.y2-lb.y1;
   if(s.locked){
     /* 固定中: グレー枠のみ(ハンドルなし) */
-    return`<g transform="translate(${s.x} ${s.y}) rotate(${s.rot||0})" pointer-events="none"><rect x="${-hw-pad}" y="${-hh-pad}" width="${s.w+pad*2}" height="${s.h+pad*2}" fill="none" stroke="var(--ink-soft)" stroke-width="${sw}" stroke-dasharray="${5/wz} ${4/wz}"/></g>`;
+    return`<g transform="translate(${s.x} ${s.y}) rotate(${s.rot||0})" pointer-events="none"><rect x="${ox}" y="${oy}" width="${ow}" height="${oh}" fill="none" stroke="var(--ink-soft)" stroke-width="${sw}" stroke-dasharray="${5/wz} ${4/wz}"/></g>`;
   }
   let h=`<g data-id="${s.id}" transform="translate(${s.x} ${s.y}) rotate(${s.rot||0})">`;
-  h+=`<rect x="${-hw-pad}" y="${-hh-pad}" width="${s.w+pad*2}" height="${s.h+pad*2}" fill="none" stroke="var(--accent)" stroke-width="${sw}" stroke-dasharray="${5/wz} ${4/wz}"/>`;
-  /* 回転ハンドル */
-  h+=`<line x1="0" y1="${-hh-pad}" x2="0" y2="${-hh-28/wz}" stroke="var(--accent)" stroke-width="${sw}"/>`;
-  h+=`<circle data-handle="rot" cx="0" cy="${-hh-33/wz}" r="${r}" fill="var(--node-bg)" stroke="var(--accent)" stroke-width="${sw}"/>`;
+  h+=`<rect x="${ox}" y="${oy}" width="${ow}" height="${oh}" fill="none" stroke="var(--accent)" stroke-width="${sw}" stroke-dasharray="${5/wz} ${4/wz}"/>`;
+  /* 回転ハンドル(デバイスは外装の上に出す) */
+  h+=`<line x1="0" y1="${oy}" x2="0" y2="${oy-23/wz}" stroke="var(--accent)" stroke-width="${sw}"/>`;
+  h+=`<circle data-handle="rot" cx="0" cy="${oy-28/wz}" r="${r}" fill="var(--node-bg)" stroke="var(--accent)" stroke-width="${sw}"/>`;
   handlesFor(s).forEach(([sx,sy])=>{
     h+=`<rect data-handle="${sx},${sy}" x="${sx*hw-r}" y="${sy*hh-r}" width="${r*2}" height="${r*2}" rx="${2/wz}" fill="var(--node-bg)" stroke="var(--accent)" stroke-width="${sw}"/>`;
   });
@@ -4613,7 +5002,7 @@ function imgAdjustSvg(s){
   const r=7/wz,sw=1.5/wz;
   let h=`<g data-id="${s.id}" transform="translate(${s.x} ${s.y}) rotate(${s.rot||0})">`;
   if(!f.show)   /* はみ出しを薄く見せて全体を掴めるように */
-    h+=`<image href="${f.src}" x="${q.x}" y="${q.y}" width="${q.w}" height="${q.h}" preserveAspectRatio="none" opacity=".3" pointer-events="none"/>`;
+    h+=`<image href="${imgHref(f.src)}" x="${q.x}" y="${q.y}" width="${q.w}" height="${q.h}" preserveAspectRatio="none" opacity=".3" pointer-events="none"/>`;
   h+=`<rect data-ifmove="1" x="${q.x}" y="${q.y}" width="${q.w}" height="${q.h}" fill="transparent" stroke="var(--accent)" stroke-width="${sw}" stroke-dasharray="${5/wz} ${4/wz}"/>`;
   [[-1,-1],[1,-1],[1,1],[-1,1]].forEach(([sx,sy])=>{
     const cx=q.x+q.w/2+sx*q.w/2,cy=q.y+q.h/2+sy*q.h/2;
@@ -4653,6 +5042,11 @@ function renderWire(){
     const one=withShadow(s,shapeSvg(s));
     html+=f?`<g clip-path="url(#fc_${f.id})">${one}</g>`:one;
   });
+  /* デバイスの外装で画面の上に載る部分(ノッチ・ホームバー・ブラウザボタン等)。
+     中身の図形より手前に描く(ノッチが内容に重なる本物の見え方) */
+  d.shapes.forEach(s=>{if(isFrame(s)&&s.device){
+    html+=`<g transform="translate(${s.x} ${s.y}) rotate(${s.rot||0})" pointer-events="none">${devPartsSvg(deviceGeom(s).front)}</g>`;
+  }});
   d.shapes.forEach(s=>{if(isFrame(s))html+=frameLabelSvg(s);});
   d.shapes.forEach(s=>{if(s.locked)html+=lockSvg(s);});
   /* ガイド線(定規ON時のみ)。掴んで動かせる・定規に戻すと消える */
@@ -4705,7 +5099,7 @@ function renderWire(){
 function updateWireBtns(){
   const ss=selShapes();
   const any=ss.length>0;
-  ['wireDupBtn','wireDelBtn','wireFillBtn','wireUpBtn','wireDownBtn','wireLockBtn'].forEach(i=>$('#'+i).disabled=!any);
+  ['wireDupBtn','wireDelBtn','wireFillBtn','wireUpBtn','wireDownBtn','wireFrontBtn','wireBackBtn','wireLockBtn'].forEach(i=>$('#'+i).disabled=!any);
   const one=ss.length===1?ss[0]:null;
   const ptSel=selAnchor&&one&&one.id===selAnchor.sid&&one.type==='path';
   $('#wireDelBtn').title=ptSel?(selAnchor.ci?'選んだ穴の点を削除 (Delete)':'選んだ点を削除 (Delete)'):'削除 (Delete)';
@@ -4728,6 +5122,14 @@ function updateWireBtns(){
 /* 図形の四隅(回転後のワールド座標)。外接円で概算すると大きな図形ほど
    枠が実物より大きくずれるため、実際の角を使う */
 function shapeCorners(s){
+  /* デバイスモックアップは外装まで含めた範囲を占める */
+  if(isFrame(s)&&s.device){
+    const lb=frameFullLocalBox(s);
+    return[[lb.x1,lb.y1],[lb.x2,lb.y1],[lb.x2,lb.y2],[lb.x1,lb.y2]].map(([x,y])=>{
+      const v=rotV({x,y},s.rot||0);
+      return{x:s.x+v.x,y:s.y+v.y};
+    });
+  }
   const hw=Math.max(s.w,0)/2,hh=Math.max(s.h,s.fs||0)/2;
   return[[-hw,-hh],[hw,-hh],[hw,hh],[-hw,hh]].map(([x,y])=>{
     const v=rotV({x,y},s.rot||0);
@@ -4762,6 +5164,7 @@ function openWire(id){
   if(editingId)commitEdit();
   finishWireText();
   penMode=false;penShape=null;eraseMode=false;eraseStroke=null;imgAdjust=false;wBrush=null;txPick=false;txSel=null;measureMode=false;measure=null;wireView.style.cursor='';
+  clearTimeout(freehandIdleTimer);freehandIdleTimer=null;
   doc.current=id;
   wireSel=[];selAnchor=null;
   document.body.classList.remove('text-mode');
@@ -4781,7 +5184,7 @@ function wireBBox(shapes){
   let x1=1e9,y1=1e9,x2=-1e9,y2=-1e9;
   shapes.forEach((s,i)=>{
     let r=Math.hypot(s.w,Math.max(s.h,s.fs||0))/2+12;
-    if(s.sh)r+=Math.max(Math.abs(s.sh.x),Math.abs(s.sh.y))+s.sh.b*1.5+4;
+    if(s.sh)r+=s.sh.dist+s.sh.b*1.5+4;
     if(s.imgFill&&s.imgFill.show){   /* はみ出し表示中は画像の分も入れる */
       const q=imgFillRect(s);
       [[q.x,q.y],[q.x+q.w,q.y],[q.x+q.w,q.y+q.h],[q.x,q.y+q.h]]
@@ -4824,9 +5227,9 @@ function shapeBox(s){
     y1:Math.min(...pts.map(p=>p.y))-g,y2:Math.max(...pts.map(p=>p.y))+g
   };
   if(s.sh){   /* 影も見た目の一部なので書き出し範囲に入れる */
-    const p=s.sh.b*1.5+1;
-    b.x1+=Math.min(0,s.sh.x)-p;b.x2+=Math.max(0,s.sh.x)+p;
-    b.y1+=Math.min(0,s.sh.y)-p;b.y2+=Math.max(0,s.sh.y)+p;
+    const off=shOffset(s.sh),p=s.sh.b*1.5+1;
+    b.x1+=Math.min(0,off.x)-p;b.x2+=Math.max(0,off.x)+p;
+    b.y1+=Math.min(0,off.y)-p;b.y2+=Math.max(0,off.y)+p;
   }
   return b;
 }
@@ -4871,6 +5274,7 @@ const WFONTS=[
   {g:'日本語',k:'udkyo',n:'教科書体',f:'"UD デジタル 教科書体 N-R","UD Digi Kyokasho N-R","Klee",serif',probe:['UD デジタル 教科書体 N-R','UD Digi Kyokasho N-R','Klee']},
   {g:'日本語',k:'gyosho',n:'行書体',f:'"HGP行書体","HG行書体",serif',probe:['HGP行書体','HG行書体']},
   {g:'日本語',k:'pop',n:'ポップ体',f:'"HGP創英角ﾎﾟｯﾌﾟ体","HG創英角ﾎﾟｯﾌﾟ体",sans-serif',probe:['HGP創英角ﾎﾟｯﾌﾟ体','HG創英角ﾎﾟｯﾌﾟ体']},
+  {g:'日本語',k:'kaisho',n:'楷書体',f:'"HG正楷書体-PRO","HGS正楷書体-PRO",serif',probe:['HG正楷書体-PRO','HGS正楷書体-PRO']},
   /* 欧文・見出し */
   {g:'欧文・見出し',k:'serif',n:'Serif (Georgia)',f:'Georgia,"Times New Roman",serif'},
   {g:'欧文・見出し',k:'sans',n:'Sans (Arial)',f:'Arial,Helvetica,sans-serif'},
@@ -4880,8 +5284,18 @@ const WFONTS=[
   {g:'欧文・見出し',k:'classic',n:'クラシック (Garamond)',f:'Garamond,"Palatino Linotype",Georgia,serif',probe:['Garamond','Palatino Linotype']},
   {g:'欧文・見出し',k:'geo',n:'幾何学 (Century Gothic)',f:'"Century Gothic",Futura,"Trebuchet MS",sans-serif',probe:['Century Gothic','Futura']},
   {g:'欧文・見出し',k:'narrow',n:'コンデンス (細長)',f:'"Arial Narrow","Roboto Condensed",sans-serif',probe:['Arial Narrow','Roboto Condensed']},
+  {g:'欧文・見出し',k:'slab',n:'スラブセリフ (Rockwell)',f:'Rockwell,"Courier New",serif',probe:['Rockwell']},
+  {g:'欧文・見出し',k:'elegant',n:'エレガント (Cambria)',f:'Cambria,Georgia,serif',probe:['Cambria']},
+  {g:'欧文・見出し',k:'soft',n:'やわらかサンセリフ (Corbel)',f:'Corbel,"Segoe UI",sans-serif',probe:['Corbel']},
+  /* 装飾・ポスター */
+  {g:'装飾・ポスター',k:'stencil',n:'ステンシル',f:'Stencil,"Arial Black",sans-serif',probe:['Stencil']},
+  {g:'装飾・ポスター',k:'deco',n:'装飾体 (Algerian)',f:'Algerian,Impact,serif',probe:['Algerian']},
+  {g:'装飾・ポスター',k:'retro',n:'レトロポスター (Playbill)',f:'Playbill,Georgia,serif',probe:['Playbill']},
+  {g:'装飾・ポスター',k:'gothic19',n:'クラシック装飾 (Old English)',f:'"Old English Text MT","Blackletter686 BT",serif',probe:['Old English Text MT']},
+  {g:'装飾・ポスター',k:'tech',n:'テック・近未来 (Agency FB)',f:'"Agency FB","Bahnschrift",sans-serif',probe:['Agency FB']},
   /* 手書き */
   {g:'手書き',k:'script',n:'筆記体',f:'"Brush Script MT","Snell Roundhand","Segoe Script",cursive',probe:['Brush Script MT','Snell Roundhand']},
+  {g:'手書き',k:'elegantscript',n:'優雅な筆記体 (Monotype Corsiva)',f:'"Monotype Corsiva","Brush Script MT",cursive',probe:['Monotype Corsiva']},
   {g:'手書き',k:'hand',n:'手書き',f:'"Segoe Script","Bradley Hand",cursive',probe:['Segoe Script','Bradley Hand']},
   {g:'手書き',k:'crayon',n:'手書き (ラフ)',f:'"Ink Free","Comic Sans MS","Chalkboard SE",cursive',probe:['Ink Free','Comic Sans MS']},
   {g:'手書き',k:'print',n:'手書き (プリント)',f:'"Segoe Print","Comic Sans MS",cursive',probe:['Segoe Print']}
@@ -4904,7 +5318,10 @@ function fontAvailable(fam){
 function charAttr(s,i){
   const c=(s.cattr&&s.cattr[i])||{};
   const p=(k,d)=>c[k]!==undefined?c[k]:(s[k]!==undefined?s[k]:d);
-  return{fs:p('fs',18),fw:p('fw',400),ff:p('ff','gothic'),ls:p('ls',0),it:p('it',0)};
+  /* rot(回転)/dx/dy(位置ずらし)は文字ごとの指定のみ有効。
+     s.rotは図形全体の回転という別の意味で使われているので、フォールバックしない */
+  return{fs:p('fs',18),fw:p('fw',400),ff:p('ff','gothic'),ls:p('ls',0),it:p('it',0),
+    rot:c.rot||0,dx:c.dx||0,dy:c.dy||0};
 }
 const fontCss=a=>`${a.fw} ${a.fs}px ${fontStack(a.ff)}`;
 /* 1文字の送り幅とベースラインまでの上下(フォントの実際の寸法を使う) */
@@ -4973,9 +5390,39 @@ function textLayout(s){
           :va==='middle'?contentTop+(l.A+l.D)/2-(c.asc+c.desc)/2+c.asc
           :contentTop+l.A);
       }
+      /* 文字ごとの位置ずらし(自然な配置からのオフセット、シェイプのローカル座標系) */
+      c.cx+=c.a.dx;
+      if(s.vert)c.cy+=c.a.dy;else c.by+=c.a.dy;
     });
   });
-  return{lines:L,chars:L.flatMap(l=>l.chars),w,h,lean,along,across};
+  const allChars=L.flatMap(l=>l.chars);
+  /* 個別に位置・角度をずらした文字があれば、実際に占める範囲を測り直して中心をそろえる
+     (でないと選択枠・当たり判定・書き出し範囲が実際の見た目とずれる) */
+  const moved=allChars.some(c=>c.a.dx||c.a.dy||c.a.rot);
+  let W=w,H=h;
+  if(moved){
+    let x1=1e9,y1=1e9,x2=-1e9,y2=-1e9;
+    allChars.forEach(c=>{
+      let ccx,ccy,hw,hh;
+      if(s.vert){
+        ccx=c.cx;ccy=c.cy;
+        hw=charMetrics(c.ch,c.a).w/2;hh=c.adv/2;
+      }else{
+        hw=c.adv/2;hh=(c.asc+c.desc)/2;
+        ccx=c.cx+hw;ccy=c.by-(c.asc-c.desc)/2;
+      }
+      [[-hw,-hh],[hw,-hh],[hw,hh],[-hw,hh]].forEach(([dx,dy])=>{
+        const r=c.a.rot?rotV({x:dx,y:dy},c.a.rot):{x:dx,y:dy};
+        const px=ccx+r.x,py=ccy+r.y;
+        x1=Math.min(x1,px);x2=Math.max(x2,px);y1=Math.min(y1,py);y2=Math.max(y2,py);
+      });
+    });
+    x1-=lean;x2+=lean;
+    W=Math.max(20,x2-x1);H=Math.max(20,y2-y1);
+    const cx0=(x1+x2)/2,cy0=(y1+y2)/2;
+    allChars.forEach(c=>{c.cx-=cx0;if(s.vert)c.cy-=cy0;else c.by-=cy0;});
+  }
+  return{lines:L,chars:allChars,w:W,h:H,lean,along,across};
 }
 function measureWText(s){
   const L=textLayout(s);
@@ -5000,20 +5447,69 @@ function addShape(type){
   if(type==='text')beginWireText(s);
 }
 /* フレームを追加。ピクセルはそのままワールド座標の大きさ(ズーム100%＝実寸) */
-function addFrame(w,h,name,lock){
+function addFrame(w,h,name,lock,opt){
+  opt=opt||{};
   const d=curDoc();if(!d.shapes)return;
   exitPen();exitEraser();exitBrush();
   pushUndo();
   const c=s2w(viewW()/2,viewH()/2);
   const s={id:uid(),type:'frame',x:c.x,y:c.y,w,h,rot:0,
-    name:name||'フレーム',fill:'#FFFFFF',noStroke:true,r:0,
+    name:name||'フレーム',fill:'#FFFFFF',noStroke:true,r:opt.r||0,
     sizeLock:lock!==false,clip:true};
+  if(opt.device)s.device=opt.device;
   d.shapes.unshift(s);   /* 下地なので一番背面に置く */
   wireSel=[s.id];selAnchor=null;
   save();
   focusFrame(s);
   openStyleMenu();   /* ピクセル指定をすぐ触れるように */
   toast(`${s.name} ${w} × ${h}px のフレームを作りました`);
+}
+/* モックアップ(デバイス外装つき)を追加 */
+function addDeviceFrame(k){
+  const d=DEVICES.find(x=>x.k===k);if(!d)return;
+  addFrame(d.w,d.h,d.n,true,{device:{kind:d.kind},r:d.r});
+}
+/* ---------- 大きさ(px)をパネルから指定 ---------- */
+const sizeableShape=s=>['rect','ellipse','path','line','image'].includes(s.type);
+let szLink=true;   /* 縦横比を保つ(既定ON) */
+/* 中心を保ったまま大きさを変える。パスは点も比率で拡縮 */
+function resizeShapeTo(s,nw,nh){
+  nw=clamp(Math.round(nw),1,20000);
+  nh=clamp(Math.round(nh),1,20000);
+  if(s.type==='path'&&s.pts){
+    const kx=nw/Math.max(s.w,0.01),ky=nh/Math.max(s.h,0.01);
+    const sc=arr=>arr.map(p=>{
+      const q={x:p.x*kx,y:p.y*ky};
+      if(p.h1)q.h1={x:p.h1.x*kx,y:p.h1.y*ky};
+      if(p.h2)q.h2={x:p.h2.x*kx,y:p.h2.y*ky};
+      return q;
+    });
+    s.pts=sc(s.pts);if(s.holes)s.holes=s.holes.map(sc);
+    s.w=nw;s.h=nh;
+  }else if(s.type==='line'){
+    s.w=nw;   /* 線は長さのみ(高さ=0) */
+  }else{
+    s.w=nw;s.h=nh;
+  }
+}
+function applySizeInput(dim){
+  const s=oneSel();
+  if(!s||s.locked||!sizeableShape(s))return;
+  const vw=+$('#szW').value,vh=+$('#szH').value;
+  const ratio=s.h>0?s.w/s.h:1;
+  let nw=s.w,nh=s.h;
+  if(dim==='w'){
+    if(isNaN(vw)||vw<1)return;
+    nw=vw;
+    if(szLink&&s.type!=='line'&&s.h>0)nh=nw/ratio;   /* 片方入力→比率で自動 */
+  }else{
+    if(isNaN(vh)||vh<1)return;
+    nh=vh;
+    if(szLink&&s.h>0)nw=nh*ratio;
+  }
+  pushUndo();
+  resizeShapeTo(s,nw,nh);
+  save();renderWire();updateStyleMenu();
 }
 /* そのフレームが画面いっぱいに見えるところまで寄る */
 function focusFrame(f){
@@ -5132,6 +5628,19 @@ function layerSel(dir){
   }
   save();renderWire();
   toast(dir>0?'前面へ移動しました':'背面へ移動しました');
+}
+/* 最前面 / 最背面へ一気に移動 */
+function layerExtreme(dir){
+  const d=curDoc();
+  const ss=selShapes().filter(s=>!s.locked);if(!ss.length)return;
+  const sel=ss.slice().sort((a,b)=>d.shapes.indexOf(a)-d.shapes.indexOf(b));
+  const rest=d.shapes.filter(s=>!ss.includes(s));
+  const next=dir>0?[...rest,...sel]:[...sel,...rest];
+  if(next.every((s,i)=>s===d.shapes[i])){toast(dir>0?'すでに一番前面です':'すでに一番背面です');return;}
+  pushUndo();
+  d.shapes=next;
+  save();renderWire();
+  toast(dir>0?'最前面へ移動しました':'最背面へ移動しました');
 }
 /* 編集対象: 塗り / 枠線 / ふちどり1 / ふちどり2(図形の種類で使えるものだけ) */
 let paintTarget='fill';
@@ -5450,24 +5959,50 @@ function toPath(){
   toast('パスに変換しました(点をドラッグ / 辺の◯をドラッグで曲線)');
 }
 /* 前面の図形で切り取る(型抜き) */
+/* テキストを刃にして下の図形を型抜きする(切り抜き文字デザイン)。
+   文字はベクター化できない(フォントの輪郭を取り出す手段が無い)ので、
+   消しゴムと同じラスター方式で型抜きする:文字をそのままfillTextしてマスクにする */
+function textCutDraw(cutter){
+  return ctx=>{
+    ctx.save();
+    ctx.translate(cutter.x,cutter.y);
+    ctx.rotate((cutter.rot||0)*Math.PI/180);
+    ctx.fillStyle='#000';
+    const L=textLayout(cutter);
+    L.chars.forEach(c=>{
+      ctx.save();
+      if(cutter.vert){ctx.translate(c.cx,c.cy);ctx.textAlign='center';ctx.textBaseline='middle';}
+      else{ctx.translate(c.cx,c.by);ctx.textAlign='left';ctx.textBaseline='alphabetic';}
+      if(c.a.rot)ctx.rotate(c.a.rot*Math.PI/180);
+      if(c.a.it)ctx.transform(1,0,-Math.tan(c.a.it*Math.PI/180),1,0,0);
+      ctx.font=fontCss(c.a);
+      ctx.fillText(c.ch,0,0);
+      ctx.restore();
+    });
+    ctx.restore();
+  };
+}
 function cutByFront(){
   const d=curDoc();
   const ss=selShapes();
   if(ss.length<2){toast('切り抜く図形と、下になる図形を選んでください');return;}
   const sorted=[...ss].sort((a,b)=>d.shapes.indexOf(a)-d.shapes.indexOf(b));
   const cutter=sorted[sorted.length-1];              /* 一番前面が刃 */
-  if(!CUT_OK(cutter)){toast('一番前の図形が切り抜きに使えません(四角・丸・閉じたパス)');return;}
+  const isTextCutter=cutter.type==='text';
+  if(!isTextCutter&&!CUT_OK(cutter)){toast('一番前の図形が切り抜きに使えません(四角・丸・閉じたパス・テキスト)');return;}
   const targets=sorted.slice(0,-1).filter(s=>!s.locked&&CUT_OK(s));
   if(!targets.length){toast('切り取られる図形がありません(四角・丸・閉じたパス)');return;}
-  const polys=worldContours(cutter);
   pushUndo();
-  const draw=ctx=>{ctx.beginPath();polys.forEach(c=>addContourPath(ctx,c));ctx.fill('evenodd');};
+  const draw=isTextCutter?textCutDraw(cutter):(()=>{
+    const polys=worldContours(cutter);
+    return ctx=>{ctx.beginPath();polys.forEach(c=>addContourPath(ctx,c));ctx.fill('evenodd');};
+  })();
   const r=applyCut(targets,draw);
   if(!r.changed){histOf().undo.pop();updateHistBtns();toast('重なっていないため切り取れませんでした');return;}
   d.shapes=d.shapes.filter(s=>s!==cutter);           /* 刃は消す */
   wireSel=[];selAnchor=null;
   save();renderWire();
-  toast('前面の図形で切り取りました');
+  toast(isTextCutter?'文字の形で切り取りました(背景が透けて見えます)':'前面の図形で切り取りました');
 }
 /* 消しゴム */
 function exitEraser(){
@@ -5553,7 +6088,8 @@ function smoothSel(){
 /* ペン(パス)ツール */
 function exitPen(){
   if(!penMode&&!penShape)return;
-  finishPen();
+  clearTimeout(freehandIdleTimer);freehandIdleTimer=null;
+  if(penKind==='free')finishFreeStroke();else finishPen();
   penMode=false;
   wireView.style.cursor='';
   updateWireBtns();
@@ -5659,25 +6195,39 @@ function autoHandles(pts,cornerCos){
   });
 }
 const CORNER_COS=Math.cos(75*Math.PI/180);
-function cleanFreehand(pts,z){
+function cleanFreehand(pts,z,strong){
+  /* strong=描き終えて1〜2秒止まった時の仕上げ整形(通常より強くならす) */
   let a=avgSmooth(pts,1);                              /* まず軽くならす */
-  a=resamplePoly(a,5/z);                               /* 等間隔に */
-  markCorners(a,2,Math.cos(58*Math.PI/180));           /* ならす前に角を決めておく */
-  a=avgSmooth(a,6);                                    /* 角以外をならす */
-  a=dpSimplify(a,3/z);                                 /* 要る点だけ残す */
+  a=resamplePoly(a,(strong?8:5)/z);                    /* 等間隔に */
+  markCorners(a,2,Math.cos((strong?72:58)*Math.PI/180));/* ならす前に角を決めておく(strongは明確な角だけ残す) */
+  a=avgSmooth(a,strong?11:6);                          /* 角以外をならす */
+  a=dpSimplify(a,(strong?4.5:3)/z);                    /* 要る点だけ残す */
   if(a.length<2)a=[{x:pts[0].x,y:pts[0].y},{x:pts[pts.length-1].x,y:pts[pts.length-1].y}];
   return autoHandles(a,CORNER_COS);
 }
-function finishFreeStroke(){
+function finishFreeStroke(strong){
+  clearTimeout(freehandIdleTimer);freehandIdleTimer=null;
   const s=penShape;penShape=null;
   if(!s)return;
   const d=curDoc();
   if(s.pts.length<2){d.shapes=d.shapes.filter(x=>x!==s);renderWire();return;}
-  s.pts=cleanFreehand(s.pts,wz);
+  s.pts=cleanFreehand(s.pts,wz,strong);
   delete s.wp;
   pathNormalize(s);
   wireSel=[s.id];
   save();renderWire();
+}
+/* 描き終えて動かさずに1〜2秒止まっていたら、持ったままでもきれいに整えて確定する */
+function scheduleFreehandIdle(){
+  clearTimeout(freehandIdleTimer);
+  freehandIdleTimer=setTimeout(()=>{
+    freehandIdleTimer=null;
+    if(penShape&&penShape.pts.length>=8){
+      wDrag=null;   /* 指を離す前に確定するので、後から来るpointerup/moveは無視させる */
+      finishFreeStroke(true);
+      toast('ラインを自動できれいに整えました');
+    }
+  },FREEHAND_HOLD_MS);
 }
 /* 開いたパスを曲線ごとポリゴンに落とす(部分的な太さも一緒に運ぶ) */
 function flattenOpenW(s){
@@ -5888,6 +6438,7 @@ function startResize(s,sx,sy){
   return d;
 }
 wireView.addEventListener('pointerdown',e=>{
+  if(e.button===2)return;   /* 右クリックは contextmenu で処理する */
   hidePopups();   /* スタイルパネルは開いたままにする */
   wirePointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
   if(wirePointers.size===2){
@@ -5946,6 +6497,7 @@ wireView.addEventListener('pointerdown',e=>{
     penShape={id:uid(),type:'path',x:p.x,y:p.y,rot:0,fill:null,pts:[{x:0,y:0}],closed:false,w:1,h:1};
     curDoc().shapes.push(penShape);
     wDrag={mode:'free-draw'};
+    scheduleFreehandIdle();
     renderWire();
     return;
   }
@@ -6118,7 +6670,7 @@ wireView.addEventListener('pointermove',e=>{
     const s=penShape;if(!s)return;
     const last=s.pts[s.pts.length-1];
     const q={x:p.x-s.x,y:p.y-s.y};
-    if(Math.hypot(q.x-last.x,q.y-last.y)>1.2/wz){s.pts.push(q);renderWire();}
+    if(Math.hypot(q.x-last.x,q.y-last.y)>1.2/wz){s.pts.push(q);renderWire();scheduleFreehandIdle();}
     return;
   }
   if(wDrag.mode==='wbrush'){
@@ -6287,8 +6839,14 @@ wireView.addEventListener('pointermove',e=>{
       }
       measureWText(s);
     }else{
-      if(sx)s.w=Math.max(10,dl.x*sx);
-      if(sy)s.h=Math.max(10,dl.y*sy);
+      let nw=sx?Math.max(10,dl.x*sx):s.w, nh=sy?Math.max(10,dl.y*sy):s.h;
+      /* Shift+四隅ドラッグ で縦横比を保つ(画像・図形共通) */
+      if(e.shiftKey&&sx&&sy&&wDrag.w0>0&&wDrag.h0>0){
+        const r0=wDrag.w0/wDrag.h0;
+        if(nw/wDrag.w0>=nh/wDrag.h0)nh=nw/r0; else nw=nh*r0;
+      }
+      if(sx)s.w=nw;
+      if(sy)s.h=nh;
       if(s.type==='path'&&wDrag.pts0){
         /* パスは全ての点・ハンドルを比率でスケール */
         const kx=s.w/(wDrag.w0||1),ky=s.h/(wDrag.h0||1);
@@ -6496,8 +7054,11 @@ const presetKey=f=>{
     if(p.w===Math.round(f.w)&&p.h===Math.round(f.h))return p.w+'x'+p.h;
   return '';
 };
-/* ツールバーのサイズ一覧 */
-$('#framePresetList').innerHTML=FRAME_PRESETS.map(g=>
+/* ツールバーのサイズ一覧(先頭にデバイスモックアップ) */
+$('#framePresetList').innerHTML=
+  `<div class="menu-label">モックアップ(端末の外観つき)</div>`+DEVICES.map(d=>
+    `<button class="mi" data-dev="${d.k}">${escXml(d.n)}<span class="px">${d.w} × ${d.h}</span></button>`
+  ).join('')+'<hr>'+FRAME_PRESETS.map(g=>
   `<div class="menu-label">${g.g}</div>`+g.items.map(p=>
     `<button class="mi" data-fw="${p.w}" data-fh="${p.h}" data-fn="${escXml(p.n)}">${escXml(p.n)}<span class="px">${p.w} × ${p.h}</span></button>`
   ).join('')
@@ -6512,11 +7073,35 @@ $('#wireFrameBtn').onclick=e=>openBarMenu($('#frameMenu'),e.currentTarget);
 $('#frameMenu').addEventListener('click',e=>{
   const mi=e.target.closest('.mi');if(!mi)return;
   hideMenus();
-  if(mi.dataset.free)addFrame(800,600,'フレーム',false);
+  if(mi.dataset.dev)addDeviceFrame(mi.dataset.dev);
+  else if(mi.dataset.free)addFrame(800,600,'フレーム',false);
   else addFrame(+mi.dataset.fw,+mi.dataset.fh,mi.dataset.fn,true);
 });
+/* パネルの外観セレクタ(端末モックアップの付け外し) */
+$('#frDevice').innerHTML='<option value="">なし(ただのフレーム)</option>'+DEVICES.map(d=>
+  `<option value="${d.k}">${escXml(d.n)}</option>`).join('');
+$('#frDevice').addEventListener('change',()=>{
+  const f=oneSel();if(!f||!isFrame(f))return;
+  pushUndo();
+  const k=$('#frDevice').value;
+  if(!k)delete f.device;
+  else{const d=DEVICES.find(x=>x.k===k);f.device={kind:d.kind};if(d.r!==undefined)f.r=d.r;}
+  save();renderWire();updateStyleMenu();
+  toast(k?'端末の外観をつけました':'外観をなしにしました');
+});
+/* 大きさ(px)入力 */
+['szW','szH'].forEach(id=>$('#'+id).addEventListener('pointerdown',e=>e.stopPropagation()));
+$('#szW').addEventListener('change',()=>applySizeInput('w'));
+$('#szH').addEventListener('change',()=>applySizeInput('h'));
+$('#szW').addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter')e.target.blur();});
+$('#szH').addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter')e.target.blur();});
+$('#szLink').addEventListener('click',()=>{
+  szLink=!szLink;
+  $('#szLink').classList.toggle('active',szLink);
+  toast(szLink?'縦横比を保ちます(片方を変えるともう片方も追従)':'縦横を自由に指定できます');
+});
 /* パネル内の操作でパネル自体がドラッグされないように止める */
-['frName','frW','frH','frPreset'].forEach(id=>
+['frName','frW','frH','frPreset','frDevice'].forEach(id=>
   $('#'+id).addEventListener('pointerdown',e=>e.stopPropagation()));
 $('#frName').addEventListener('input',()=>{
   const f=oneSel();if(!f||!isFrame(f))return;
@@ -6639,7 +7224,159 @@ $('#wireDupBtn').onclick=dupSel;
 $('#wireDelBtn').onclick=delSel;
 $('#wireUpBtn').onclick=()=>layerSel(1);
 $('#wireDownBtn').onclick=()=>layerSel(-1);
+$('#wireFrontBtn').onclick=()=>layerExtreme(1);
+$('#wireBackBtn').onclick=()=>layerExtreme(-1);
 $('#wireGroupBtn').onclick=groupToggle;
+
+/* ---------- 下のツールバーの表示/非表示 ---------- */
+let wireBarHidden=false;
+try{wireBarHidden=localStorage.getItem('wireBarHidden')==='1';}catch(e){}
+function applyWireBar(){
+  document.body.classList.toggle('wirebar-off',wireBarHidden);
+  $('#wireBarToggleBtn').classList.toggle('active',wireBarHidden);
+}
+function toggleWireBar(){
+  wireBarHidden=!wireBarHidden;
+  try{localStorage.setItem('wireBarHidden',wireBarHidden?'1':'0');}catch(e){}
+  applyWireBar();
+  toast(wireBarHidden?'ツールバーを隠しました(キャンバスを右クリックで操作できます)':'ツールバーを表示しました');
+}
+$('#wireBarToggleBtn').onclick=toggleWireBar;
+applyWireBar();
+
+/* ---------- 右クリックのメニュー(ツールバーと同じ操作) ---------- */
+/* [act, 見出し, アイコン元ボタンID(あれば流用), 使える条件] sep:1で区切り線 */
+const CTX_ITEMS=[
+  {act:'frame', label:'フレーム / モックアップ', btn:'wireFrameBtn'},
+  {act:'line', label:'線を追加', btn:'wireLineBtn'},
+  {act:'rect', label:'四角を追加', btn:'wireRectBtn'},
+  {act:'ellipse', label:'丸を追加', btn:'wireEllipseBtn'},
+  {act:'text', label:'テキストを追加', btn:'wireTextBtn'},
+  {act:'image', label:'画像を追加', btn:'wireImgBtn'},
+  {act:'pen', label:'ペン / 手書き', btn:'wirePenBtn'},
+  {sep:1},
+  {act:'fill', label:'色とスタイル', btn:'wireFillBtn', need:s=>s.any},
+  {act:'front', label:'最前面へ', btn:'wireFrontBtn', need:s=>s.any},
+  {act:'up', label:'前面へ', btn:'wireUpBtn', need:s=>s.any},
+  {act:'down', label:'背面へ', btn:'wireDownBtn', need:s=>s.any},
+  {act:'back', label:'最背面へ', btn:'wireBackBtn', need:s=>s.any},
+  {act:'align', label:'整列', btn:'wireAlignBtn', need:s=>s.any},
+  {act:'group', label:'グループ化 / 解除', btn:'wireGroupBtn', need:s=>s.n>=2},
+  {act:'lock', label:'固定 / 解除', btn:'wireLockBtn', need:s=>s.any},
+  {act:'cut', label:'前面の図形で切り取る', btn:'wireCutBtn', need:s=>s.n>=2},
+  {act:'dup', label:'複製', btn:'wireDupBtn', need:s=>s.any},
+  {act:'delete', label:'削除', btn:'wireDelBtn', need:s=>s.any},
+  {sep:1},
+  {act:'multi', label:'複数選択モード', btn:'wireMultiBtn'},
+  {act:'eraser', label:'消しゴム', btn:'wireEraserBtn'},
+  {act:'ruler', label:'定規 / ガイド', btn:'wireRulerBtn'},
+  {act:'measure', label:'メジャー', btn:'wireMeasureBtn'},
+  {act:'fit', label:'全体を表示', btn:'wireFitBtn'},
+  {sep:1},
+  {act:'undo', label:'元に戻す', btn:'wireUndoBtn', need:s=>s.undo},
+  {act:'redo', label:'やり直す', btn:'wireRedoBtn', need:s=>s.redo},
+  {sep:1},
+  {act:'togglebar', label:'ツールバーを隠す / 表示', icon:'<svg viewBox="0 0 24 24"><rect x="3" y="15" width="18" height="5" rx="1.5"/><path d="M6.5 17.5h3M13 17.5h5"/></svg>'}
+];
+let lastCtx={x:0,y:0};
+/* メニューを作る(アイコンは対応するツールバーボタンから流用) */
+(function buildWireCtx(){
+  const m=$('#wireCtxMenu');
+  m.innerHTML=CTX_ITEMS.map(it=>{
+    if(it.sep)return'<hr>';
+    let icon=it.icon||'';
+    if(!icon&&it.btn){const b=$('#'+it.btn);if(b){const svg=b.querySelector('svg');if(svg)icon=svg.outerHTML;}}
+    return`<button class="mi" data-act="${it.act}">${icon}${escXml(it.label)}</button>`;
+  }).join('');
+})();
+function ctxState(){
+  const ss=selShapes();const h=histOf();
+  return{any:ss.length>0,n:ss.length,undo:h.undo.length>0,redo:h.redo.length>0};
+}
+function updateWireCtx(){
+  const st=ctxState();
+  CTX_ITEMS.forEach(it=>{
+    if(it.sep)return;
+    const el=$(`#wireCtxMenu .mi[data-act="${it.act}"]`);if(!el)return;
+    el.classList.toggle('disabled',!!(it.need&&!it.need(st)));
+    if(it.act==='togglebar')el.lastChild.textContent=wireBarHidden?'ツールバーを表示':'ツールバーを隠す';
+    if(it.act==='group')el.lastChild.textContent=(st.n>=2&&selShapes().every(s=>s.gid&&s.gid===selShapes()[0].gid))?'グループを解除':'グループ化';
+  });
+}
+function openWireCtx(x,y){
+  updateWireCtx();
+  hidePopups();   /* 他のバーメニューは閉じる(スタイルパネルは残す) */
+  const m=$('#wireCtxMenu');
+  m.classList.add('on');
+  const mr=m.getBoundingClientRect();
+  m.style.left=clamp(x,8,innerWidth-mr.width-8)+'px';
+  m.style.top=clamp(y,8,innerHeight-mr.height-8)+'px';
+}
+/* 位置(x,y)に .menu を開く(右クリックからサブメニューを出す用) */
+function openMenuAt(menu,x,y){
+  hideMenus();
+  menu.classList.add('on');
+  const mr=menu.getBoundingClientRect();
+  menu.style.left=clamp(x,8,innerWidth-mr.width-8)+'px';
+  menu.style.top=clamp(y,8,innerHeight-mr.height-8)+'px';
+}
+/* 右クリックメニューの実行(ツールバーが隠れていても動く直接呼び出し) */
+function wireAction(act,x,y){
+  switch(act){
+    case'frame':{
+      document.querySelectorAll('#penMenu .mi').forEach(b=>b.classList.remove('active'));
+      openMenuAt($('#frameMenu'),x,y);break;}
+    case'line':addShape('line');break;
+    case'rect':addShape('rect');break;
+    case'ellipse':addShape('ellipse');break;
+    case'text':addShape('text');break;
+    case'image':$('#wireImgInput').click();break;
+    case'pen':
+      document.querySelectorAll('#penMenu .mi').forEach(b=>b.classList.toggle('active',b.dataset.pen===penKind));
+      openMenuAt($('#penMenu'),x,y);break;
+    case'fill':openStyleMenu();break;
+    case'front':layerExtreme(1);break;
+    case'up':layerSel(1);break;
+    case'down':layerSel(-1);break;
+    case'back':layerExtreme(-1);break;
+    case'align':
+      if(!selShapes().length){toast('整列する図形を選んでください');break;}
+      openMenuAt($('#alignMenu'),x,y);break;
+    case'group':groupToggle();break;
+    case'lock':lockToggle();break;
+    case'cut':cutByFront();break;
+    case'dup':dupSel();break;
+    case'delete':delSel();break;
+    case'multi':$('#wireMultiBtn').onclick();break;
+    case'eraser':
+      document.querySelectorAll('#eraserSizeRow .seg').forEach(b=>b.classList.toggle('active',+b.dataset.es===eraseSize));
+      openMenuAt($('#eraserMenu'),x,y);break;
+    case'ruler':$('#wireRulerBtn').onclick();break;
+    case'measure':$('#wireMeasureBtn').onclick();break;
+    case'fit':fitWire();break;
+    case'undo':undo();break;
+    case'redo':redo();break;
+    case'togglebar':toggleWireBar();break;
+  }
+}
+$('#wireCtxMenu').addEventListener('click',e=>{
+  const mi=e.target.closest('.mi');if(!mi||mi.classList.contains('disabled'))return;
+  const act=mi.dataset.act;
+  /* サブメニューを開くものはメニューを閉じない(openMenuAt側で切替) */
+  if(!['frame','pen','align','eraser'].includes(act))hideMenus();
+  wireAction(act,lastCtx.x,lastCtx.y);
+});
+wireView.addEventListener('contextmenu',e=>{
+  e.preventDefault();
+  /* カーソル下の図形が未選択なら選ぶ(その図形に操作が効くように) */
+  const gid=e.target.closest('g[data-id]');
+  if(gid){
+    const s=shapeById(gid.dataset.id);
+    if(s&&!wireSel.includes(s.id)){wireSel=groupIds(s);selAnchor=null;renderWire();}
+  }
+  lastCtx={x:e.clientX,y:e.clientY};
+  openWireCtx(e.clientX,e.clientY);
+});
 $('#wireLockBtn').onclick=lockToggle;
 $('#wireMultiBtn').onclick=()=>{
   wMulti=!wMulti;
@@ -6663,29 +7400,24 @@ addEventListener('paste',e=>{
     if(it.type.startsWith('image/')){
       e.preventDefault();
       /* 図形を選んでいればその中に、そうでなければ画像として追加 */
-      const ss=selShapes().filter(s=>!s.locked&&canTwoPaints(s));
+      const ss=selShapes().filter(s=>!s.locked&&canImgFill(s));
       if(ss.length)setImgFillFromBlob(it.getAsFile());
       else addImageFromBlob(it.getAsFile());
       return;
     }
   }
 });
-/* 画像を読み込んで縮小し、{url,w,h} を返す */
+/* 画像を読み込んで {url,w,h} を返す。
+   以前は保存容量(localStorage 5MB)のため1200pxへ縮小していたが、
+   今は本体を別保存(IndexedDB)にしたので原寸のまま無劣化で取り込む。
+   模写用のページ全体スクショ(縦2万px級)もぼやけずに扱える */
 function loadImageBlob(blob,cb){
   const reader=new FileReader();
   reader.onload=()=>{
     const img=new Image();
-    img.onload=()=>{
-      /* 大きい画像は縮小して保存容量を抑える */
-      const maxD=1200;
-      const k=Math.min(1,maxD/Math.max(img.width,img.height));
-      const cv=document.createElement('canvas');
-      cv.width=Math.max(1,Math.round(img.width*k));
-      cv.height=Math.max(1,Math.round(img.height*k));
-      cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
-      let url=cv.toDataURL('image/png');
-      if(url.length>700000)url=cv.toDataURL('image/jpeg',0.85);
-      cb({url,w:cv.width,h:cv.height});
+    img.onload=async()=>{
+      const url=await storeImage(reader.result);
+      cb({url,w:img.naturalWidth,h:img.naturalHeight});
     };
     img.onerror=()=>toast('画像を読み込めませんでした');
     img.src=reader.result;
@@ -6707,11 +7439,11 @@ function addImageFromBlob(blob){
 }
 /* 選んだ図形の中に画像を入れる */
 function setImgFillFromBlob(blob){
-  const ss=selShapes().filter(s=>!s.locked&&canTwoPaints(s));
-  if(!ss.length){toast('四角・丸・閉じたパスを選んでください');return;}
+  const ss=selShapes().filter(s=>!s.locked&&canImgFill(s));
+  if(!ss.length){toast('四角・丸・閉じたパス・テキストを選んでください');return;}
   loadImageBlob(blob,r=>{
     pushUndo();
-    ss.forEach(s=>{s.imgFill={src:r.url,iw:r.w,ih:r.h,ox:0,oy:0,scale:1};});
+    ss.forEach(s=>{s.imgFill={src:r.url,iw:r.w,ih:r.h,ox:0,oy:0,scale:1};if(s.type==='text')measureWText(s);});
     save();renderWire();updateStyleMenu();
     toast('図形の中に画像を入れました(位置と大きさを調整できます)');
   });
@@ -6842,6 +7574,8 @@ function setShadow(on){
 function setShProp(k,v,noUndo){
   const ss=selShapes().filter(s=>!s.locked);if(!ss.length)return;
   if(!noUndo)pushUndo();
+  if(k==='ang')v=((v%360)+360)%360;
+  if(k==='dist')v=Math.max(0,v);
   ss.forEach(s=>{if(!s.sh)s.sh={...SH_DEF};s.sh[k]=v;});
   save();renderWire();
 }
@@ -6873,6 +7607,33 @@ function setOlWidth(which,v,noUndo){
 function setLs(px,noUndo){applyTextAttr('ls',clamp(px,-20,60),noUndo);}
 function setItalic(deg,noUndo){applyTextAttr('it',clamp(deg,0,45),noUndo);}
 function setFont(k,noUndo){applyTextAttr('ff',k,noUndo);}
+/* 文字ごとの回転・位置ずらし。全体への既定値という概念が無い(s.rotは図形全体の
+   回転という別の意味なので)ため、文字を選んでいる時だけ効く専用の適用関数にする */
+function applyCharAttr(prop,val,noUndo){
+  const ss=selShapes().filter(s=>!s.locked&&s.type==='text');
+  if(!ss.length)return;
+  if(!ss.some(s=>txRange(s))){toast('文字を選んでから使ってください');return;}
+  if(!noUndo)pushUndo();
+  ss.forEach(s=>{
+    const rng=txRange(s);if(!rng)return;
+    if(!s.cattr)s.cattr=[];
+    for(let i=rng.a;i<=rng.b;i++)s.cattr[i]={...(s.cattr[i]||{}),[prop]:val};
+    measureWText(s);
+  });
+  save();renderWire();
+}
+function resetCharPose(){
+  const ss=selShapes().filter(s=>!s.locked&&s.type==='text');
+  if(!ss.some(s=>txRange(s))){toast('文字を選んでから使ってください');return;}
+  pushUndo();
+  ss.forEach(s=>{
+    const rng=txRange(s);if(!rng||!s.cattr)return;
+    for(let i=rng.a;i<=rng.b;i++)if(s.cattr[i]){delete s.cattr[i].rot;delete s.cattr[i].dx;delete s.cattr[i].dy;}
+    measureWText(s);
+  });
+  save();renderWire();updateStyleMenu();
+  toast('位置・角度をリセットしました');
+}
 /* 文字を選ぶモード */
 function toggleTxPick(){
   const s=oneSel();
@@ -6933,7 +7694,7 @@ function updateStyleMenu(){
     $('#shadowEdit').style.display=sh?'block':'none';
     if(sh){
       const set=(id,v)=>{$('#'+id).value=v;$('#'+id+'V').value=v;};
-      set('shX',Math.round(sh.x));set('shY',Math.round(sh.y));set('shB',Math.round(sh.b));
+      set('shAng',Math.round(sh.ang));set('shDist',Math.round(sh.dist));set('shB',Math.round(sh.b));
       set('shA',Math.round(sh.a*100));
       if(document.activeElement!==$('#shCHex')){$('#shC').value=sh.c;$('#shCHex').value=sh.c.toUpperCase();}
     }
@@ -6973,8 +7734,28 @@ function updateStyleMenu(){
     $('#txItRow').style.display=a.it?'flex':'none';
     document.querySelectorAll('#txItalicRow .seg').forEach(b=>
       b.classList.toggle('active',(b.dataset.it!=='0')===!!a.it));
+    /* 文字ごとの位置・角度(文字を選んでいる時だけ意味を持つ) */
+    $('#txPosLabel').textContent=rng?`文字ごとの位置・角度(選んだ${rng.b-rng.a+1}文字)`:'文字ごとの位置・角度(文字を選んでから)';
+    $('#txPosEdit').style.display=rng?'block':'none';
+    if(rng){
+      $('#txRot').value=clamp(a.rot,-180,180);$('#txRotV').value=a.rot;
+      $('#txDx').value=clamp(a.dx,-60,60);$('#txDxV').value=a.dx;
+      $('#txDy').value=clamp(a.dy,-60,60);$('#txDyV').value=a.dy;
+    }
   }
   $('#radiusSec').style.display=rects.length?'block':'none';
+  /* 大きさ(px)入力: 単一選択の図形・画像のみ(フレーム・テキストは別) */
+  const szS=(ss.length===1&&sizeableShape(ss[0]))?ss[0]:null;
+  $('#sizeSec').style.display=szS?'block':'none';
+  if(szS){
+    const isLine=szS.type==='line';
+    if(document.activeElement!==$('#szW'))$('#szW').value=Math.round(szS.w);
+    if(document.activeElement!==$('#szH'))$('#szH').value=Math.round(szS.h);
+    /* 線は高さの概念が無いので隠す */
+    $('#szHRow').style.display=isLine?'none':'flex';
+    $('#szLinkRow').style.display=isLine?'none':'flex';
+    $('#szLink').classList.toggle('active',szLink);
+  }
   /* フレーム(名前・ピクセル指定・固定・はみ出し) */
   const frames=ss.filter(isFrame);
   $('#frameSec').style.display=frames.length===1?'block':'none';
@@ -6984,12 +7765,13 @@ function updateStyleMenu(){
     if(document.activeElement!==$('#frW'))$('#frW').value=Math.round(f.w);
     if(document.activeElement!==$('#frH'))$('#frH').value=Math.round(f.h);
     $('#frPreset').value=presetKey(f);
+    $('#frDevice').value=deviceKey(f);
     document.querySelectorAll('#frLockRow .seg').forEach(b=>
       b.classList.toggle('active',(b.dataset.frlock==='1')===!!f.sizeLock));
     $('#frClip').classList.toggle('active',f.clip!==false);
   }
   /* 図形の中の画像 */
-  const canImg=ss.filter(canTwoPaints);
+  const canImg=ss.filter(canImgFill);
   const withImg=canImg.filter(s=>s.imgFill);
   $('#imgFillSec').style.display=canImg.length?'block':'none';
   $('#imgFillEdit').style.display=withImg.length?'block':'none';
@@ -7088,8 +7870,12 @@ bindSlider('textFs','textFsV',setFs);
 bindSlider('ptWIn','ptWV',setPointWidth);
 bindSlider('txLs','txLsV',setLs);
 bindSlider('txIt','txItV',setItalic);
-bindSlider('shX','shXV',v=>setShProp('x',v,true));
-bindSlider('shY','shYV',v=>setShProp('y',v,true));
+bindSlider('txRot','txRotV',v=>applyCharAttr('rot',v,true));
+bindSlider('txDx','txDxV',v=>applyCharAttr('dx',v,true));
+bindSlider('txDy','txDyV',v=>applyCharAttr('dy',v,true));
+$('#txPosReset').onclick=resetCharPose;
+bindSlider('shAng','shAngV',v=>setShProp('ang',v,true));
+bindSlider('shDist','shDistV',v=>setShProp('dist',v,true));
 bindSlider('shB','shBV',v=>setShProp('b',Math.max(0,v),true));
 bindSlider('shA','shAV',v=>setShProp('a',clamp(v,0,100)/100,true));
 function setImgFx(k,v,noUndo){
@@ -7167,7 +7953,7 @@ $('#imgFillDel').addEventListener('click',()=>{
   const ss=selShapes().filter(s=>!s.locked&&s.imgFill);
   if(!ss.length){toast('画像が入っていません');return;}
   pushUndo();
-  ss.forEach(s=>delete s.imgFill);
+  ss.forEach(s=>{delete s.imgFill;if(s.type==='text')measureWText(s);});
   save();renderWire();updateStyleMenu();
   toast('画像を外しました');
 });
@@ -7222,9 +8008,47 @@ function placeFillMenu(){
   y=clamp(y,8,Math.max(8,innerHeight-80));
   menu.style.left=x+'px';menu.style.top=y+'px';
 }
+/* ---------- 色とスタイルの折りたたみ(縦に長いのを整理) ---------- */
+const collState={};   /* 開閉状態を覚える(セッション内) */
+function makeColl(id,title,open){
+  const sec=$('#'+id);
+  if(!sec||sec.dataset.coll)return;
+  sec.dataset.coll='1';sec.classList.add('coll');
+  const body=document.createElement('div');body.className='collBody';
+  while(sec.firstChild)body.appendChild(sec.firstChild);
+  const head=document.createElement('div');head.className='collHead';
+  head.innerHTML=`<span>${escXml(title)}</span><svg class="collChev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>`;
+  sec.appendChild(head);sec.appendChild(body);
+  /* window.__collOpenAll があれば全部開いた状態にする(自動テスト・全展開用) */
+  const st=window.__collOpenAll?true:(collState[id]!==undefined?collState[id]:!!open);
+  collState[id]=st;
+  sec.classList.toggle('closed',!st);
+  head.addEventListener('click',()=>{
+    const nowOpen=sec.classList.contains('closed');
+    sec.classList.toggle('closed',!nowOpen);
+    collState[id]=nowOpen;
+  });
+}
+function initColl(){
+  /* [id, 見出し, 既定で開く?] 使用頻度の高いものだけ開いておく */
+  [['gradSec','塗りのスタイル・グラデーション',false],
+   ['strokeSec','枠線・線',true],
+   ['shadowSec','シャドウ',false],
+   ['imgFillSec','図形の中の画像',false],
+   ['aspectSec','元の縦横比に戻す',false],
+   ['imgFxSec','画像の補正',false],
+   ['radiusSec','角の丸み',false],
+   ['refineSec','切り取り後の補正',false],
+   /* テキスト内の詳細(ネスト) */
+   ['txWeightSec','太さ(ウェイト)',false],
+   ['txOlSec','ふちどり',false],
+   ['txPosSec','文字ごとの位置・角度',false]
+  ].forEach(([id,t,o])=>makeColl(id,t,o));
+}
+initColl();
 $('#fillMenu').addEventListener('pointerdown',e=>{
-  /* 操作部品の上では動かさない */
-  if(e.target.closest('button,input,.sw,.gstop,#gradBar'))return;
+  /* 操作部品・折りたたみ見出しの上では動かさない */
+  if(e.target.closest('button,input,select,.sw,.gstop,#gradBar,.collHead'))return;
   const menu=$('#fillMenu');
   const r=menu.getBoundingClientRect();
   const ox=e.clientX-r.left,oy=e.clientY-r.top;
@@ -8113,6 +8937,10 @@ addEventListener('beforeunload',()=>{
   doc=(fromIdb&&fromLs)
     ?((fromLs.savedAt||0)>(fromIdb.savedAt||0)?fromLs:fromIdb)
     :(fromIdb||fromLs||freshDoc());
+  /* 画像本体(別保存)を読み込み、旧形式のインライン画像は別保存へ移す。
+     そのあと、どこからも使われなくなった画像を掃除する */
+  try{await hydrateImages(doc);}catch(e){}
+  gcImages(doc);
   startApp();
   /* 選んだデータをIDBへ確定し、旧localStorageは空けておく(5MB枠の解放) */
   try{
