@@ -534,7 +534,7 @@ body.text-mode #docBar{display:flex;}
 }
 
 /* 削除確認ダイアログ */
-#confirmWrap{position:fixed;inset:0;z-index:80;display:none;align-items:center;justify-content:center;padding:20px;}
+#confirmWrap{position:fixed;inset:0;z-index:95;display:none;align-items:center;justify-content:center;padding:20px;}
 #confirmWrap.on{display:flex;}
 #confirmBack{position:absolute;inset:0;background:rgba(0,0,0,.3);}
 #confirmDlg{
@@ -582,6 +582,46 @@ body.text-mode #docBar{display:flex;}
 /* ツールバーの表示/非表示 */
 body.wirebar-off #wireBar{display:none;}
 body:not(.wire-mode) #wireBarToggleBtn{display:none;}
+body:not(.wire-mode) #wireLayerBtn{display:none;}
+/* レイヤーパネル */
+#layerPanel{
+  position:fixed;top:74px;left:14px;z-index:20;
+  width:230px;max-height:min(60vh,520px);
+  border-radius:16px;display:none;flex-direction:column;overflow:hidden;
+}
+#layerPanel.on{display:flex;}
+body:not(.wire-mode) #layerPanel{display:none;}
+#layerPanelHead{
+  display:flex;align-items:baseline;justify-content:space-between;gap:8px;
+  padding:11px 14px 8px;font-size:12.5px;font-weight:700;color:var(--ink);flex:none;
+}
+#layerCount{font-size:10.5px;font-weight:500;color:var(--ink-soft);}
+#layerList{flex:1;overflow-y:auto;padding:2px 6px 8px;}
+.layerRow{
+  display:flex;align-items:center;gap:6px;
+  padding:6px 6px;border-radius:9px;cursor:pointer;user-select:none;
+  transition:background .12s;
+}
+.layerRow:hover{background:var(--btn-hover);}
+.layerRow.sel{background:color-mix(in srgb,var(--accent) 14%,transparent);}
+.layerRow.drag{opacity:.5;}
+.layerRow .lr-grip{width:14px;height:20px;flex:none;color:var(--ink-soft);opacity:.5;cursor:grab;display:flex;align-items:center;justify-content:center;}
+.layerRow .lr-grip svg{width:10px;height:14px;stroke:currentColor;stroke-width:1.6;fill:none;}
+.layerRow .lr-icon{width:20px;height:20px;flex:none;color:var(--ink-soft);display:flex;align-items:center;justify-content:center;}
+.layerRow .lr-icon svg{width:15px;height:15px;stroke:currentColor;stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round;}
+.layerRow .lr-name{
+  flex:1;min-width:0;font-size:12.5px;font-weight:600;color:var(--ink);
+  background:transparent;border:none;outline:none;padding:3px 4px;border-radius:6px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.layerRow .lr-name:focus{background:var(--btn-active);}
+.layerRow.hidden-shape .lr-name,.layerRow.hidden-shape .lr-icon{opacity:.4;}
+.layerRow .lr-btn{width:24px;height:24px;flex:none;border-radius:7px;color:var(--ink-soft);display:flex;align-items:center;justify-content:center;opacity:.55;transition:opacity .12s,background .12s,color .12s;}
+.layerRow .lr-btn:hover{opacity:1;background:var(--btn-hover);}
+.layerRow .lr-btn.active{opacity:1;color:var(--accent);}
+.layerRow .lr-btn svg{width:14px;height:14px;stroke:currentColor;stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round;}
+.layerRow .lr-dropline{position:absolute;left:6px;right:6px;height:2px;background:var(--accent);border-radius:2px;pointer-events:none;}
+#layerEmpty{padding:20px 14px;font-size:12px;color:var(--ink-soft);text-align:center;}
 /* 右クリックのメニュー: 使えない項目は暗くしてクリック不可 */
 .menu .mi.disabled{opacity:.32;pointer-events:none;color:var(--ink-soft);}
 .menu .mi.disabled svg{opacity:.45;}
@@ -767,10 +807,68 @@ body:not(.wire-mode) #wireBarToggleBtn{display:none;}
   border:1.5px dashed var(--ink-soft);
   font-size:9px;color:var(--ink-soft);display:flex;align-items:center;justify-content:center;
 }
+/* ブランドカラー(保存した色) */
+.brandHead{display:flex;align-items:baseline;justify-content:space-between;padding:4px 12px 0;}
+.brandHead>span:first-child{font-size:11px;font-weight:700;color:var(--ink-soft);letter-spacing:.05em;}
+.brandHint{font-size:9.5px;font-weight:500;color:var(--ink-soft);opacity:.8;}
+.brandEmpty{font-size:10.5px;color:var(--ink-soft);padding:2px 12px 6px;opacity:.75;}
+/* パネル内のグループ表示 */
+.brandGrp{margin-top:3px;}
+.brandGrpHead{display:flex;align-items:center;gap:6px;padding:2px 12px 0;}
+.brandGrpHead .gname{font-size:10.5px;font-weight:700;color:var(--ink-soft);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.brandGrpHead .gadd{font-size:14px;color:var(--accent);cursor:pointer;line-height:1;padding:0 4px;flex:none;}
+.brandGrpHead .gadd:hover{opacity:.7;}
+.brandTools{display:flex;gap:8px;padding:5px 12px 2px;}
+.brandTools button{font-size:10.5px;font-weight:650;color:var(--ink-soft);padding:3px 9px;border-radius:7px;background:var(--btn-hover);}
+.brandTools button:hover{color:var(--ink);}
+/* ブランドカラー管理ダイアログ */
+#brandDlgWrap{position:fixed;inset:0;z-index:80;display:none;align-items:center;justify-content:center;padding:20px;}
+#brandDlgWrap.on{display:flex;}
+#brandDlgBack{position:absolute;inset:0;background:rgba(0,0,0,.3);}
+#brandDlg{position:relative;width:420px;max-width:100%;max-height:86vh;overflow-y:auto;border-radius:20px;padding:22px 20px 16px;animation:menuIn .16s cubic-bezier(.2,.8,.2,1);}
+#brandDlg h2{font-size:16px;font-weight:750;margin-bottom:12px;}
+.bg-grp{border:1px solid var(--panel-border);border-radius:12px;padding:10px 10px 8px;margin-bottom:12px;}
+.bg-grphead{display:flex;gap:8px;align-items:center;margin-bottom:8px;}
+.bg-gname{flex:1;height:30px;padding:0 9px;border:1px solid var(--panel-border);border-radius:8px;background:var(--node-bg);color:var(--ink);font-size:13px;font-weight:700;font-family:inherit;}
+.bg-gname:focus,.bg-cname:focus{outline:none;border-color:var(--accent);}
+.bg-delgrp{font-size:11px;font-weight:600;color:var(--danger);padding:5px 8px;border-radius:7px;flex:none;}
+.bg-delgrp:hover{background:color-mix(in srgb,var(--danger) 12%,transparent);}
+.bg-color{display:flex;gap:8px;align-items:center;margin-bottom:6px;}
+.bg-hex{width:28px;height:28px;flex:none;border:1px solid var(--panel-border);border-radius:50%;padding:0;cursor:pointer;overflow:hidden;-webkit-appearance:none;appearance:none;}
+.bg-hex::-webkit-color-swatch-wrapper{padding:0;}
+.bg-hex::-webkit-color-swatch{border:none;border-radius:50%;}
+.bg-cname{flex:1;min-width:0;height:28px;padding:0 8px;border:1px solid var(--panel-border);border-radius:7px;background:var(--node-bg);color:var(--ink);font-size:12px;font-family:inherit;}
+.bg-hexlbl{font-size:10px;color:var(--ink-soft);font-weight:600;width:60px;flex:none;font-family:monospace;}
+.bg-delcolor{width:24px;height:24px;flex:none;color:var(--ink-soft);border-radius:6px;font-size:15px;}
+.bg-delcolor:hover{color:var(--danger);background:var(--btn-hover);}
+.bg-addcolor{font-size:11px;font-weight:650;color:var(--accent);padding:5px 9px;border-radius:7px;margin-top:2px;}
+.bg-addcolor:hover{background:color-mix(in srgb,var(--accent) 8%,transparent);}
+#brandDlgFoot{display:flex;gap:10px;margin-top:6px;}
+#brandDlgFoot button{flex:1;padding:11px;border-radius:11px;font-size:13px;font-weight:650;transition:all .15s;}
+#brandAddGroup{background:var(--btn-hover);color:var(--ink);}
+#brandAddGroup:hover{background:var(--btn-active);}
+#brandDlgClose{background:var(--accent);color:#fff;}
+#brandDlgClose:hover{filter:brightness(1.08);}
 /* フレームのサイズ一覧(ツールバーのメニュー) */
 #frameMenu{max-height:78vh;overflow-y:auto;min-width:238px;}
 #frameMenu .mi .px,#penMenu .mi .px{margin-left:auto;font-size:10.5px;color:var(--ink-soft);font-weight:600;}
 #penMenu{min-width:216px;}
+/* アイコンライブラリ */
+#iconMenu{max-height:70vh;overflow-y:auto;min-width:216px;}
+#iconGrid{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;padding:4px 6px 6px;}
+.iconBtn{
+  aspect-ratio:1;border-radius:9px;display:flex;align-items:center;justify-content:center;
+  color:var(--ink);transition:background .12s;
+}
+.iconBtn:hover{background:var(--btn-hover);}
+.iconBtn svg{width:19px;height:19px;fill:currentColor;}
+/* UIパーツライブラリ */
+#partsMenu{max-height:78vh;overflow-y:auto;min-width:216px;}
+#partsList .mi span.pv{
+  width:34px;height:22px;flex:none;border-radius:5px;background:var(--btn-hover);
+  display:flex;align-items:center;justify-content:center;overflow:hidden;
+}
+#partsList .mi span.pv svg{width:30px;height:18px;}
 
 /* ============================================================
    モーダル(ヘルプ)
@@ -842,6 +940,9 @@ kbd{
   <div class="spacer"></div>
   <button class="iconbtn" id="wireBarToggleBtn" title="下のツールバーを表示 / 非表示">
     <svg viewBox="0 0 24 24"><rect x="3" y="15" width="18" height="5" rx="1.5"/><path d="M6.5 17.5h3M13 17.5h5M12 4v7M12 11l-3-3M12 11l3-3"/></svg>
+  </button>
+  <button class="iconbtn" id="wireLayerBtn" title="レイヤー一覧">
+    <svg viewBox="0 0 24 24"><path d="M12 3l8 4.5-8 4.5-8-4.5z"/><path d="M4 12l8 4.5 8-4.5M4 16.5l8 4.5 8-4.5"/></svg>
   </button>
   <button class="iconbtn" id="multiBtn" title="2画面(マルチモード)">
     <svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="14" rx="2.5"/><path d="M12 5v14"/></svg>
@@ -925,6 +1026,12 @@ kbd{
   </button>
   <button class="iconbtn" id="wireImgBtn" title="画像を追加(Ctrl+Vで貼り付けも可)">
     <svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="M4.5 17l4.5-4.5 3 3 3.5-3.5 4 4"/></svg>
+  </button>
+  <button class="iconbtn menu-btn" id="wireIconBtn" title="アイコンを追加">
+    <svg viewBox="0 0 24 24"><path d="M12 3l1.6 4.9H19l-4.2 3 1.6 4.9L12 12.8 7.6 15.8l1.6-4.9L5 7.9h5.4z"/></svg>
+  </button>
+  <button class="iconbtn menu-btn" id="wirePartsBtn" title="UIパーツを追加">
+    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="6" rx="1.5"/><rect x="3" y="14" width="8" height="6" rx="1.5"/><path d="M15 17h6"/></svg>
   </button>
   <div class="sep"></div>
   <button class="iconbtn menu-btn" id="wireEraserBtn" title="消しゴム(なぞった所を切り取る)">
@@ -1010,6 +1117,16 @@ kbd{
       <button class="seg" data-frlock="0">自由に変える</button>
     </div>
     <div class="segRow"><button class="seg" id="frClip">はみ出しを隠す</button></div>
+    <div class="menu-label">グリッド(画面には出るが書き出しには含まれません)</div>
+    <div class="segRow" id="gridOnRow">
+      <button class="seg" data-grid="on">あり</button>
+      <button class="seg" data-grid="off">なし</button>
+    </div>
+    <div id="gridEdit">
+      <div class="numRow"><span class="radLbl">列数</span><input type="number" id="gridCols" min="1" max="24" step="1"></div>
+      <div class="numRow"><span class="radLbl">余白</span><input type="number" id="gridMargin" min="0" max="2000" step="1"><span class="unit">px</span></div>
+      <div class="numRow"><span class="radLbl">間隔</span><input type="number" id="gridGutter" min="0" max="500" step="1"><span class="unit">px</span></div>
+    </div>
     <hr>
   </div>
   <div id="sizeSec">
@@ -1017,6 +1134,13 @@ kbd{
     <div class="numRow"><span class="radLbl">幅</span><input type="number" id="szW" min="1" max="20000" step="1"><span class="unit">px</span></div>
     <div class="numRow" id="szHRow"><span class="radLbl">高さ</span><input type="number" id="szH" min="1" max="20000" step="1"><span class="unit">px</span></div>
     <div class="segRow" id="szLinkRow"><button class="seg" id="szLink">縦横比を保つ</button></div>
+    <hr>
+  </div>
+  <div id="posSec">
+    <div class="menu-label">位置・角度</div>
+    <div class="numRow"><span class="radLbl">X</span><input type="number" id="posX" step="1"><span class="unit">px</span></div>
+    <div class="numRow"><span class="radLbl">Y</span><input type="number" id="posY" step="1"><span class="unit">px</span></div>
+    <div class="numRow"><span class="radLbl">回転</span><input type="number" id="posRot" step="1"><span class="unit">°</span></div>
     <hr>
   </div>
   <div class="segRow" id="paintTargetRow">
@@ -1027,6 +1151,9 @@ kbd{
   </div>
   <div class="menu-label" id="fillLabel">塗り / 文字色</div>
   <div class="swatches" id="fillSwatches"></div>
+  <div class="brandHead"><span>ブランドカラー</span><span class="brandHint">＋で保存 / 右クリックで削除</span></div>
+  <div id="brandBox"></div>
+  <input type="color" id="brandPick" style="position:absolute;width:0;height:0;opacity:0;pointer-events:none">
   <div class="radRow" id="hexRow">
     <span class="radLbl">HEX</span>
     <input type="text" id="hexInput" spellcheck="false" autocomplete="off" placeholder="#4A7DE8" maxlength="7">
@@ -1080,12 +1207,23 @@ kbd{
       <button class="seg" data-sh="off">なし</button>
     </div>
     <div id="shadowEdit">
+      <div class="segRow" id="shTabs"></div>
+      <div class="segRow" id="shInnerRow">
+        <button class="seg" data-shi="0">外側</button>
+        <button class="seg" data-shi="1">内側</button>
+      </div>
       <div class="radRow"><span class="radLbl">角度</span><input type="range" id="shAng" min="0" max="359" step="1" value="56"><input type="number" class="radNum" id="shAngV" min="-720" max="720" value="56"></div>
       <div class="radRow"><span class="radLbl">距離</span><input type="range" id="shDist" min="0" max="60" step="1" value="7"><input type="number" class="radNum" id="shDistV" min="0" max="500" value="7"></div>
       <div class="radRow"><span class="radLbl">ぼかし</span><input type="range" id="shB" min="0" max="80" step="1" value="12"><input type="number" class="radNum" id="shBV" min="0" max="300" value="12"></div>
       <div class="radRow"><span class="radLbl">濃さ</span><input type="range" id="shA" min="0" max="100" step="1" value="35"><input type="number" class="radNum" id="shAV" min="0" max="100" value="35"></div>
       <div class="colRow"><span class="radLbl">色</span><input type="color" id="shC" value="#000000"><input type="text" id="shCHex" spellcheck="false" autocomplete="off" maxlength="7" value="#000000"></div>
+      <div class="segRow" id="shDelRow"><button class="seg" id="shDelLayer">このシャドウを削除</button></div>
     </div>
+  </div>
+  <div id="blurSec">
+    <hr>
+    <div class="menu-label">ぼかし</div>
+    <div class="radRow"><span class="radLbl">強さ</span><input type="range" id="blurAmt" min="0" max="40" step="1" value="0"><input type="number" class="radNum" id="blurAmtV" min="0" max="200" value="0"></div>
   </div>
   <div id="imgFillSec">
     <hr>
@@ -1217,6 +1355,18 @@ kbd{
 </div>
 <div id="frameMenu" class="menu glass">
   <div id="framePresetList"></div>
+</div>
+<div id="iconMenu" class="menu glass">
+  <div class="menu-label">アイコンを追加</div>
+  <div id="iconGrid"></div>
+</div>
+<div id="partsMenu" class="menu glass">
+  <div class="menu-label">UIパーツを追加</div>
+  <div id="partsList"></div>
+</div>
+<div id="layerPanel" class="glass">
+  <div id="layerPanelHead"><span>レイヤー</span><span id="layerCount"></span></div>
+  <div id="layerList"></div>
 </div>
 <div id="alignMenu" class="menu glass">
   <div class="menu-label">整列(2つ以上選ぶ / フレーム内なら1つでも)</div>
@@ -1356,6 +1506,7 @@ kbd{
 </div>
 <div id="dColorMenu" class="menu glass">
   <div class="swatches" id="dColorSwatches"></div>
+  <div class="swatches" id="dBrandSwatches"></div>
 </div>
 <div id="dPageMenu" class="menu glass">
   <button class="mi" data-pact="addBefore"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>前にページを追加</button>
@@ -1415,6 +1566,7 @@ kbd{
   <button class="mi" data-act="done"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7"/></svg><span id="doneLabel">完了にする</span></button>
   <hr>
   <div class="swatches" id="swatches"></div>
+  <div class="swatches" id="swatchesBrand"></div>
   <hr>
   <button class="mi danger" data-act="delete"><svg viewBox="0 0 24 24"><path d="M5 7h14M10 7V5.5A1.5 1.5 0 0 1 11.5 4h1A1.5 1.5 0 0 1 14 5.5V7m-7.5 0l.8 12a1.5 1.5 0 0 0 1.5 1.4h6.4a1.5 1.5 0 0 0 1.5-1.4l.8-12"/></svg>削除<span class="kbd">Del</span></button>
 </div>
@@ -1453,6 +1605,8 @@ kbd{
     <div class="shortcut"><span>フレーム(媒体の大きさ)を置く</span><span class="keys"><kbd>ツールバー左端</kbd>＝定型サイズ</span></div>
     <div class="shortcut"><span>端末モックアップ(ノートPC/タブレット/スマホ)</span><span class="keys">フレーム一覧の<kbd>モックアップ</kbd></span></div>
     <div class="shortcut"><span>色とスタイルの項目を開閉</span><span class="keys">見出し(<kbd>シャドウ</kbd>等)をクリック</span></div>
+    <div class="shortcut"><span>ブランドカラーを保存</span><span class="keys">グループの<kbd>＋</kbd> / 右クリックで削除</span></div>
+    <div class="shortcut"><span>ブランドカラーの名前・グループ管理</span><span class="keys"><kbd>編集 / 名前</kbd>ボタン</span></div>
     <div class="shortcut"><span>右クリックで操作メニュー</span><span class="keys">キャンバスを<kbd>右クリック</kbd></span></div>
     <div class="shortcut"><span>最前面 / 最背面へ</span><span class="keys">ツールバー or 右クリック</span></div>
     <div class="shortcut"><span>下のツールバーを隠す / 表示</span><span class="keys">上部の<kbd>ツールバー</kbd>ボタン</span></div>
@@ -1495,6 +1649,16 @@ kbd{
     <div class="shortcut"><span>回転</span><span class="keys"><kbd>上の◯ハンドル</kbd></span></div>
     <div class="shortcut"><span>複製 / 削除</span><span class="keys"><kbd>Ctrl</kbd>＋<kbd>D</kbd> / <kbd>Delete</kbd></span></div>
     <div class="shortcut"><span>テキスト編集</span><span class="keys"><kbd>ダブルクリック</kbd> / <kbd>再タップ</kbd></span></div>
+    <div class="shortcut"><span>位置(X/Y)・回転角を数値で指定</span><span class="keys"><kbd>色とスタイル</kbd>の<kbd>位置・角度</kbd></span></div>
+    <div class="shortcut"><span>他の図形へ吸着(スマートガイド)</span><span class="keys">近づけると自動でピンク線が出る</span></div>
+    <div class="shortcut"><span>レイヤー一覧(表示・固定・並び替え・名前)</span><span class="keys">上部の<kbd>レイヤー</kbd>ボタン</span></div>
+    <div class="shortcut"><span>レイヤーの並び替え</span><span class="keys">行の<kbd>点(グリップ)</kbd>をドラッグ</span></div>
+    <div class="shortcut"><span>アイコンを追加</span><span class="keys">下のツールバーの<kbd>★アイコン</kbd></span></div>
+    <div class="shortcut"><span>UIパーツ(ボタン・入力欄・カード等)を追加</span><span class="keys">下のツールバーの<kbd>UIパーツ</kbd></span></div>
+    <div class="shortcut"><span>フレームにグリッド(列組み)を表示</span><span class="keys">フレームを選んで<kbd>グリッド あり</kbd>(書き出しには含まれません)</span></div>
+    <div class="shortcut"><span>図形全体をぼかす</span><span class="keys"><kbd>色とスタイル</kbd>の<kbd>ぼかし</kbd></span></div>
+    <div class="shortcut"><span>内側シャドウ</span><span class="keys">シャドウの<kbd>内側</kbd>ボタン(四角・丸・画像・閉じたパスのみ)</span></div>
+    <div class="shortcut"><span>シャドウを複数重ねる</span><span class="keys">シャドウの<kbd>＋</kbd>で追加、タブで切替</span></div>
   </div>
 </div>
 
@@ -1571,6 +1735,19 @@ kbd{
     <div id="confirmBtns">
       <button id="confirmCancel">キャンセル</button>
       <button id="confirmOk">削除</button>
+    </div>
+  </div>
+</div>
+
+<!-- ブランドカラー管理ダイアログ -->
+<div id="brandDlgWrap">
+  <div id="brandDlgBack"></div>
+  <div id="brandDlg" class="glass">
+    <h2>ブランドカラーの管理</h2>
+    <div id="brandDlgBody"></div>
+    <div id="brandDlgFoot">
+      <button id="brandAddGroup">＋ グループを追加</button>
+      <button id="brandDlgClose">閉じる</button>
     </div>
   </div>
 </div>
@@ -3526,11 +3703,14 @@ function makeWireSvg(shapes,box,pad,bgMode){
   const W=Math.max(1,Math.round((x2-x1)+pad*2)),H=Math.max(1,Math.round((y2-y1)+pad*2));
   let defs='',body='';
   shapes.forEach(sp=>{
+    if(sp.hidden)return;
     defs+=gradDefs(sp);
     if(isFrame(sp))defs+=frameClipDefs(sp);
-    if(sp.sh)defs+=shadowDefs(sp);
+    if(hasSh(sp))defs+=shadowDefs(sp);
+    if(sp.blur)defs+=blurDefs(sp);
   });
   shapes.forEach((sp,i)=>{
+    if(sp.hidden)return;
     const f=clipFrameAt(shapes,i);
     const one=withShadow(sp,shapeSvg(sp));
     body+=f?`<g clip-path="url(#fc_${f.id})">${one}</g>`:one;
@@ -3813,6 +3993,7 @@ async function makeWireCanvas(w,opt){
     return cg;
   };
   shapes.forEach((s,i)=>{
+    if(s.hidden)return;   /* レイヤーパネルで非表示にした図形は書き出しにも含めない */
     ctx.save();
     /* フレームの中の図形は、はみ出しを切り取ってから描く
        (範囲を絞ったときも、フレームと中身の並び順は保ったまま渡している) */
@@ -3825,13 +4006,21 @@ async function makeWireCanvas(w,opt){
     }
     ctx.translate(s.x,s.y);
     ctx.rotate((s.rot||0)*Math.PI/180);
-    /* シャドウ(Canvasの影は変形の影響を受けないので、書き出し倍率を自分で掛ける) */
+    if(s.blur)ctx.filter=`blur(${s.blur*scale}px)`;   /* 図形全体のぼかし(書き出し倍率ぶん自分で掛ける) */
+    /* シャドウ(複数・内側対応。Canvasの影は変形の影響を受けないので、書き出し倍率を自分で掛ける)
+       対応図形(MULTI_SHADOW_TYPES)以外は従来どおり最初の1つだけを外側シャドウとして扱う */
+    const shArrAll=shList(s);
+    const shMultiOk=MULTI_SHADOW_TYPES(s);
+    const shOuterAll=shArrAll.filter(l=>!(shMultiOk&&l.inner));
+    const shInnerAll=shMultiOk?shArrAll.filter(l=>l.inner):[];
+    const shReal=shOuterAll.length?shOuterAll[shOuterAll.length-1]:null;   /* 最後の外側=既存の1枚描画に乗せる */
+    const shExtraOuter=shOuterAll.length>1?shOuterAll.slice(0,-1):[];      /* それ以前の外側は先に下描き */
     let shOn=false;
     const shSet=()=>{
-      if(!s.sh)return;
-      const off=shOffset(s.sh);
-      ctx.shadowColor=rgba(s.sh.c,s.sh.a);
-      ctx.shadowBlur=s.sh.b*scale;
+      if(!shReal)return;
+      const off=shOffset(shReal);
+      ctx.shadowColor=rgba(shReal.c,shReal.a);
+      ctx.shadowBlur=shReal.b*scale;
       ctx.shadowOffsetX=off.x*scale;
       ctx.shadowOffsetY=off.y*scale;
       shOn=true;
@@ -3842,6 +4031,17 @@ async function makeWireCanvas(w,opt){
       ctx.shadowColor='transparent';ctx.shadowBlur=0;ctx.shadowOffsetX=0;ctx.shadowOffsetY=0;
       shOn=false;
     };
+    if(shExtraOuter.length){
+      const p2s=shapeLocalPath2D(s),paintExtra=paintCv(s,'fill')||'#000';
+      shExtraOuter.forEach(sh2=>{
+        ctx.save();
+        const off2=shOffset(sh2);
+        ctx.shadowColor=rgba(sh2.c,sh2.a);ctx.shadowBlur=sh2.b*scale;
+        ctx.shadowOffsetX=off2.x*scale;ctx.shadowOffsetY=off2.y*scale;
+        ctx.fillStyle=paintExtra;ctx.fill(p2s);
+        ctx.restore();
+      });
+    }
     shSet();
     ctx.lineWidth=strokeW(s);
     ctx.lineCap='round';
@@ -3877,6 +4077,21 @@ async function makeWireCanvas(w,opt){
       doFill(()=>ctx.fill(p2));
       drawImgFill(p2);
       if(!s.noStroke&&strokeW(s)>0)doStroke(spaint,sa,()=>ctx.stroke(p2));
+    }else if(s.type==='icon'){
+      const ic=iconById(s.iconId);
+      if(ic){
+        const p2=new Path2D(ic.d),isw=s.w/24,ish=s.h/24;
+        ctx.save();ctx.translate(-s.w/2,-s.h/2);ctx.scale(isw,ish);
+        ctx.globalAlpha=base*fa;ctx.fillStyle=paint||tc.ink;
+        ctx.fill(p2,'evenodd');
+        ctx.restore();shClear();
+        if(!s.noStroke&&strokeW(s)>0){
+          ctx.save();ctx.translate(-s.w/2,-s.h/2);ctx.scale(isw,ish);
+          ctx.globalAlpha=base*sa;ctx.strokeStyle=spaint;ctx.lineWidth=strokeW(s)/((isw+ish)/2||1);
+          ctx.stroke(p2);
+          ctx.restore();
+        }
+      }
     }else if(s.type==='path'&&hasVarW(s)&&!s.noStroke){
       /* 太さが変わる線は輪郭を塗る(画面と同じ計算) */
       ctx.globalAlpha=base*fa;
@@ -3928,7 +4143,7 @@ async function makeWireCanvas(w,opt){
           passes.forEach(ps=>{
             ctx.strokeStyle=ps.p;ctx.lineWidth=ps.w;ctx.lineJoin='round';ctx.miterLimit=2;
             ctx.globalAlpha=base*ps.a;
-            if(!firstDone||!s.sh){ctx.strokeText(c.ch,0,0);firstDone=true;}
+            if(!firstDone||!shReal){ctx.strokeText(c.ch,0,0);firstDone=true;}
             else{
               ctx.save();
               ctx.shadowColor='transparent';ctx.shadowBlur=0;ctx.shadowOffsetX=0;ctx.shadowOffsetY=0;
@@ -3942,7 +4157,7 @@ async function makeWireCanvas(w,opt){
       /* 文字色 or 図形の中の画像。ふちどりが無い時だけ影を付ける(ふちどりが既に影を出している場合は重ねない) */
       ctx.globalAlpha=base*fa;
       const withSh=fn=>{
-        if(!passes.length||!s.sh){fn();return;}
+        if(!passes.length||!shReal){fn();return;}
         ctx.save();
         ctx.shadowColor='transparent';ctx.shadowBlur=0;ctx.shadowOffsetX=0;ctx.shadowOffsetY=0;
         fn();ctx.restore();
@@ -3959,6 +4174,29 @@ async function makeWireCanvas(w,opt){
         });
       }
       ctx.globalAlpha=base;
+    }
+    /* 内側シャドウ(あれば、通常描画の上に重ねる)。「図形の輪郭 + 大きな外枠」を
+       逆方向にずらして穴として塗ることで、影が内側からしか見えないようにする定番の手法 */
+    if(shInnerAll.length){
+      const p2s=shapeLocalPath2D(s),BIG=Math.max(s.w,s.h,1)*3+500;
+      ctx.save();
+      ctx.clip(p2s);
+      shInnerAll.forEach(sh2=>{
+        ctx.save();
+        const off2=shOffset(sh2);
+        ctx.shadowColor=rgba(sh2.c,sh2.a);
+        ctx.shadowBlur=sh2.b*scale;
+        ctx.shadowOffsetX=off2.x*scale;ctx.shadowOffsetY=off2.y*scale;
+        /* 「大きな外枠 - 図形そのものの穴」を塗ると、その影(shadowOffsetぶんずれた
+           コピー)は図形の内側では穴の反対側にしか映らない=内側シャドウになる */
+        const composite=new Path2D();
+        composite.rect(-BIG,-BIG,BIG*2,BIG*2);
+        composite.addPath(p2s);
+        ctx.globalAlpha=1;ctx.fillStyle='#000';
+        ctx.fill(composite,'evenodd');
+        ctx.restore();
+      });
+      ctx.restore();
     }
     ctx.restore();
   });
@@ -4010,6 +4248,8 @@ let rulersOn=false;               /* 定規とガイド(ドキュメントごと
 let measureMode=false,measure=null;  /* メジャー(pxを測る) */
 let selAnchor=null;               /* 選択中のパスの点 {sid,i} */
 let wDrag=null,wLpTimer=null;
+let smartGuideV=null,smartGuideH=null;   /* 移動中に他の図形へ吸着した位置(表示用の補助線) */
+let layerPanelOpen=false;
 let lastTap={t:0,x:0,y:0};        /* 独自のダブルクリック判定 */
 const wirePointers=new Map();
 
@@ -4504,7 +4744,7 @@ const GRAD_OK=s=>true;
 /* 枠線・線の太さ(px)。画像は既定0(枠なし) */
 const strokeW=s=>s.sw===undefined?(s.type==='image'?0:2):s.sw;
 /* 塗りと枠線の2色を持てる図形 */
-const canTwoPaints=s=>s.type==='rect'||s.type==='frame'||s.type==='ellipse'||(s.type==='path'&&s.closed);
+const canTwoPaints=s=>s.type==='rect'||s.type==='frame'||s.type==='ellipse'||s.type==='icon'||(s.type==='path'&&s.closed);
 /* 図形の中の画像はテキストにも入れられる(文字の形で画像を切り抜く)。
    枠線あり/なし・角丸など他のcanTwoPaints用途とは別の判定にする */
 const canImgFill=s=>canTwoPaints(s)||s.type==='text';
@@ -4700,6 +4940,8 @@ function cloneShape(s){
   if(s.wp)c.wp=s.wp.slice();
   if(s.cattr)c.cattr=s.cattr.map(a=>a?{...a}:a);
   if(s.sh)c.sh={...s.sh};
+  if(s.shadows)c.shadows=s.shadows.map(l=>({...l}));
+  if(s.grid)c.grid={...s.grid};
   if(s.device)c.device={...s.device};
   if(s.imgFx)c.imgFx={...s.imgFx};
   if(s.olg)c.olg=JSON.parse(JSON.stringify(s.olg));
@@ -4707,13 +4949,19 @@ function cloneShape(s){
   if(s.smemo)c.smemo={...s.smemo};
   return c;
 }
-/* ---------- シャドウ ----------
-   s.sh={ang,dist,b,c,a}(角度・距離px・ぼかし・色・濃さ)。角度・距離で指定するのは
-   「光がどの向きからどれだけ離れて影を落とすか」という実際の影の付き方に合わせるため。
-   SVGはfeDropShadowのフィルター。図形が回転していても影の向きは画面基準のまま
-   (Canvas書き出しと同じ挙動)にするため、オフセットを図形の回転ぶん逆回しにして渡す */
+/* ---------- シャドウ(複数・内側対応) ----------
+   s.shadows=[{ang,dist,b,c,a,inner}, ...](角度・距離px・ぼかし・色・濃さ・内側か)。
+   角度・距離で指定するのは「光がどの向きからどれだけ離れて影を落とすか」という
+   実際の影の付き方に合わせるため。旧形式 s.sh(単一のオブジェクト)は読み取り時に
+   自動で配列扱いする(shList)。書き込み(編集操作)の際に s.shadows へ正式に移す。
+   図形が回転していても影の向きは画面基準のまま(Canvas書き出しと同じ挙動)に
+   するため、オフセットを図形の回転ぶん逆回しにして渡す。
+   内側シャドウ・2つ目以降のシャドウは、塗りつぶしの輪郭がはっきりしている
+   図形(四角・丸・画像・閉じたパス)だけに対応する(線・開いたパス・テキストは
+   輪郭が不定/文字ごとの合成になるため、従来どおり1つの外側シャドウのみ) */
 const SH_DEF={ang:56,dist:7,b:12,c:'#000000',a:0.35};
-/* 万一migrateSh前の旧形式(x/yのみ)が来てもNaNにならないようにする */
+const MULTI_SHADOW_TYPES=s=>s.type==='rect'||s.type==='ellipse'||s.type==='image'||(s.type==='path'&&s.closed);
+/* 万一旧形式(x/yのみ)が来てもNaNにならないようにする */
 const shOffset=sh=>{
   if(sh.dist===undefined&&sh.x!==undefined)return{x:sh.x,y:sh.y};
   const r=(sh.ang||0)*Math.PI/180;
@@ -4733,21 +4981,78 @@ function migrateOl(s){
     delete s.ol;
   }
 }
+/* 読み取り専用: そのまま配列で返す(旧形式は都度ラップするだけで doc は書き換えない) */
+const shList=s=>s.shadows?s.shadows:(s.sh?[s.sh]:[]);
+const hasSh=s=>shList(s).length>0;
+/* 編集操作の起点: s.shadows に正式移行してから返す(以後はこちらを書き換える) */
+function ensureShadows(s){
+  if(!s.shadows){
+    s.shadows=s.sh?[{...s.sh}]:[];
+    delete s.sh;
+  }
+  return s.shadows;
+}
 function shadowDefs(s){
-  const sh=s.sh;
-  const off=shOffset(sh);
-  const o=rotV(off,-(s.rot||0));
-  const R=Math.max(s.w,s.h,s.fs||0)/2+sh.dist+sh.b*2+40;
-  return `<filter id="wsh_${s.id}" filterUnits="userSpaceOnUse" x="${-R}" y="${-R}" width="${R*2}" height="${R*2}"><feDropShadow dx="${o.x}" dy="${o.y}" stdDeviation="${sh.b/2}" flood-color="${sh.c}" flood-opacity="${sh.a}"/></filter>`;
+  const layers=shList(s);
+  if(!layers.length)return'';
+  const supported=MULTI_SHADOW_TYPES(s);
+  const outerLayers=layers.filter(l=>!(supported&&l.inner));
+  const innerLayers=supported?layers.filter(l=>l.inner):[];
+  const R=Math.max(s.w,s.h,s.fs||0)/2+Math.max(...layers.map(l=>(l.dist||0)+(l.b||0)*2))+40;
+  let defs='';const mergeNodes=[];
+  outerLayers.forEach((sh,idx)=>{
+    const o=rotV(shOffset(sh),-(s.rot||0));
+    const id=`wsho_${s.id}_${idx}`;
+    defs+=`<feGaussianBlur in="SourceAlpha" stdDeviation="${sh.b/2}" result="${id}_b"/>`
+      +`<feOffset in="${id}_b" dx="${o.x}" dy="${o.y}" result="${id}_o"/>`
+      +`<feFlood flood-color="${sh.c}" flood-opacity="${sh.a}" result="${id}_c"/>`
+      +`<feComposite in="${id}_c" in2="${id}_o" operator="in" result="${id}"/>`;
+    mergeNodes.push(id);
+  });
+  let base='SourceGraphic';
+  if(mergeNodes.length){
+    base=`wshbase_${s.id}`;
+    defs+=`<feMerge result="${base}">${mergeNodes.map(id=>`<feMergeNode in="${id}"/>`).join('')}<feMergeNode in="SourceGraphic"/></feMerge>`;
+  }
+  innerLayers.forEach((sh,idx)=>{
+    const o=rotV(shOffset(sh),-(s.rot||0));
+    const id=`wshi_${s.id}_${idx}`;
+    defs+=`<feOffset in="${base}" dx="${o.x}" dy="${o.y}" result="${id}_of"/>`
+      +`<feGaussianBlur in="${id}_of" stdDeviation="${sh.b/2}" result="${id}_bl"/>`
+      +`<feComposite in="${base}" in2="${id}_bl" operator="out" result="${id}_inv"/>`
+      +`<feFlood flood-color="${sh.c}" flood-opacity="${sh.a}" result="${id}_col"/>`
+      +`<feComposite in="${id}_col" in2="${id}_inv" operator="in" result="${id}_sh"/>`
+      +`<feComposite in="${id}_sh" in2="${base}" operator="over" result="${id}_out"/>`;
+    base=`${id}_out`;
+  });
+  return`<filter id="wsh_${s.id}" filterUnits="userSpaceOnUse" x="${-R}" y="${-R}" width="${R*2}" height="${R*2}">${defs}</filter>`;
+}
+/* ぼかしフィルター(s.blur=px)。シャドウとは独立した、図形全体への単純なガウスぼかし */
+function blurDefs(s){
+  if(!s.blur)return'';
+  const R=Math.max(s.w,s.h,s.fs||0)/2+s.blur*3+40;
+  return`<filter id="wbl_${s.id}" filterUnits="userSpaceOnUse" x="${-R}" y="${-R}" width="${R*2}" height="${R*2}"><feGaussianBlur stdDeviation="${s.blur/2}"/></filter>`;
 }
 /* 図形の中身だけをフィルターの掛かったgで包む(選択枠などには掛けない)。
-   フィルターは変形を持たない内側のgに付ける(外側だと座標系の解釈が紛れるため) */
+   フィルターは変形を持たない内側のgに付ける(外側だと座標系の解釈が紛れるため)。
+   ぼかし→シャドウの順に重ねる(ぼかした形にシャドウが付く自然な見え方) */
 function withShadow(s,svg){
-  if(!s.sh)return svg;
+  if(!s.blur&&!hasSh(s))return svg;
   const i=svg.indexOf('>');
-  return svg.slice(0,i+1)+`<g filter="url(#wsh_${s.id})">`+svg.slice(i+1,svg.length-4)+'</g></g>';
+  const head=svg.slice(0,i+1);
+  let content=svg.slice(i+1,svg.length-4);
+  if(s.blur)content=`<g filter="url(#wbl_${s.id})">${content}</g>`;
+  if(hasSh(s))content=`<g filter="url(#wsh_${s.id})">${content}</g>`;
+  return head+content+'</g>';
 }
 /* 塗りの色 / 枠線の色 */
+/* 図形の局所座標での輪郭Path2D(Canvas書き出しで、複数/内側シャドウの土台に使う。
+   対象は MULTI_SHADOW_TYPES と同じ: 四角・丸・画像・閉じたパス) */
+function shapeLocalPath2D(s){
+  if(s.type==='ellipse'){const p=new Path2D();p.ellipse(0,0,s.w/2,s.h/2,0,0,Math.PI*2);return p;}
+  if(s.type==='path'&&s.closed)return new Path2D(pathD(s));
+  const p=new Path2D();p.roundRect(-s.w/2,-s.h/2,s.w,s.h,isRectish(s)?rectRadii(s):0);return p;
+}
 const paintOf=s=>s.grad?`url(#wg_${s.id})`:(s.fill||null);
 const strokePaintOf=s=>s.sgrad?`url(#wgs_${s.id})`:(s.sc||null);
 /* 線・開いたパス・画像の枠は「主の色」がそのまま線の色になる */
@@ -4763,6 +5068,36 @@ const paintsStroke=s=>s.type==='line'||s.type==='image'||(s.type==='path'&&!s.cl
 const DEV_COL={body:'#23262D',body2:'#0E1014',btn:'#3C414B',island:'#0A0B0E',bar:'#4A4F59',
   out:'#2C313B',winBar:'#EDEFF2',winLine:'#D3D7DE',winAddr:'#FFFFFF',
   tl:['#FF5F57','#FEBC2E','#28C840']};
+/* ============================================================
+   アイコンライブラリ
+   viewBox 24x24 の塗りつぶしパス(fill-rule=evenodd)。type:'icon' の図形として
+   置く(パス編集はできないが、色・大きさ・回転・シャドウ等は他の図形と共通)。
+   ============================================================ */
+const ICONS=[
+  {id:'home',n:'ホーム',d:'M12 2.5L2 11h3v10h6v-6h2v6h6V11h3z'},
+  {id:'search',n:'検索',d:'M3 10.5A7.5 7.5 0 1 0 18 10.5A7.5 7.5 0 1 0 3 10.5ZM5.2 10.5A5.3 5.3 0 1 0 15.8 10.5A5.3 5.3 0 1 0 5.2 10.5ZM14.44 16.56L19.94 22.06L22.06 19.94L16.56 14.44Z'},
+  {id:'heart',n:'お気に入り',d:'M12 21S3 14.5 3 8.5A5.2 5.2 0 0 1 12 5a5.2 5.2 0 0 1 9 3.5C21 14.5 12 21 12 21Z'},
+  {id:'star',n:'星',d:'M12 2L14.47 8.6L21.51 8.91L15.99 13.3L17.88 20.09L12 16.2L6.12 20.09L8.01 13.3L2.49 8.91L9.53 8.6Z'},
+  {id:'check',n:'チェック',d:'M2.94 14.06L8.44 19.56L10.56 17.44L5.06 11.94ZM9.06 18.06L21.06 6.06L18.94 3.94L6.94 15.94Z'},
+  {id:'plus',n:'プラス',d:'M10.5 3H13.5V21H10.5ZM3 10.5H21V13.5H3Z'},
+  {id:'close',n:'閉じる',d:'M3.44 5.56L18.44 20.56L20.56 18.44L5.56 3.44ZM18.44 3.44L3.44 18.44L5.56 20.56L20.56 5.56Z'},
+  {id:'arrowRight',n:'矢印(右)',d:'M3 10.5v3h12v5L21 12l-6-6.5v5H3Z'},
+  {id:'arrowLeft',n:'矢印(左)',d:'M21 10.5v3H9v5L3 12l6-6.5v5h12Z'},
+  {id:'arrowUp',n:'矢印(上)',d:'M10.5 21h3V9h5L12 3L6 9h5Z'},
+  {id:'arrowDown',n:'矢印(下)',d:'M10.5 3h3v12h5L12 21L6 15h5Z'},
+  {id:'chevronDown',n:'シェブロン',d:'M3.94 10.06L10.94 17.06L13.06 14.94L6.06 7.94ZM13.06 17.06L20.06 10.06L17.94 7.94L10.94 14.94Z'},
+  {id:'mail',n:'メール',d:'M4.5 5H19.5A2 2 0 0 1 21.5 7V17A2 2 0 0 1 19.5 19H4.5A2 2 0 0 1 2.5 17V7A2 2 0 0 1 4.5 5ZM3.5 6.5L12 13l8.5-6.5'},
+  {id:'bell',n:'通知',d:'M12 2.5a2 2 0 0 1 2 2v.6c3 .9 5 3.7 5 7.4v3l2 3H3l2-3v-3c0-3.7 2-6.5 5-7.4V4.5a2 2 0 0 1 2-2ZM9 20a3 3 0 0 0 6 0Z'},
+  {id:'trash',n:'ゴミ箱',d:'M5 7h14l-1.2 13.2A2 2 0 0 1 15.8 22H8.2a2 2 0 0 1-2-1.8L5 7ZM9 4.5A1.5 1.5 0 0 1 10.5 3h3A1.5 1.5 0 0 1 15 4.5V7H9ZM3 7h18v2H3Z'},
+  {id:'lock',n:'鍵',d:'M7 10.5H17A2.5 2.5 0 0 1 19.5 13V18.5A2.5 2.5 0 0 1 17 21H7A2.5 2.5 0 0 1 4.5 18.5V13A2.5 2.5 0 0 1 7 10.5ZM8 10.5V8a4 4 0 0 1 8 0v2.5H13V8a1 1 0 0 0-2 0v2.5Z'},
+  {id:'user',n:'ユーザー',d:'M7.7 7.8A4.3 4.3 0 1 0 16.3 7.8A4.3 4.3 0 1 0 7.7 7.8ZM4 21c0-4.4 3.6-7.5 8-7.5s8 3.1 8 7.5Z'},
+  {id:'cart',n:'カート',d:'M3 4h2.4l1 2H20a1 1 0 0 1 1 1.2l-1.6 7A2 2 0 0 1 17.4 16H9a2 2 0 0 1-1.9-1.4L4.6 6H3ZM9 19a1.6 1.6 0 1 1 0 3.2A1.6 1.6 0 0 1 9 19ZM17 19a1.6 1.6 0 1 1 0 3.2A1.6 1.6 0 0 1 17 19Z'},
+  {id:'chat',n:'チャット',d:'M5.5 4H18.5A3 3 0 0 1 21.5 7V14A3 3 0 0 1 18.5 17H5.5A3 3 0 0 1 2.5 14V7A3 3 0 0 1 5.5 4ZM8 20.5V17h-.5L4 20.5Z'},
+  {id:'download',n:'ダウンロード',d:'M10.5 3h3v9h4L12 18l-5.5-6h4Z M4 20h16v2H4Z'},
+  {id:'settings',n:'設定',d:'M22 12L19.76 15.21L19.07 19.07L15.21 19.76L12 22L8.79 19.76L4.93 19.07L4.24 15.21L2 12L4.24 8.79L4.93 4.93L8.79 4.24L12 2L15.21 4.24L19.07 4.93L19.76 8.79ZM4.8 12A7.2 7.2 0 1 0 19.2 12A7.2 7.2 0 1 0 4.8 12Z'},
+  {id:'image',n:'画像',d:'M4.5 4H19.5A2 2 0 0 1 21.5 6V18A2 2 0 0 1 19.5 20H4.5A2 2 0 0 1 2.5 18V6A2 2 0 0 1 4.5 4ZM6.2 9.5A1.8 1.8 0 1 0 9.8 9.5A1.8 1.8 0 1 0 6.2 9.5ZM4.5 18l5-6 3.5 4 2.5-3 5.5 5Z'}
+];
+const iconById=id=>ICONS.find(i=>i.id===id);
 /* ツールバー・パネルで使うモックアップ一覧(端末の実物イメージ。1種ずつ) */
 const DEVICES=[
   {k:'phone', kind:'phone', n:'スマホ',    w:390, h:844, r:44},
@@ -4879,6 +5214,11 @@ function shapeSvg(s){
     if(!im)return`<g data-id="${s.id}" ${tr}>${el} fill="${fill}" fill-opacity="${fa}" stroke="${stroke}" stroke-opacity="${sa}" stroke-width="${sw}"/></g>`;
     return`<g data-id="${s.id}" ${tr}>${el} fill="${fill}" fill-opacity="${fa}"/>${im}${el} fill="none" stroke="${stroke}" stroke-opacity="${sa}" stroke-width="${sw}"/></g>`;
   }
+  if(s.type==='icon'){
+    const ic=iconById(s.iconId);
+    const isw=s.w/24,ish=s.h/24,swLocal=sw/((isw+ish)/2||1);
+    return`<g data-id="${s.id}" ${tr}><rect x="${-s.w/2}" y="${-s.h/2}" width="${s.w}" height="${s.h}" fill="transparent"/><g transform="translate(${-s.w/2} ${-s.h/2}) scale(${isw} ${ish})"><path d="${ic?ic.d:''}" fill="${fill}" fill-opacity="${fa}" fill-rule="evenodd" stroke="${stroke}" stroke-opacity="${sa}" stroke-width="${swLocal}"/></g></g>`;
+  }
   if(s.type==='path'){
     const d=pathD(s);
     const open=!s.closed;
@@ -4941,6 +5281,22 @@ function frameLabelSvg(f){
     <rect x="${-f.w/2}" y="${y-fs}" width="${f.w}" height="${fs+4/wz}" fill="transparent"/>
     <text x="${-f.w/2}" y="${y}" font-size="${fs}" font-weight="700" fill="${on?'var(--accent)':'var(--ink-soft)'}" style="user-select:none">${escXml(f.name||'フレーム')}<tspan dx="${8/wz}" font-weight="600" opacity=".7">${Math.round(f.w)} × ${Math.round(f.h)}</tspan></text>
   </g>`;
+}
+/* グリッド(列組みの目安)。f.grid={on,cols,margin,gutter,color}。
+   画面編集の補助線として表示するだけで、PNG/SVG書き出しには含めない(定規・ガイドと同じ扱い) */
+function frameGridSvg(f){
+  const g=f.grid;if(!g||!g.on)return'';
+  const cols=Math.max(1,Math.round(g.cols||12)),margin=Math.max(0,g.margin||0),gutter=Math.max(0,g.gutter===undefined?20:g.gutter);
+  const contentW=f.w-margin*2;
+  const colW=(contentW-(cols-1)*gutter)/cols;
+  if(colW<=0)return'';
+  const col=g.color||'#4A7DE8';
+  let bands='';
+  for(let i=0;i<cols;i++){
+    const x=-f.w/2+margin+i*(colW+gutter);
+    bands+=`<rect x="${x}" y="${-f.h/2}" width="${colW}" height="${f.h}" fill="${col}" opacity="0.14"/>`;
+  }
+  return`<g transform="translate(${f.x} ${f.y}) rotate(${f.rot||0})" pointer-events="none">${bands}</g>`;
 }
 /* はみ出しを切り取るための形(ワールド座標。回転もそのまま入れる) */
 function frameClipDefs(f){
@@ -5030,14 +5386,16 @@ const txRange=s=>(txSel&&txSel.sid===s.id&&txSel.b>=txSel.a)?txSel:null;
 function renderWire(){
   const d=curDoc();if(!d.shapes)return;
   wireViewApply();
-  wireSel=wireSel.filter(id=>d.shapes.some(s=>s.id===id));
+  wireSel=wireSel.filter(id=>{const s=d.shapes.find(x=>x.id===id);return s&&!s.hidden;});
   let html='';
   let defs='';
-  d.shapes.forEach(s=>{defs+=gradDefs(s);if(isFrame(s))defs+=frameClipDefs(s);if(s.sh)defs+=shadowDefs(s);});
+  d.shapes.forEach(s=>{if(s.hidden)return;defs+=gradDefs(s);if(isFrame(s))defs+=frameClipDefs(s);if(hasSh(s))defs+=shadowDefs(s);if(s.blur)defs+=blurDefs(s);});
   if(defs)html+=`<defs>${defs}</defs>`;
   /* フレームの中の図形は、変形を持たないgで包んでから切り取る
-     (clip-pathは要素自身のtransformの影響を受けるため、直接付けるとずれる) */
+     (clip-pathは要素自身のtransformの影響を受けるため、直接付けるとずれる)。
+     非表示(レイヤーパネル)の図形は画面にも書き出しにも出さない */
   d.shapes.forEach((s,i)=>{
+    if(s.hidden)return;
     const f=clipFrameAt(d.shapes,i);
     const one=withShadow(s,shapeSvg(s));
     html+=f?`<g clip-path="url(#fc_${f.id})">${one}</g>`:one;
@@ -5047,6 +5405,8 @@ function renderWire(){
   d.shapes.forEach(s=>{if(isFrame(s)&&s.device){
     html+=`<g transform="translate(${s.x} ${s.y}) rotate(${s.rot||0})" pointer-events="none">${devPartsSvg(deviceGeom(s).front)}</g>`;
   }});
+  /* グリッド(列組みの目安。画面上だけの表示で書き出しには含まない) */
+  d.shapes.forEach(s=>{if(isFrame(s)&&s.grid&&s.grid.on)html+=frameGridSvg(s);});
   d.shapes.forEach(s=>{if(isFrame(s))html+=frameLabelSvg(s);});
   d.shapes.forEach(s=>{if(s.locked)html+=lockSvg(s);});
   /* ガイド線(定規ON時のみ)。掴んで動かせる・定規に戻すと消える */
@@ -5058,6 +5418,12 @@ function renderWire(){
     d.guides.h.forEach((gy,i)=>{
       html+=`<g data-guide="h,${i}" style="cursor:row-resize"><line y1="${gy}" y2="${gy}" x1="${-E}" x2="${E}" stroke="transparent" stroke-width="${hit}"/><line y1="${gy}" y2="${gy}" x1="${-E}" x2="${E}" stroke="#E858C8" stroke-width="${gw}"/></g>`;
     });
+  }
+  /* スマートガイド(移動中、他の図形の端・中心に吸着した時だけ出る補助線) */
+  if(smartGuideV!==null||smartGuideH!==null){
+    const E=1e6,gw=1.2/wz;
+    if(smartGuideV!==null)html+=`<line x1="${smartGuideV}" x2="${smartGuideV}" y1="${-E}" y2="${E}" stroke="#E858C8" stroke-width="${gw}" pointer-events="none"/>`;
+    if(smartGuideH!==null)html+=`<line y1="${smartGuideH}" y2="${smartGuideH}" x1="${-E}" x2="${E}" stroke="#E858C8" stroke-width="${gw}" pointer-events="none"/>`;
   }
   /* メジャー(測った距離の表示) */
   if(measure){
@@ -5095,6 +5461,7 @@ function renderWire(){
   wireWorld.innerHTML=html;
   $('#nodeCount').textContent=d.shapes.length+' 図形';
   updateWireBtns();
+  if(layerPanelOpen)renderLayerPanel();
 }
 function updateWireBtns(){
   const ss=selShapes();
@@ -5184,7 +5551,8 @@ function wireBBox(shapes){
   let x1=1e9,y1=1e9,x2=-1e9,y2=-1e9;
   shapes.forEach((s,i)=>{
     let r=Math.hypot(s.w,Math.max(s.h,s.fs||0))/2+12;
-    if(s.sh)r+=s.sh.dist+s.sh.b*1.5+4;
+    if(hasSh(s))r+=Math.max(...shList(s).map(l=>(l.dist||0)+(l.b||0)*1.5))+4;
+    if(s.blur)r+=s.blur*1.5+4;
     if(s.imgFill&&s.imgFill.show){   /* はみ出し表示中は画像の分も入れる */
       const q=imgFillRect(s);
       [[q.x,q.y],[q.x+q.w,q.y],[q.x+q.w,q.y+q.h],[q.x,q.y+q.h]]
@@ -5226,11 +5594,17 @@ function shapeBox(s){
     x1:Math.min(...pts.map(p=>p.x))-g,x2:Math.max(...pts.map(p=>p.x))+g,
     y1:Math.min(...pts.map(p=>p.y))-g,y2:Math.max(...pts.map(p=>p.y))+g
   };
-  if(s.sh){   /* 影も見た目の一部なので書き出し範囲に入れる */
-    const off=shOffset(s.sh),p=s.sh.b*1.5+1;
-    b.x1+=Math.min(0,off.x)-p;b.x2+=Math.max(0,off.x)+p;
-    b.y1+=Math.min(0,off.y)-p;b.y2+=Math.max(0,off.y)+p;
+  if(hasSh(s)){   /* 影も見た目の一部なので書き出し範囲に入れる(内側シャドウは形の外へは出ない) */
+    const outers=MULTI_SHADOW_TYPES(s)?shList(s).filter(l=>!l.inner):shList(s);
+    let dx1=0,dx2=0,dy1=0,dy2=0;
+    outers.forEach(sh=>{
+      const off=shOffset(sh),p=(sh.b||0)*1.5+1;
+      dx1=Math.min(dx1,Math.min(0,off.x)-p);dx2=Math.max(dx2,Math.max(0,off.x)+p);
+      dy1=Math.min(dy1,Math.min(0,off.y)-p);dy2=Math.max(dy2,Math.max(0,off.y)+p);
+    });
+    b.x1+=dx1;b.x2+=dx2;b.y1+=dy1;b.y2+=dy2;
   }
+  if(s.blur){const p=s.blur*1.5+1;b.x1-=p;b.x2+=p;b.y1-=p;b.y2+=p;}
   return b;
 }
 function shapesBox(ss){
@@ -5446,6 +5820,91 @@ function addShape(type){
   save();renderWire();
   if(type==='text')beginWireText(s);
 }
+/* アイコンを追加(アイコンライブラリから) */
+function addIcon(iconId){
+  const d=curDoc();if(!d.shapes)return;
+  const ic=iconById(iconId);if(!ic)return;
+  exitPen();exitEraser();exitBrush();
+  pushUndo();
+  const c=s2w(viewW()/2,viewH()/2);
+  const s={id:uid(),type:'icon',x:c.x,y:c.y,w:32,h:32,rot:0,fill:'#23262D',noStroke:true,iconId};
+  d.shapes.push(s);
+  wireSel=[s.id];
+  save();renderWire();
+  toast(`${ic.n}を追加しました`);
+}
+/* ============================================================
+   UIパーツライブラリ
+   よく使うUI部品(ボタン・入力欄など)を、既存の図形(四角・テキスト・アイコン)を
+   組み合わせた「グループ」として一度に配置する。置いた後は普通の図形として
+   自由に編集できる(専用のデータ型は持たない)。座標は部品の中心を(0,0)とした
+   相対位置で書き、addPart()で配置先へまとめて平行移動する。
+   ============================================================ */
+const UI_PARTS=[
+  {id:'btnPrimary',n:'ボタン(塗り)',build:()=>[
+    {type:'rect',x:0,y:0,w:140,h:44,rot:0,fill:'#4A7DE8',noStroke:true,r:10},
+    {type:'text',x:0,y:0,rot:0,fill:'#FFFFFF',text:'ボタン',fs:15,fw:600,va:'middle'}
+  ]},
+  {id:'btnOutline',n:'ボタン(アウトライン)',build:()=>[
+    {type:'rect',x:0,y:0,w:140,h:44,rot:0,fill:null,noStroke:false,sc:'#4A7DE8',sw:1.5,r:10},
+    {type:'text',x:0,y:0,rot:0,fill:'#4A7DE8',text:'ボタン',fs:15,fw:600,va:'middle'}
+  ]},
+  {id:'input',n:'入力欄',build:()=>[
+    {type:'rect',x:0,y:0,w:240,h:44,rot:0,fill:'#FFFFFF',noStroke:false,sc:'#D7DBE2',sw:1.5,r:8},
+    {type:'text',x:-58,y:0,rot:0,fill:'#8B93A6',text:'プレースホルダー',fs:13,fw:400,va:'middle'}
+  ]},
+  {id:'checkbox',n:'チェックボックス',build:()=>[
+    {type:'rect',x:-70,y:0,w:20,h:20,rot:0,fill:'#FFFFFF',noStroke:false,sc:'#8B93A6',sw:1.5,r:4},
+    {type:'icon',x:-70,y:0,w:14,h:14,rot:0,fill:'#4A7DE8',noStroke:true,iconId:'check'},
+    {type:'text',x:8,y:0,rot:0,fill:null,text:'チェックボックス',fs:14,fw:400,va:'middle'}
+  ]},
+  {id:'toggle',n:'トグルスイッチ',build:()=>[
+    {type:'rect',x:0,y:0,w:44,h:24,rot:0,fill:'#4A7DE8',noStroke:true,r:12},
+    {type:'ellipse',x:10,y:0,w:18,h:18,rot:0,fill:'#FFFFFF',noStroke:true}
+  ]},
+  {id:'tabs',n:'タブバー',build:()=>[
+    {type:'text',x:-90,y:-6,rot:0,fill:'#4A7DE8',text:'タブ1',fs:14,fw:700,va:'middle'},
+    {type:'text',x:0,y:-6,rot:0,fill:'#8B93A6',text:'タブ2',fs:14,fw:500,va:'middle'},
+    {type:'text',x:90,y:-6,rot:0,fill:'#8B93A6',text:'タブ3',fs:14,fw:500,va:'middle'},
+    {type:'rect',x:-90,y:16,w:40,h:3,rot:0,fill:'#4A7DE8',noStroke:true,r:1.5}
+  ]},
+  {id:'card',n:'カード',build:()=>[
+    {type:'rect',x:0,y:0,w:220,h:260,rot:0,fill:'#FFFFFF',noStroke:true,r:14,shadows:[{ang:90,dist:4,b:16,c:'#000000',a:0.12}]},
+    {type:'rect',x:0,y:-60,w:196,h:110,rot:0,fill:'#E9ECF2',noStroke:true,r:8},
+    {type:'text',x:-86,y:20,rot:0,fill:null,text:'見出し',fs:15,fw:700,va:'middle'},
+    {type:'text',x:-86,y:44,rot:0,fill:'#8B93A6',text:'説明テキスト',fs:12,fw:400,va:'middle'}
+  ]},
+  {id:'searchBar',n:'検索バー',build:()=>[
+    {type:'rect',x:0,y:0,w:220,h:44,rot:0,fill:'#FFFFFF',noStroke:false,sc:'#D7DBE2',sw:1.5,r:22},
+    {type:'icon',x:-84,y:0,w:18,h:18,rot:0,fill:'#8B93A6',noStroke:true,iconId:'search'},
+    {type:'text',x:-40,y:0,rot:0,fill:'#8B93A6',text:'検索',fs:14,fw:400,va:'middle'}
+  ]},
+  {id:'navbar',n:'ナビゲーションバー',build:()=>[
+    {type:'rect',x:0,y:0,w:320,h:56,rot:0,fill:'#FFFFFF',noStroke:false,sc:'#E7E9EE',sw:1,r:0},
+    {type:'icon',x:-140,y:0,w:20,h:20,rot:0,fill:'#23262D',noStroke:true,iconId:'arrowLeft'},
+    {type:'text',x:0,y:0,rot:0,fill:null,text:'タイトル',fs:16,fw:700,va:'middle'},
+    {type:'icon',x:140,y:0,w:20,h:20,rot:0,fill:'#23262D',noStroke:true,iconId:'settings'}
+  ]}
+];
+const partById=id=>UI_PARTS.find(p=>p.id===id);
+/* UIパーツを配置(画面中央に、複数の図形をグループとして) */
+function addPart(partId){
+  const part=partById(partId);if(!part)return;
+  const d=curDoc();if(!d.shapes)return;
+  exitPen();exitEraser();exitBrush();
+  pushUndo();
+  const c=s2w(viewW()/2,viewH()/2);
+  const gid=uid();
+  const ids=[];
+  part.build().forEach(def=>{
+    const s={id:uid(),rot:0,...def,x:c.x+def.x,y:c.y+def.y,gid};
+    if(s.type==='text'){s.w=0;s.h=0;measureWText(s);}
+    d.shapes.push(s);ids.push(s.id);
+  });
+  wireSel=ids;selAnchor=null;
+  save();renderWire();
+  toast(`${part.n}を追加しました`);
+}
 /* フレームを追加。ピクセルはそのままワールド座標の大きさ(ズーム100%＝実寸) */
 function addFrame(w,h,name,lock,opt){
   opt=opt||{};
@@ -5470,7 +5929,7 @@ function addDeviceFrame(k){
   addFrame(d.w,d.h,d.n,true,{device:{kind:d.kind},r:d.r});
 }
 /* ---------- 大きさ(px)をパネルから指定 ---------- */
-const sizeableShape=s=>['rect','ellipse','path','line','image'].includes(s.type);
+const sizeableShape=s=>['rect','ellipse','path','line','image','icon'].includes(s.type);
 let szLink=true;   /* 縦横比を保つ(既定ON) */
 /* 中心を保ったまま大きさを変える。パスは点も比率で拡縮 */
 function resizeShapeTo(s,nw,nh){
@@ -5730,6 +6189,106 @@ function setStopColor(c,noUndo){
 function applyWireColor(c,noUndo){
   if(refGrad())setStopColor(c,noUndo);
   else setFill(c,noUndo);
+}
+/* ---------- ブランドカラー(保存した色。ブランドコードのように使い回す) ----------
+   doc.brandGroups=[{id,name,colors:[{hex,name}]}]。グループでまとめられ、名前を付けられる。
+   doc直下なのでマップ・ワイヤー・文書で共通、IndexedDB保存とバックアップにも含まれる */
+function brandGroups(){
+  if(!doc.brandGroups){
+    /* 旧形式(フラットな配列 doc.brandColors)から移行 */
+    const old=doc.brandColors;
+    doc.brandGroups=[{id:uid(),name:'ブランドカラー',colors:(old&&old.length?old:[]).map(h=>({hex:normHex(h)||h,name:''}))}];
+    delete doc.brandColors;
+  }
+  return doc.brandGroups;
+}
+const allBrandColors=()=>brandGroups().flatMap(g=>g.colors);
+function normHex(c){
+  if(!c)return null;
+  let v=String(c).trim();if(v[0]!=='#')v='#'+v;
+  if(/^#[0-9a-fA-F]{3}$/.test(v))v='#'+v.slice(1).split('').map(h=>h+h).join('');
+  return /^#[0-9a-fA-F]{6}$/.test(v)?v.toUpperCase():null;
+}
+function brandGroupById(id){return brandGroups().find(g=>g.id===id);}
+function addBrandGroup(name){
+  const g={id:uid(),name:name||('グループ '+(brandGroups().length+1)),colors:[]};
+  brandGroups().push(g);save();
+  return g;
+}
+function removeBrandGroup(id){
+  doc.brandGroups=brandGroups().filter(g=>g.id!==id);
+  if(!doc.brandGroups.length)addBrandGroup('ブランドカラー');
+  save();renderBrandColors();renderBrandDlg();
+}
+function renameBrandGroup(id,name){const g=brandGroupById(id);if(g){g.name=name;save();renderBrandColors();}}
+function addBrandColorTo(gid,hex,name){
+  const v=normHex(hex);if(!v){toast('#RRGGBB の色を指定してください');return;}
+  const g=brandGroupById(gid);if(!g)return;
+  if(g.colors.some(c=>c.hex===v)){toast('このグループにすでにあります');return;}
+  g.colors.push({hex:v,name:name||''});
+  save();renderBrandColors();
+  toast('ブランドカラーに登録しました: '+v);
+}
+function removeBrandColorAt(gid,idx){
+  const g=brandGroupById(gid);if(!g||!g.colors[idx])return;
+  g.colors.splice(idx,1);
+  save();renderBrandColors();renderBrandDlg();
+}
+function setBrandColorHex(gid,idx,hex){const g=brandGroupById(gid),v=normHex(hex);if(g&&g.colors[idx]&&v){g.colors[idx].hex=v;save();renderBrandColors();}}
+function setBrandColorName(gid,idx,name){const g=brandGroupById(gid);if(g&&g.colors[idx]){g.colors[idx].name=name;save();renderBrandColors();}}
+/* パネル・マップ・文書のブランド表示を描き直す */
+function renderBrandColors(){
+  const groups=brandGroups();
+  /* ワイヤーの塗りパネル(グループ表示・管理あり) */
+  const box=$('#brandBox');
+  if(box){
+    let html='';
+    groups.forEach(g=>{
+      const sws=g.colors.map((c,i)=>
+        `<button class="sw" data-fill="${c.hex}" data-brand="1" data-gid="${g.id}" data-idx="${i}" style="background:${c.hex}" title="${escXml((c.name?c.name+' ':'')+c.hex)}（右クリックで削除）"></button>`
+      ).join('');
+      html+=`<div class="brandGrp"><div class="brandGrpHead"><span class="gname">${escXml(g.name||'（無名）')}</span><span class="gadd" data-gadd="${g.id}" title="今の色をこのグループに追加">＋</span></div><div class="swatches">${sws||'<span class="brandEmpty">まだ色がありません</span>'}</div></div>`;
+    });
+    box.innerHTML=html+`<div class="brandTools"><button id="brandNewGroup">＋ グループ</button><button id="brandEditBtn">編集 / 名前</button></div>`;
+  }
+  /* マップのノード色メニュー(全色を適用のみ) */
+  const flat=allBrandColors();
+  const mb=$('#swatchesBrand');
+  if(mb){
+    mb.style.display=flat.length?'flex':'none';
+    mb.innerHTML=flat.map(c=>`<button class="sw" data-act="color" data-color="${c.hex}" style="background:${c.hex}" title="${escXml((c.name?c.name+' ':'')+c.hex)}"></button>`).join('');
+  }
+  /* 文書の文字色メニュー(全色を適用のみ) */
+  const db=$('#dBrandSwatches');
+  if(db){
+    db.style.display=flat.length?'flex':'none';
+    db.innerHTML=flat.map(c=>`<button class="sw" data-color="${c.hex}" style="background:${c.hex}" title="${escXml((c.name?c.name+' ':'')+c.hex)}"></button>`).join('');
+  }
+}
+/* ---------- 管理ダイアログ ---------- */
+let brandPickTarget=null;   /* {gid, fromDlg} 色ピッカーの追加先 */
+function openBrandDlg(){renderBrandDlg();$('#brandDlgWrap').classList.add('on');}
+function closeBrandDlg(){$('#brandDlgWrap').classList.remove('on');}
+function renderBrandDlg(){
+  const body=$('#brandDlgBody');if(!body)return;
+  body.innerHTML=brandGroups().map(g=>{
+    const rows=g.colors.map((c,i)=>
+      `<div class="bg-color" data-idx="${i}">
+        <input type="color" class="bg-hex" value="${c.hex}">
+        <input type="text" class="bg-cname" value="${escXml(c.name||'')}" placeholder="色の名前(例: メインブルー)" spellcheck="false">
+        <span class="bg-hexlbl">${c.hex}</span>
+        <button class="bg-delcolor" title="この色を削除">×</button>
+      </div>`
+    ).join('');
+    return`<div class="bg-grp" data-gid="${g.id}">
+      <div class="bg-grphead">
+        <input type="text" class="bg-gname" value="${escXml(g.name||'')}" placeholder="グループ名" spellcheck="false">
+        <button class="bg-delgrp">グループを削除</button>
+      </div>
+      ${rows}
+      <button class="bg-addcolor">＋ 色を追加</button>
+    </div>`;
+  }).join('');
 }
 /* この色だけの透明度(グラデーションのストップ) */
 function setStopAlpha(v,noUndo){
@@ -6730,25 +7289,44 @@ wireView.addEventListener('pointermove',e=>{
   }
   if(wDrag.mode==='move'){
     wDrag.items.forEach(it=>{it.s.x=p.x+it.ox;it.s.y=p.y+it.oy;});
-    /* ガイドへの吸着(端と中心が近づいたらぴったり合わせる) */
+    /* 吸着(端と中心が近づいたらぴったり合わせる): 定規のガイド線 + 他の図形の端・中心(スマートガイド)。
+       両方の候補から一番近いものを選ぶ */
+    const tol=6/wz;
+    const bb=cornersBox(wDrag.items.map(it=>it.s),0);
+    let dx=null,dxMag=Infinity,dy=null,dyMag=Infinity,guideV=null,guideH=null;
     if(rulersOn){
       const g=curDoc().guides;
       if(g&&(g.v.length||g.h.length)){
-        const tol=6/wz;
-        const bb=cornersBox(wDrag.items.map(it=>it.s),0);
-        let dx=null,dy=null;
         [bb.x1,(bb.x1+bb.x2)/2,bb.x2].forEach(x=>g.v.forEach(gx=>{
-          const df=gx-x;
-          if(Math.abs(df)<tol&&(dx===null||Math.abs(df)<Math.abs(dx)))dx=df;
+          const df=gx-x,m=Math.abs(df);
+          if(m<tol&&m<dxMag){dx=df;dxMag=m;}
         }));
         [bb.y1,(bb.y1+bb.y2)/2,bb.y2].forEach(y=>g.h.forEach(gy=>{
-          const df=gy-y;
-          if(Math.abs(df)<tol&&(dy===null||Math.abs(df)<Math.abs(dy)))dy=df;
+          const df=gy-y,m=Math.abs(df);
+          if(m<tol&&m<dyMag){dy=df;dyMag=m;}
         }));
-        if(dx!==null)wDrag.items.forEach(it=>{it.s.x+=dx;});
-        if(dy!==null)wDrag.items.forEach(it=>{it.s.y+=dy;});
       }
     }
+    const movingIds=new Set(wDrag.items.map(it=>it.s.id));
+    curDoc().shapes.forEach(s=>{
+      if(movingIds.has(s.id))return;
+      const ob=cornersBox([s],0);
+      [ob.x1,(ob.x1+ob.x2)/2,ob.x2].forEach(tx=>{
+        [bb.x1,(bb.x1+bb.x2)/2,bb.x2].forEach(x=>{
+          const df=tx-x,m=Math.abs(df);
+          if(m<tol&&m<dxMag){dx=df;dxMag=m;guideV=tx;}
+        });
+      });
+      [ob.y1,(ob.y1+ob.y2)/2,ob.y2].forEach(ty=>{
+        [bb.y1,(bb.y1+bb.y2)/2,bb.y2].forEach(y=>{
+          const df=ty-y,m=Math.abs(df);
+          if(m<tol&&m<dyMag){dy=df;dyMag=m;guideH=ty;}
+        });
+      });
+    });
+    if(dx!==null)wDrag.items.forEach(it=>{it.s.x+=dx;});
+    if(dy!==null)wDrag.items.forEach(it=>{it.s.y+=dy;});
+    smartGuideV=guideV;smartGuideH=guideH;
     wDrag.items.forEach(it=>{
       if(it.box0&&it.s.grad&&it.s.grad.box){
         it.s.grad.box.x=it.box0.x+(it.s.x-it.x0);
@@ -6899,6 +7477,9 @@ function wireUp(e){
     save();renderWire();
   }
   if(dg.mode==='move'||dg.mode==='resize'||dg.mode==='rotate')save();
+  if(dg.mode==='move'&&(smartGuideV!==null||smartGuideH!==null)){
+    smartGuideV=null;smartGuideH=null;renderWire();
+  }
 }
 wireView.addEventListener('pointerup',wireUp);
 wireView.addEventListener('pointercancel',wireUp);
@@ -7077,6 +7658,26 @@ $('#frameMenu').addEventListener('click',e=>{
   else if(mi.dataset.free)addFrame(800,600,'フレーム',false);
   else addFrame(+mi.dataset.fw,+mi.dataset.fh,mi.dataset.fn,true);
 });
+/* ---------- アイコンライブラリ ---------- */
+$('#iconGrid').innerHTML=ICONS.map(ic=>
+  `<button class="iconBtn" data-icon="${ic.id}" title="${escXml(ic.n)}"><svg viewBox="0 0 24 24" fill-rule="evenodd"><path d="${ic.d}"/></svg></button>`
+).join('');
+$('#wireIconBtn').onclick=e=>openBarMenu($('#iconMenu'),e.currentTarget);
+$('#iconGrid').addEventListener('click',e=>{
+  const b=e.target.closest('.iconBtn');if(!b)return;
+  hideMenus();
+  addIcon(b.dataset.icon);
+});
+/* ---------- UIパーツライブラリ ---------- */
+$('#partsList').innerHTML=UI_PARTS.map(p=>
+  `<button class="mi" data-part="${p.id}"><span class="pv"><svg viewBox="0 0 24 24"><rect x="2" y="8" width="20" height="8" rx="4" fill="currentColor" opacity=".85"/></svg></span>${escXml(p.n)}</button>`
+).join('');
+$('#wirePartsBtn').onclick=e=>openBarMenu($('#partsMenu'),e.currentTarget);
+$('#partsList').addEventListener('click',e=>{
+  const b=e.target.closest('.mi');if(!b)return;
+  hideMenus();
+  addPart(b.dataset.part);
+});
 /* パネルの外観セレクタ(端末モックアップの付け外し) */
 $('#frDevice').innerHTML='<option value="">なし(ただのフレーム)</option>'+DEVICES.map(d=>
   `<option value="${d.k}">${escXml(d.n)}</option>`).join('');
@@ -7100,6 +7701,27 @@ $('#szLink').addEventListener('click',()=>{
   $('#szLink').classList.toggle('active',szLink);
   toast(szLink?'縦横比を保ちます(片方を変えるともう片方も追従)':'縦横を自由に指定できます');
 });
+/* 位置(X/Y)・回転角の数値入力 */
+function applyPosInput(dim){
+  const s=oneSel();
+  if(!s||s.locked)return;
+  if(dim==='rot'){
+    const v=+$('#posRot').value;if(isNaN(v))return;
+    pushUndo();s.rot=((v%360)+360)%360;
+  }else{
+    const v=+$('#'+(dim==='x'?'posX':'posY')).value;if(isNaN(v))return;
+    pushUndo();
+    if(dim==='x')s.x=v;else s.y=v;
+  }
+  save();renderWire();updateStyleMenu();
+}
+['posX','posY','posRot'].forEach(id=>{
+  $('#'+id).addEventListener('pointerdown',e=>e.stopPropagation());
+  $('#'+id).addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter')e.target.blur();});
+});
+$('#posX').addEventListener('change',()=>applyPosInput('x'));
+$('#posY').addEventListener('change',()=>applyPosInput('y'));
+$('#posRot').addEventListener('change',()=>applyPosInput('rot'));
 /* パネル内の操作でパネル自体がドラッグされないように止める */
 ['frName','frW','frH','frPreset','frDevice'].forEach(id=>
   $('#'+id).addEventListener('pointerdown',e=>e.stopPropagation()));
@@ -7143,6 +7765,30 @@ $('#frClip').onclick=()=>{
   save();renderWire();updateStyleMenu();
   toast(f.clip?'はみ出した部分を隠します':'はみ出した部分も表示します');
 };
+/* グリッド(列組みの目安。書き出しには含まれない) */
+$('#gridOnRow').addEventListener('click',e=>{
+  const b=e.target.closest('.seg');if(!b)return;
+  const f=oneSel();if(!f||!isFrame(f))return;
+  pushUndo();
+  const on=b.dataset.grid==='on';
+  if(on)f.grid={cols:12,margin:40,gutter:20,color:'#4A7DE8',...(f.grid||{}),on:true};
+  else if(f.grid)f.grid.on=false;
+  save();renderWire();updateStyleMenu();
+  toast(on?'グリッドを表示します(書き出しには含まれません)':'グリッドを隠しました');
+});
+function setGridProp(k,v){
+  const f=oneSel();if(!f||!isFrame(f)||!f.grid)return;
+  pushUndo();
+  f.grid[k]=Math.max(k==='cols'?1:0,v);
+  save();renderWire();
+}
+['gridCols','gridMargin','gridGutter'].forEach(id=>{
+  $('#'+id).addEventListener('pointerdown',e=>e.stopPropagation());
+  $('#'+id).addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter')e.target.blur();});
+});
+$('#gridCols').addEventListener('change',()=>{const v=+$('#gridCols').value;if(!isNaN(v))setGridProp('cols',Math.round(v));});
+$('#gridMargin').addEventListener('change',()=>{const v=+$('#gridMargin').value;if(!isNaN(v))setGridProp('margin',Math.round(v));});
+$('#gridGutter').addEventListener('change',()=>{const v=+$('#gridGutter').value;if(!isNaN(v))setGridProp('gutter',Math.round(v));});
 
 /* ---------- ツールバー ---------- */
 $('#wireLineBtn').onclick=()=>addShape('line');
@@ -7244,6 +7890,118 @@ function toggleWireBar(){
 $('#wireBarToggleBtn').onclick=toggleWireBar;
 applyWireBar();
 
+/* ---------- レイヤーパネル ---------- */
+const SHAPE_TYPE_LABEL={rect:'四角',ellipse:'丸',line:'線',text:'テキスト',image:'画像',path:'パス',frame:'フレーム',icon:'アイコン'};
+function shapeLabel(s){
+  if(s.name)return s.name;
+  if(s.type==='text')return(s.text||'').replace(/\n/g,' ').slice(0,14)||'テキスト';
+  return SHAPE_TYPE_LABEL[s.type]||s.type;
+}
+const LAYER_ICON_CACHE={};
+function layerIconFor(s){
+  if(LAYER_ICON_CACHE[s.type]!==undefined)return LAYER_ICON_CACHE[s.type];
+  const map={rect:'wireRectBtn',ellipse:'wireEllipseBtn',line:'wireLineBtn',text:'wireTextBtn',image:'wireImgBtn',path:'wirePenBtn',frame:'wireFrameBtn'};
+  const id=map[s.type];
+  const svg=id&&$('#'+id)&&$('#'+id).querySelector('svg');
+  LAYER_ICON_CACHE[s.type]=svg?svg.outerHTML:'';
+  return LAYER_ICON_CACHE[s.type];
+}
+function toggleLayerPanel(){
+  layerPanelOpen=!layerPanelOpen;
+  $('#layerPanel').classList.toggle('on',layerPanelOpen);
+  $('#wireLayerBtn').classList.toggle('active',layerPanelOpen);
+  if(layerPanelOpen)renderLayerPanel();
+}
+$('#wireLayerBtn').onclick=toggleLayerPanel;
+const EYE_ON_SVG='<svg viewBox="0 0 24 24"><path d="M2 12s3.8-7 10-7 10 7 10 7-3.8 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>';
+const EYE_OFF_SVG='<svg viewBox="0 0 24 24"><path d="M3 3l18 18M10.6 10.6a3 3 0 0 0 4.2 4.2M6.5 6.7C4 8.3 2 12 2 12s3.8 7 10 7c2 0 3.7-.6 5.1-1.5M17.9 17.9C20 16.2 22 12 22 12s-1.2-2.2-3.3-4.1"/></svg>';
+const LOCK_SVG='<svg viewBox="0 0 24 24"><rect x="5.5" y="10.5" width="13" height="9" rx="2"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/></svg>';
+function renderLayerPanel(){
+  const d=curDoc();
+  const list=$('#layerList');
+  if(!d||!d.shapes){list.innerHTML='';$('#layerCount').textContent='';return;}
+  $('#layerCount').textContent=d.shapes.length+'個';
+  if(!d.shapes.length){list.innerHTML='<div id="layerEmpty">図形がありません</div>';return;}
+  const rows=d.shapes.map((s,i)=>({s,idx:i})).reverse();   /* 前面が上に来るように逆順表示 */
+  list.innerHTML=rows.map(({s,idx})=>{
+    const sel=wireSel.includes(s.id);
+    return`<div class="layerRow${sel?' sel':''}${s.hidden?' hidden-shape':''}" data-idx="${idx}" data-id="${s.id}">
+      <span class="lr-grip" title="ドラッグで並び替え"><svg viewBox="0 0 10 16"><circle cx="2" cy="2" r="1"/><circle cx="8" cy="2" r="1"/><circle cx="2" cy="8" r="1"/><circle cx="8" cy="8" r="1"/><circle cx="2" cy="14" r="1"/><circle cx="8" cy="14" r="1"/></svg></span>
+      <span class="lr-icon">${layerIconFor(s)}</span>
+      <input class="lr-name" data-id="${s.id}" value="${escXml(shapeLabel(s))}" spellcheck="false" autocomplete="off">
+      <button class="lr-btn lr-eye${s.hidden?'':' active'}" data-act="eye" title="表示 / 非表示">${s.hidden?EYE_OFF_SVG:EYE_ON_SVG}</button>
+      <button class="lr-btn lr-lock${s.locked?' active':''}" data-act="lock" title="固定 / 解除">${LOCK_SVG}</button>
+    </div>`;
+  }).join('');
+}
+$('#layerList').addEventListener('click',e=>{
+  const row=e.target.closest('.layerRow');if(!row)return;
+  const id=row.dataset.id,s=shapeById(id);if(!s)return;
+  if(e.target.closest('[data-act="eye"]')){
+    pushUndo();
+    s.hidden=!s.hidden;
+    if(s.hidden)wireSel=wireSel.filter(x=>x!==id);
+    save();renderWire();
+    return;
+  }
+  if(e.target.closest('[data-act="lock"]')){
+    pushUndo();
+    s.locked=!s.locked;
+    save();renderWire();updateStyleMenu();
+    return;
+  }
+  if(e.target.closest('.lr-grip'))return;
+  if(s.hidden)return;   /* 非表示中は目のボタンから戻すまで選べない */
+  if(!wireSel.includes(id)){wireSel=[id];selAnchor=null;renderWire();updateStyleMenu();}
+});
+$('#layerList').addEventListener('input',e=>{
+  const inp=e.target.closest('.lr-name');if(!inp)return;
+  const s=shapeById(inp.dataset.id);if(!s)return;
+  const v=inp.value.trim();
+  if(v)s.name=v;else delete s.name;
+  save();
+});
+$('#layerList').addEventListener('pointerdown',e=>{
+  if(e.target.closest('.lr-name'))return;
+  const grip=e.target.closest('.lr-grip');
+  if(!grip)return;
+  e.preventDefault();
+  const row=grip.closest('.layerRow');
+  const startY=e.clientY;
+  const rows=[...$('#layerList').querySelectorAll('.layerRow')];
+  const fromPos=rows.indexOf(row);   /* 表示上の位置(0=最前面) */
+  row.classList.add('drag');
+  let toPos=fromPos;
+  const move=ev=>{
+    const dy=ev.clientY-startY;
+    const rh=row.getBoundingClientRect().height||28;
+    toPos=clamp(fromPos+Math.round(dy/rh),0,rows.length-1);
+    rows.forEach((r,i)=>r.style.transform=i===fromPos?'':(
+      (toPos<=i&&i<fromPos)?'translateY('+rh+'px)':
+      (fromPos<i&&i<=toPos)?'translateY(-'+rh+'px)':''
+    ));
+  };
+  const up=()=>{
+    removeEventListener('pointermove',move);
+    removeEventListener('pointerup',up);
+    rows.forEach(r=>{r.style.transform='';});
+    row.classList.remove('drag');
+    if(toPos!==fromPos){
+      const d=curDoc();
+      /* 表示は前面が先頭(=配列の末尾)なので、配列インデックスに変換して並び替える */
+      const arrLen=d.shapes.length;
+      const fromIdx=arrLen-1-fromPos,toIdx=arrLen-1-toPos;
+      pushUndo();
+      const [moved]=d.shapes.splice(fromIdx,1);
+      d.shapes.splice(toIdx,0,moved);
+      save();renderWire();
+      toast('順番を変更しました');
+    }
+  };
+  addEventListener('pointermove',move);
+  addEventListener('pointerup',up);
+});
+
 /* ---------- 右クリックのメニュー(ツールバーと同じ操作) ---------- */
 /* [act, 見出し, アイコン元ボタンID(あれば流用), 使える条件] sep:1で区切り線 */
 const CTX_ITEMS=[
@@ -7254,6 +8012,8 @@ const CTX_ITEMS=[
   {act:'text', label:'テキストを追加', btn:'wireTextBtn'},
   {act:'image', label:'画像を追加', btn:'wireImgBtn'},
   {act:'pen', label:'ペン / 手書き', btn:'wirePenBtn'},
+  {act:'icon', label:'アイコンを追加', btn:'wireIconBtn'},
+  {act:'parts', label:'UIパーツを追加', btn:'wirePartsBtn'},
   {sep:1},
   {act:'fill', label:'色とスタイル', btn:'wireFillBtn', need:s=>s.any},
   {act:'front', label:'最前面へ', btn:'wireFrontBtn', need:s=>s.any},
@@ -7334,6 +8094,8 @@ function wireAction(act,x,y){
     case'pen':
       document.querySelectorAll('#penMenu .mi').forEach(b=>b.classList.toggle('active',b.dataset.pen===penKind));
       openMenuAt($('#penMenu'),x,y);break;
+    case'icon':openMenuAt($('#iconMenu'),x,y);break;
+    case'parts':openMenuAt($('#partsMenu'),x,y);break;
     case'fill':openStyleMenu();break;
     case'front':layerExtreme(1);break;
     case'up':layerSel(1);break;
@@ -7363,7 +8125,7 @@ $('#wireCtxMenu').addEventListener('click',e=>{
   const mi=e.target.closest('.mi');if(!mi||mi.classList.contains('disabled'))return;
   const act=mi.dataset.act;
   /* サブメニューを開くものはメニューを閉じない(openMenuAt側で切替) */
-  if(!['frame','pen','align','eraser'].includes(act))hideMenus();
+  if(!['frame','pen','align','eraser','icon','parts'].includes(act))hideMenus();
   wireAction(act,lastCtx.x,lastCtx.y);
 });
 wireView.addEventListener('contextmenu',e=>{
@@ -7564,10 +8326,16 @@ function setBlockAttr(prop,val,noUndo){
 }
 function setFs(px,noUndo){applyTextAttr('fs',clamp(px,8,200),noUndo);}
 /* シャドウ */
+let curShadowIdx=0;   /* パネルで編集中のシャドウの番号(0始まり) */
 function setShadow(on){
   const ss=selShapes().filter(s=>!s.locked);if(!ss.length)return;
   pushUndo();
-  ss.forEach(s=>{if(on)s.sh=s.sh||{...SH_DEF};else delete s.sh;});
+  if(on){
+    ss.forEach(s=>{const arr=ensureShadows(s);if(!arr.length)arr.push({...SH_DEF});});
+    curShadowIdx=0;
+  }else{
+    ss.forEach(s=>{delete s.shadows;delete s.sh;});
+  }
   save();renderWire();updateStyleMenu();
   toast(on?'シャドウを付けました':'シャドウを外しました');
 }
@@ -7576,7 +8344,59 @@ function setShProp(k,v,noUndo){
   if(!noUndo)pushUndo();
   if(k==='ang')v=((v%360)+360)%360;
   if(k==='dist')v=Math.max(0,v);
-  ss.forEach(s=>{if(!s.sh)s.sh={...SH_DEF};s.sh[k]=v;});
+  ss.forEach(s=>{
+    const arr=ensureShadows(s);
+    if(!arr.length)arr.push({...SH_DEF});
+    arr[Math.min(curShadowIdx,arr.length-1)][k]=v;
+  });
+  save();renderWire();
+}
+function setShInner(on){
+  const ss=selShapes().filter(s=>!s.locked&&MULTI_SHADOW_TYPES(s)&&hasSh(s));
+  if(!ss.length)return;
+  pushUndo();
+  ss.forEach(s=>{
+    const arr=ensureShadows(s);if(!arr.length)return;
+    arr[Math.min(curShadowIdx,arr.length-1)].inner=on;
+  });
+  save();renderWire();updateStyleMenu();
+}
+/* 2つ目以降のシャドウを追加(対応図形: 四角・丸・画像・閉じたパスのみ) */
+function addShadowLayer(){
+  const ss=selShapes().filter(s=>!s.locked&&MULTI_SHADOW_TYPES(s));
+  if(!ss.length){toast('この図形にはシャドウを追加できません(四角・丸・画像・閉じたパスのみ)');return;}
+  pushUndo();
+  let newIdx=0;
+  ss.forEach(s=>{
+    const arr=ensureShadows(s);
+    if(!arr.length)arr.push({...SH_DEF});
+    const last=arr[arr.length-1];
+    arr.push({...last,dist:(last.dist||0)+8,inner:false});
+    newIdx=arr.length-1;
+  });
+  curShadowIdx=newIdx;
+  save();renderWire();updateStyleMenu();
+  toast('シャドウを追加しました');
+}
+function removeShadowLayer(){
+  const ss=selShapes().filter(s=>!s.locked&&hasSh(s));
+  if(!ss.length)return;
+  pushUndo();
+  ss.forEach(s=>{
+    const arr=ensureShadows(s);
+    const idx=Math.min(curShadowIdx,arr.length-1);
+    if(idx>=0)arr.splice(idx,1);
+    if(!arr.length)delete s.shadows;
+  });
+  curShadowIdx=Math.max(0,curShadowIdx-1);
+  save();renderWire();updateStyleMenu();
+  toast('シャドウを削除しました');
+}
+/* ぼかし(px)。シャドウとは独立した図形全体のガウスぼかり */
+function setBlur(px,noUndo){
+  const ss=selShapes().filter(s=>!s.locked);if(!ss.length)return;
+  if(!noUndo)pushUndo();
+  ss.forEach(s=>{if(px>0)s.blur=Math.round(px);else delete s.blur;});
   save();renderWire();
 }
 /* ふちどり(テキスト)。which: 'ol'=内側 / 'ol2'=外側(二重) */
@@ -7685,19 +8505,38 @@ function updateStyleMenu(){
       $('#ptWIn').value=clamp(px,1,60);$('#ptWV').value=px;
     }
   }
-  /* シャドウ(どの図形でも) */
+  /* シャドウ(どの図形でも)・複数レイヤー / 内側対応 */
   $('#shadowSec').style.display=ss.length?'block':'none';
   if(ss.length){
-    const sh=ss[0].sh;
+    const s0=ss[0];
+    const arr=shList(s0);
+    const on=arr.length>0;
     document.querySelectorAll('#shOnRow .seg').forEach(b=>
-      b.classList.toggle('active',(b.dataset.sh==='on')===!!sh));
-    $('#shadowEdit').style.display=sh?'block':'none';
-    if(sh){
+      b.classList.toggle('active',(b.dataset.sh==='on')===on));
+    $('#shadowEdit').style.display=on?'block':'none';
+    if(on){
+      curShadowIdx=Math.min(curShadowIdx,arr.length-1);
+      const multiOk=MULTI_SHADOW_TYPES(s0);
+      $('#shTabs').innerHTML=arr.map((l,i)=>`<button class="seg${i===curShadowIdx?' active':''}" data-shtab="${i}">#${i+1}</button>`).join('')
+        +(multiOk?'<button class="seg" id="shAddTab">＋</button>':'');
+      $('#shTabs').style.display=(multiOk||arr.length>1)?'flex':'none';
+      const sh=arr[curShadowIdx];
+      $('#shInnerRow').style.display=multiOk?'flex':'none';
+      document.querySelectorAll('#shInnerRow .seg').forEach(b=>
+        b.classList.toggle('active',(b.dataset.shi==='1')===!!sh.inner));
       const set=(id,v)=>{$('#'+id).value=v;$('#'+id+'V').value=v;};
       set('shAng',Math.round(sh.ang));set('shDist',Math.round(sh.dist));set('shB',Math.round(sh.b));
       set('shA',Math.round(sh.a*100));
       if(document.activeElement!==$('#shCHex')){$('#shC').value=sh.c;$('#shCHex').value=sh.c.toUpperCase();}
+      $('#shDelRow').style.display=arr.length>1?'flex':'none';
     }
+  }
+  /* ぼかし(どの図形でも) */
+  $('#blurSec').style.display=ss.length?'block':'none';
+  if(ss.length){
+    const b0=ss[0].blur||0;
+    if(document.activeElement!==$('#blurAmt'))$('#blurAmt').value=b0;
+    if(document.activeElement!==$('#blurAmtV'))$('#blurAmtV').value=b0;
   }
   $('#textSec').style.display=texts.length?'block':'none';
   if(texts.length){
@@ -7744,6 +8583,14 @@ function updateStyleMenu(){
     }
   }
   $('#radiusSec').style.display=rects.length?'block':'none';
+  /* 位置(X/Y)・回転角: 単一選択なら何でも */
+  const posOne=ss.length===1?ss[0]:null;
+  $('#posSec').style.display=posOne?'block':'none';
+  if(posOne){
+    if(document.activeElement!==$('#posX'))$('#posX').value=Math.round(posOne.x);
+    if(document.activeElement!==$('#posY'))$('#posY').value=Math.round(posOne.y);
+    if(document.activeElement!==$('#posRot'))$('#posRot').value=Math.round(posOne.rot||0);
+  }
   /* 大きさ(px)入力: 単一選択の図形・画像のみ(フレーム・テキストは別) */
   const szS=(ss.length===1&&sizeableShape(ss[0]))?ss[0]:null;
   $('#sizeSec').style.display=szS?'block':'none';
@@ -7769,6 +8616,15 @@ function updateStyleMenu(){
     document.querySelectorAll('#frLockRow .seg').forEach(b=>
       b.classList.toggle('active',(b.dataset.frlock==='1')===!!f.sizeLock));
     $('#frClip').classList.toggle('active',f.clip!==false);
+    const g=f.grid,gOn=!!(g&&g.on);
+    document.querySelectorAll('#gridOnRow .seg').forEach(b=>
+      b.classList.toggle('active',(b.dataset.grid==='on')===gOn));
+    $('#gridEdit').style.display=gOn?'block':'none';
+    if(gOn){
+      if(document.activeElement!==$('#gridCols'))$('#gridCols').value=g.cols||12;
+      if(document.activeElement!==$('#gridMargin'))$('#gridMargin').value=g.margin===undefined?40:g.margin;
+      if(document.activeElement!==$('#gridGutter'))$('#gridGutter').value=g.gutter===undefined?20:g.gutter;
+    }
   }
   /* 図形の中の画像 */
   const canImg=ss.filter(canImgFill);
@@ -7910,6 +8766,18 @@ $('#shOnRow').addEventListener('click',e=>{
   const b=e.target.closest('.seg');
   if(b)setShadow(b.dataset.sh==='on');
 });
+/* シャドウのタブ(複数レイヤーの切替・追加) */
+$('#shTabs').addEventListener('click',e=>{
+  const b=e.target.closest('.seg');if(!b)return;
+  if(b.id==='shAddTab'){addShadowLayer();return;}
+  if(b.dataset.shtab!==undefined){curShadowIdx=+b.dataset.shtab;updateStyleMenu();}
+});
+$('#shInnerRow').addEventListener('click',e=>{
+  const b=e.target.closest('.seg');
+  if(b)setShInner(b.dataset.shi==='1');
+});
+$('#shDelLayer').addEventListener('click',removeShadowLayer);
+bindSlider('blurAmt','blurAmtV',v=>setBlur(Math.max(0,v),true));
 $('#olOnRow').addEventListener('click',e=>{
   const b=e.target.closest('.seg');
   if(b)setOutline('ol',b.dataset.ol==='on');
@@ -8034,6 +8902,7 @@ function initColl(){
   [['gradSec','塗りのスタイル・グラデーション',false],
    ['strokeSec','枠線・線',true],
    ['shadowSec','シャドウ',false],
+   ['blurSec','ぼかし',false],
    ['imgFillSec','図形の中の画像',false],
    ['aspectSec','元の縦横比に戻す',false],
    ['imgFxSec','画像の補正',false],
@@ -8048,7 +8917,7 @@ function initColl(){
 initColl();
 $('#fillMenu').addEventListener('pointerdown',e=>{
   /* 操作部品・折りたたみ見出しの上では動かさない */
-  if(e.target.closest('button,input,select,.sw,.gstop,#gradBar,.collHead'))return;
+  if(e.target.closest('button,input,select,.sw,.gstop,#gradBar,.collHead,.gadd'))return;
   const menu=$('#fillMenu');
   const r=menu.getBoundingClientRect();
   const ox=e.clientX-r.left,oy=e.clientY-r.top;
@@ -8141,6 +9010,11 @@ $('#fillMenu').addEventListener('click',e=>{
     updateStyleMenu();
     return;
   }
+  /* ブランドカラー: グループの＋ / 新規グループ / 編集ボタン */
+  const gadd=e.target.closest('[data-gadd]');
+  if(gadd){addCurrentColorToGroup(gadd.dataset.gadd);return;}
+  if(e.target.closest('#brandNewGroup')){addBrandGroup();renderBrandColors();openBrandDlg();return;}
+  if(e.target.closest('#brandEditBtn')){openBrandDlg();return;}
   const sw=e.target.closest('.sw');
   if(!sw||sw.classList.contains('sw-picker'))return;
   /* グラデーション編集中はパレットで「選んだ色」を変更 */
@@ -8148,6 +9022,55 @@ $('#fillMenu').addEventListener('click',e=>{
   setFill(sw.dataset.fill||null);   /* パネルは開いたままにする */
   updateStyleMenu();
 });
+/* 今の色を指定グループに追加(選択が無ければピッカーで選ぶ) */
+function addCurrentColorToGroup(gid){
+  const cur=normHex(currentColorHex());
+  if(cur)addBrandColorTo(gid,cur);
+  else{brandPickTarget={gid,fromDlg:false};const pk=$('#brandPick');pk.value='#4A7DE8';pk.click();}
+}
+/* ＋ピッカーで選んだ色を登録先グループへ */
+$('#brandPick').addEventListener('change',e=>{
+  const t=brandPickTarget;brandPickTarget=null;
+  if(t){addBrandColorTo(t.gid,e.target.value);if(t.fromDlg)renderBrandDlg();}
+});
+/* パネルのブランド色を右クリック → 確認してから削除 */
+$('#brandBox').addEventListener('contextmenu',e=>{
+  const sw=e.target.closest('.sw[data-brand]');
+  if(!sw)return;
+  e.preventDefault();
+  const gid=sw.dataset.gid,idx=+sw.dataset.idx;
+  const g=brandGroupById(gid),c=g&&g.colors[idx];if(!c)return;
+  askConfirm('このブランドカラーを削除しますか？',(c.name?c.name+' ':'')+c.hex,()=>removeBrandColorAt(gid,idx));
+});
+/* 管理ダイアログの操作 */
+$('#brandDlgBody').addEventListener('input',e=>{
+  const grp=e.target.closest('.bg-grp');if(!grp)return;
+  const gid=grp.dataset.gid;
+  if(e.target.classList.contains('bg-gname'))renameBrandGroup(gid,e.target.value);
+  else if(e.target.classList.contains('bg-cname')){const idx=+e.target.closest('.bg-color').dataset.idx;setBrandColorName(gid,idx,e.target.value);}
+  else if(e.target.classList.contains('bg-hex')){
+    const row=e.target.closest('.bg-color'),idx=+row.dataset.idx;
+    setBrandColorHex(gid,idx,e.target.value);
+    const lbl=row.querySelector('.bg-hexlbl');if(lbl)lbl.textContent=normHex(e.target.value);
+  }
+});
+$('#brandDlgBody').addEventListener('click',e=>{
+  const grp=e.target.closest('.bg-grp');if(!grp)return;
+  const gid=grp.dataset.gid;
+  if(e.target.closest('.bg-delcolor')){
+    const idx=+e.target.closest('.bg-color').dataset.idx;
+    const g=brandGroupById(gid),c=g&&g.colors[idx];
+    askConfirm('この色を削除しますか？',(c?(c.name?c.name+' ':'')+c.hex:''),()=>removeBrandColorAt(gid,idx));
+  }else if(e.target.closest('.bg-delgrp')){
+    const g=brandGroupById(gid);
+    askConfirm('グループを削除しますか？','「'+((g&&g.name)||'')+'」の色もすべて消えます',()=>removeBrandGroup(gid));
+  }else if(e.target.closest('.bg-addcolor')){
+    brandPickTarget={gid,fromDlg:true};const pk=$('#brandPick');pk.value='#4A7DE8';pk.click();
+  }
+});
+$('#brandAddGroup').onclick=()=>{addBrandGroup();renderBrandColors();renderBrandDlg();};
+$('#brandDlgClose').onclick=closeBrandDlg;
+$('#brandDlgBack').onclick=closeBrandDlg;
 
 /* ============================================================
    文書(ブロックエディタ)
@@ -8896,6 +9819,7 @@ $('#p1restore').onclick=()=>{paneState='split';applyMulti();};
    ============================================================ */
 function startApp(){
 selectedId=cur().root.id;
+renderBrandColors();   /* 保存したブランドカラーをパレットに反映 */
 applyTheme();
 applyView();
 if(isWire()){
