@@ -506,14 +506,16 @@ body.text-mode #docBar{display:flex;}
 }
 .dblock-ctrl button:hover{color:var(--accent);}
 
-/* 画像の印刷: 用紙に合成した1枚だけを出す */
+/* 画像の印刷: 用紙に合成したページを出す(「画面いっぱいに」で複数ページの時は
+   1ページごとに用紙を送りながら続けて出す) */
 #printLayer{display:none;}
 @media print{
-  body.printing #printLayer{
-    display:flex!important;position:static;
-    width:100%;height:100vh;align-items:center;justify-content:center;
+  body.printing #printLayer{display:block!important;position:static;}
+  body.printing #printLayer img.pp{
+    display:block;width:100%;height:100vh;object-fit:contain;
+    break-after:page;page-break-after:always;
   }
-  body.printing #printLayer img{max-width:100%;max-height:100%;display:block;}
+  body.printing #printLayer img.pp:last-child{break-after:auto;page-break-after:auto;}
 }
 /* 印刷: A4用紙のみをそのまま出力 */
 @media print{
@@ -1698,6 +1700,11 @@ kbd{
       <span id="expPgLabel" style="font-size:12.5px;font-weight:650;color:var(--ink-soft);padding:0 8px;">1 / 1</span>
       <button class="seg" id="expNextPg" style="flex:0 0 auto;padding:7px 16px;">次のページ ▶</button>
     </div>
+    <div class="segRow" id="expWirePagerRow" style="display:none;justify-content:center;align-items:center;">
+      <button class="seg" id="expWirePrevPg" style="flex:0 0 auto;padding:7px 16px;">◀ 前のページ</button>
+      <span id="expWirePgLabel" style="font-size:12.5px;font-weight:650;color:var(--ink-soft);padding:0 8px;">1 / 1</span>
+      <button class="seg" id="expWireNextPg" style="flex:0 0 auto;padding:7px 16px;">次のページ ▶</button>
+    </div>
     <div id="expImgOpts">
     <div id="expRangeSec">
       <div class="menu-label">書き出す範囲</div>
@@ -1722,6 +1729,9 @@ kbd{
       <button class="seg" data-paper="landscape">A4 横</button>
       <button class="seg" data-paper="portrait">A4 縦</button>
     </div>
+    <div id="expSplitSec">
+      <div class="segRow"><button class="seg" id="expSplitBtn">画面いっぱいに(はみ出た分は次ページへ)</button></div>
+    </div>
     <div id="expScaleSec">
       <div class="menu-label">倍率</div>
       <div class="segRow" id="expScaleRow">
@@ -1734,9 +1744,11 @@ kbd{
     <div id="expPosSec">
       <div class="menu-label">余白・位置</div>
       <div class="radRow"><span class="radLbl">余白</span><input type="range" id="expMargin" min="0" max="120" step="5" value="60"><span class="radNum" id="expMarginV">60px</span></div>
-      <div class="radRow"><span class="radLbl">横位置</span><input type="range" id="expPosX" min="-100" max="100" step="5" value="0"><span class="radNum" id="expPosXV">中央</span></div>
-      <div class="radRow"><span class="radLbl">縦位置</span><input type="range" id="expPosY" min="-100" max="100" step="5" value="0"><span class="radNum" id="expPosYV">中央</span></div>
-      <div class="segRow"><button class="seg" id="expPosReset">中央に戻す</button></div>
+      <div id="expPosXYRows">
+        <div class="radRow"><span class="radLbl">横位置</span><input type="range" id="expPosX" min="-100" max="100" step="5" value="0"><span class="radNum" id="expPosXV">中央</span></div>
+        <div class="radRow"><span class="radLbl">縦位置</span><input type="range" id="expPosY" min="-100" max="100" step="5" value="0"><span class="radNum" id="expPosYV">中央</span></div>
+        <div class="segRow"><button class="seg" id="expPosReset">中央に戻す</button></div>
+      </div>
     </div>
     <div id="expSizeLabel"></div>
     </div>
@@ -3455,6 +3467,7 @@ let expRange='all',expFrameId=null;
 /* 仕上がり: 'fit'=実寸のまま / 'landscape'|'portrait'=A4用紙に合わせる */
 let expPaper='landscape',expScale=1;
 let expMargin=60,expPosX=0,expPosY=0;   /* 用紙に合わせる時の余白(px)・横位置/縦位置(-100〜100、0=中央) */
+let expSplit=false,expWirePage=0;       /* 画面いっぱいに(はみ出た分を複数ページに分割) */
 const MAX_PX=16384;   /* Canvasの1辺の上限(これを超えると生成に失敗する) */
 
 /* いま書き出す図形の並び(フレームと中身の前後関係は元のまま保つ) */
@@ -3518,37 +3531,75 @@ function withBg(content,bgMode){
   ctx.drawImage(content,0,0);
   return cv;
 }
-/* 保存・プレビューに使う最終的な1枚 */
+/* 「画面いっぱいに」: 縮小して1枚に収めず、内容の広い方の軸を用紙いっぱいまで拡大し、
+   はみ出た分は次ページ以降に分けて出す(縦横それぞれ何ページ必要かを計算してタイル状に並べる)。
+   各ページはexpContentの該当する位置だけが見える(canvasの外は自動でクリップされる)ので、
+   位置ぎとに切り出す計算をしなくても、ページごとにオフセットして描くだけでよい */
+function makeWirePages(bgMode){
+  const pw=expPaper==='portrait'?1240:1754;
+  const ph=expPaper==='portrait'?1754:1240;
+  const m=expMargin;
+  const caw=Math.max(1,pw-m*2),cah=Math.max(1,ph-m*2);
+  const k=Math.max(caw/expContent.width,cah/expContent.height);
+  const totalW=expContent.width*k,totalH=expContent.height*k;
+  const cols=Math.max(1,Math.ceil(totalW/caw)),rows=Math.max(1,Math.ceil(totalH/cah));
+  const pages=[];
+  for(let ry=0;ry<rows;ry++){
+    for(let rx=0;rx<cols;rx++){
+      const cv=document.createElement('canvas');
+      cv.width=pw;cv.height=ph;
+      const ctx=cv.getContext('2d');
+      if(bgMode!=='transparent'){ctx.fillStyle='#FFFFFF';ctx.fillRect(0,0,pw,ph);}
+      ctx.drawImage(expContent,0,0,expContent.width,expContent.height,
+        m-rx*caw,m-ry*cah,totalW,totalH);
+      pages.push(cv);
+    }
+  }
+  return pages;
+}
+/* 保存・印刷・プレビューに使う最終的なページの配列(用紙に合わせない/分割しない時は1枚だけ) */
+function finalPages(){
+  if(!expContent)return[];
+  if(expPaper==='fit')return[withBg(expContent,bgModeForExport())];
+  if(expSplit)return makeWirePages(bgModeForExport());
+  return[composePage(expContent,expPaper,bgModeForExport())];
+}
+/* 保存・プレビューに使う最終的な1枚(先頭ページ) */
 function finalCanvas(){
-  if(!expContent)return null;
-  return expPaper==='fit'
-    ? withBg(expContent,bgModeForExport())
-    : composePage(expContent,expPaper,bgModeForExport());
+  const pages=finalPages();
+  return pages.length?pages[0]:null;
 }
 /* CanvasからPDF(1ページ・JPEG埋め込み)を生成。W/Hはポイント単位 */
-function canvasToPdf(cv,W,H){
-  const b64=cv.toDataURL('image/jpeg',0.92).split(',')[1];
-  const bin=atob(b64);
-  const img=new Uint8Array(bin.length);
-  for(let i=0;i<bin.length;i++)img[i]=bin.charCodeAt(i);
+/* pagesは1枚のcanvasでも配列でもよい(複数なら「画面いっぱいに」の分割ページ用の複数ページPDF) */
+function canvasToPdf(pages,W,H){
+  if(!Array.isArray(pages))pages=[pages];
+  const n=pages.length;
   const enc=new TextEncoder();
   const chunks=[];let offset=0;const offsets=[];
   const push=d=>{const b=typeof d==='string'?enc.encode(d):d;chunks.push(b);offset+=b.length;};
   const obj=s=>{offsets.push(offset);push(s);};
   push('%PDF-1.4\n');
   obj('1 0 obj\n<</Type /Catalog /Pages 2 0 R>>\nendobj\n');
-  obj('2 0 obj\n<</Type /Pages /Kids [3 0 R] /Count 1>>\nendobj\n');
-  obj(`3 0 obj\n<</Type /Page /Parent 2 0 R /MediaBox [0 0 ${W} ${H}] /Resources <</XObject <</Im0 4 0 R>>>> /Contents 5 0 R>>\nendobj\n`);
-  offsets.push(offset);
-  push(`4 0 obj\n<</Type /XObject /Subtype /Image /Width ${cv.width} /Height ${cv.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${img.length}>>\nstream\n`);
-  push(img);
-  push('\nendstream\nendobj\n');
-  const content=`q\n${W} 0 0 ${H} 0 0 cm\n/Im0 Do\nQ\n`;
-  obj(`5 0 obj\n<</Length ${content.length}>>\nstream\n${content}endstream\nendobj\n`);
+  const kids=pages.map((_,i)=>`${3+i*3} 0 R`).join(' ');
+  obj(`2 0 obj\n<</Type /Pages /Kids [${kids}] /Count ${n}>>\nendobj\n`);
+  pages.forEach((cv,i)=>{
+    const pageNum=3+i*3,imgNum=4+i*3,contentNum=5+i*3;
+    const b64=cv.toDataURL('image/jpeg',0.92).split(',')[1];
+    const bin=atob(b64);
+    const img=new Uint8Array(bin.length);
+    for(let j=0;j<bin.length;j++)img[j]=bin.charCodeAt(j);
+    obj(`${pageNum} 0 obj\n<</Type /Page /Parent 2 0 R /MediaBox [0 0 ${W} ${H}] /Resources <</XObject <</Im0 ${imgNum} 0 R>>>> /Contents ${contentNum} 0 R>>\nendobj\n`);
+    obj(`${imgNum} 0 obj\n<</Type /XObject /Subtype /Image /Width ${cv.width} /Height ${cv.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${img.length}>>\nstream\n`);
+    push(img);
+    push('\nendstream\nendobj\n');
+    const content=`q\n${W} 0 0 ${H} 0 0 cm\n/Im0 Do\nQ\n`;
+    obj(`${contentNum} 0 obj\n<</Length ${content.length}>>\nstream\n${content}endstream\nendobj\n`);
+  });
   const xrefStart=offset;
-  let xref='xref\n0 6\n0000000000 65535 f \n';
+  const total_objs=2+n*3;
+  let xref=`xref\n0 ${total_objs+1}\n0000000000 65535 f \n`;
   offsets.forEach(o=>{xref+=String(o).padStart(10,'0')+' 00000 n \n';});
-  xref+=`trailer\n<</Size 6 /Root 1 0 R>>\nstartxref\n${xrefStart}\n%%EOF`;
+  xref+=`trailer\n<</Size ${total_objs+1} /Root 1 0 R>>\nstartxref\n${xrefStart}\n%%EOF`;
   push(xref);
   const total=new Uint8Array(offset);
   let p=0;chunks.forEach(c=>{total.set(c,p);p+=c.length;});
@@ -3578,6 +3629,7 @@ async function openExportDlg(){
   /* 図形・フレーム単位は実寸が既定、全体は今までどおり用紙に合わせる */
   expPaper=expRange==='all'?'landscape':'fit';
   expScale=1;
+  expSplit=false;expWirePage=0;
   await rebuildExpContent();
   if(!expContent){toast('書き出すものがありません');return;}
   if(expPaper!=='fit')   /* 内容の縦横比に合わせて向きの初期値を決める */
@@ -3684,8 +3736,10 @@ function updateExportDlg(){
   /* 倍率は実寸のときだけ(用紙に合わせる場合は出力サイズがA4で決まるため) */
   $('#expScaleSec').style.display=(expPaper==='fit'&&!isSvg)?'block':'none';
   $('#expPosSec').style.display=(expPaper!=='fit'&&!isSvg)?'block':'none';
+  $('#expSplitSec').style.display=(expPaper!=='fit'&&!isSvg)?'block':'none';
+  $('#expSplitBtn').classList.toggle('active',expSplit);
+  $('#expPosXYRows').style.display=expSplit?'none':'block';   /* 分割中は位置指定の意味が無いので隠す */
   if(!expContent){$('#expPrev').removeAttribute('src');$('#expSizeLabel').textContent='';return;}
-  const out=finalCanvas();
   if(isSvg){
     const shapes=rangeShapes()||[];
     const{box,pad}=rangeBox(shapes);
@@ -3693,14 +3747,23 @@ function updateExportDlg(){
     $('#expSizeLabel').textContent=`書き出しサイズ: ${W} × ${H} px (ベクター・拡大しても粗くなりません)`;
     $('#expSizeLabel').classList.remove('over');
     $('#expSave').disabled=false;$('#expPrint').disabled=false;
-  }else{
-    const over=out.width>MAX_PX||out.height>MAX_PX;
-    $('#expSizeLabel').textContent=over
-      ? `${out.width} × ${out.height} px — 大きすぎます。倍率を下げてください`
-      : `書き出しサイズ: ${out.width} × ${out.height} px`;
-    $('#expSizeLabel').classList.toggle('over',over);
-    $('#expSave').disabled=over;$('#expPrint').disabled=over;
+    $('#expWirePagerRow').style.display='none';
+    const out=finalCanvas();
+    $('#expPrev').src=out.toDataURL('image/png');
+    return;
   }
+  const pages=finalPages();
+  expWirePage=clamp(expWirePage,0,pages.length-1);
+  const out=pages[expWirePage];
+  const over=out.width>MAX_PX||out.height>MAX_PX;
+  $('#expSizeLabel').textContent=over
+    ? `${out.width} × ${out.height} px — 大きすぎます。倍率を下げてください`
+    : (pages.length>1?`書き出しサイズ: ${out.width} × ${out.height} px (全${pages.length}ページ)`:`書き出しサイズ: ${out.width} × ${out.height} px`);
+  $('#expSizeLabel').classList.toggle('over',over);
+  $('#expSave').disabled=over;$('#expPrint').disabled=over;
+  /* 分割で複数ページある時だけページ送りを出す(文書の印刷プレビューと同じ見た目のUIを流用) */
+  $('#expWirePagerRow').style.display=pages.length>1?'flex':'none';
+  if(pages.length>1)$('#expWirePgLabel').textContent=`${expWirePage+1} / ${pages.length}`;
   /* プレビューは常にPNGで生成(透明の見た目を正しく表示するため) */
   $('#expPrev').src=out.toDataURL('image/png');
 }
@@ -3760,6 +3823,14 @@ $('#expPosReset').onclick=()=>{
   $('#expPosY').value=0;$('#expPosYV').textContent='中央';
   updateExportDlg();
 };
+$('#expSplitBtn').onclick=()=>{
+  expSplit=!expSplit;
+  expWirePage=0;
+  updateExportDlg();
+  toast(expSplit?'画面いっぱいに表示します(はみ出た分は次ページ以降に分かれます)':'1枚に収まるよう縮小します');
+};
+$('#expWirePrevPg').onclick=()=>{expWirePage--;updateExportDlg();};
+$('#expWireNextPg').onclick=()=>{expWirePage++;updateExportDlg();};
 $('#expCancel').onclick=closeExportDlg;
 $('#exportBack').onclick=closeExportDlg;
 /* ワイヤーをベクターSVGとして書き出す(ロゴ・アイコン用)。
@@ -3819,48 +3890,61 @@ $('#expSave').onclick=()=>{
     closeExportDlg();
     return;
   }
-  const page=finalCanvas();
-  if(!page)return;
+  const pages=finalPages();
+  if(!pages.length)return;
   if(expFmt==='pdf'){
     /* 実寸のときは画像と同じ大きさの用紙にする(CSSピクセル→ポイントは 0.75倍) */
-    const W=expPaper==='fit'?page.width*0.75:(expPaper==='portrait'?595.28:841.89);
-    const H=expPaper==='fit'?page.height*0.75:(expPaper==='portrait'?841.89:595.28);
-    download(name+'.pdf',URL.createObjectURL(canvasToPdf(page,W,H)));
-    toast('PDFを保存しました');
+    const page0=pages[0];
+    const W=expPaper==='fit'?page0.width*0.75:(expPaper==='portrait'?595.28:841.89);
+    const H=expPaper==='fit'?page0.height*0.75:(expPaper==='portrait'?841.89:595.28);
+    download(name+'.pdf',URL.createObjectURL(canvasToPdf(pages,W,H)));
+    toast(pages.length>1?`PDFを保存しました(全${pages.length}ページ)`:'PDFを保存しました');
+  }else if(pages.length>1){
+    /* 画像形式で複数ページに分かれる時は、ページごとに連番のファイルとして保存する */
+    const ext=expFmt==='jpeg'?'jpg':expFmt;
+    const mime=expFmt==='jpeg'?'image/jpeg':expFmt==='webp'?'image/webp':'image/png';
+    pages.forEach((pg,i)=>{
+      download(`${name}_${i+1}.${ext}`,pg.toDataURL(mime,expFmt==='png'?undefined:0.92));
+    });
+    toast(`${pages.length}枚に分けて保存しました`);
   }else if(expFmt==='jpeg'){
-    download(name+'.jpg',page.toDataURL('image/jpeg',0.92));
+    download(name+'.jpg',pages[0].toDataURL('image/jpeg',0.92));
     toast('JPEG画像を保存しました');
   }else if(expFmt==='webp'){
-    download(name+'.webp',page.toDataURL('image/webp',0.92));
+    download(name+'.webp',pages[0].toDataURL('image/webp',0.92));
     toast(expBg==='transparent'?'WebP画像を保存しました(背景透明)':'WebP画像を保存しました');
   }else{
-    download(name+'.png',page.toDataURL('image/png'));
+    download(name+'.png',pages[0].toDataURL('image/png'));
     toast(expBg==='transparent'?'PNG画像を保存しました(背景透明)':'PNG画像を保存しました');
   }
   closeExportDlg();
 };
-/* 印刷: 用紙に載せた1枚だけを出す(実寸を選んでいる場合は縦横を自動で決める) */
+/* 印刷: 用紙に載せたページを出す(実寸を選んでいる場合は縦横を自動で決める。
+   「画面いっぱいに」で複数ページある時は全ページを続けて印刷する) */
 $('#expPrint').onclick=()=>{
   if(!expContent)return;
   const ori=expPaper==='fit'
     ? (expContent.width>=expContent.height?'landscape':'portrait')
     : expPaper;
-  const page=composePage(expContent,ori,'white');   /* 印刷は必ず白背景 */
-  printCanvas(page,ori);
+  let pages;
+  if(expPaper==='fit')pages=[withBg(expContent,'white')];
+  else if(expSplit)pages=makeWirePages('white');
+  else pages=[composePage(expContent,ori,'white')];   /* 印刷は必ず白背景 */
+  printCanvas(pages,ori);
   closeExportDlg();
 };
-function printCanvas(cv,ori){
+function printCanvas(pages,ori){
+  if(!Array.isArray(pages))pages=[pages];
   $('#printStyle').textContent=`@media print{@page{size:A4 ${ori};margin:0;}}`;
-  const img=$('#printImg');
-  img.onload=()=>{
-    document.body.classList.add('printing');
-    setTimeout(()=>{
-      window.print();
-      document.body.classList.remove('printing');
-      img.removeAttribute('src');
-    },120);
-  };
-  img.src=cv.toDataURL('image/png');
+  const layer=$('#printLayer');
+  layer.innerHTML=pages.map((cv,i)=>
+    `<img class="pp" src="${cv.toDataURL('image/png')}" alt="">`).join('');
+  document.body.classList.add('printing');
+  setTimeout(()=>{
+    window.print();
+    document.body.classList.remove('printing');
+    layer.innerHTML='<img id="printImg" alt="">';
+  },200);
 }
 function makeMapCanvas(scale){
   scale=scale||2;
