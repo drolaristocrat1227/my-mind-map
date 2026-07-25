@@ -1050,6 +1050,9 @@ kbd{
   <button class="iconbtn" id="wireMeasureBtn" title="メジャー(ドラッグしてpxを測る)">
     <svg viewBox="0 0 24 24"><path d="M4 20L20 4M4 20l2.5-.4L6 17M20 4l-2.5.4L18 7M9.5 14.5l1.5 1.5M13 11l1.5 1.5"/></svg>
   </button>
+  <button class="iconbtn" id="wireMeasureShowBtn" title="測ったメジャーの表示/非表示(定規と同じく記憶されます)">
+    <svg viewBox="0 0 24 24"><path d="M2 12s3.8-7 10-7 10 7 10 7-3.8 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+  </button>
   <div class="sep"></div>
   <button class="iconbtn" id="wireMultiBtn" title="複数選択モード(Shift+クリックでも可)">
     <svg viewBox="0 0 24 24"><rect x="4" y="4" width="12" height="12" rx="2" stroke-dasharray="3 3"/><path d="M17.5 14v7M14 17.5h7"/></svg>
@@ -1059,6 +1062,9 @@ kbd{
   </button>
   <button class="iconbtn" id="wireLockBtn" title="固定(移動・変形・削除を禁止)">
     <svg viewBox="0 0 24 24"><rect x="5.5" y="10.5" width="13" height="9" rx="2"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/></svg>
+  </button>
+  <button class="iconbtn" id="wirePtModeBtn" title="パスの点⇔大きさのハンドルを切り替え(四隅で被って掴みにくい時に)">
+    <svg viewBox="0 0 24 24"><path d="M5 19c8 0 6-14 14-14"/><circle cx="5" cy="19" r="1.6" fill="currentColor" stroke="none"/><circle cx="19" cy="5" r="1.6" fill="currentColor" stroke="none"/></svg>
   </button>
   <div class="sep"></div>
   <button class="iconbtn" id="wireFillBtn" title="塗りの色(テキストは文字色)">
@@ -1277,6 +1283,12 @@ kbd{
       <button class="seg" data-dir="h">横書き</button>
       <button class="seg" data-dir="v">縦書き</button>
     </div>
+    <div class="segRow" id="txAlignRow">
+      <button class="seg" data-align="left">左揃え</button>
+      <button class="seg" data-align="center">中央揃え</button>
+      <button class="seg" data-align="right">右揃え</button>
+    </div>
+    <div class="numRow" id="txWrapRow"><span class="radLbl">折り返し幅</span><input type="number" id="txWrap" min="0" max="20000" step="1" placeholder="指定なし"><span class="unit">px</span></div>
     <div class="radRow" id="txLhRow"><span class="radLbl">行間</span><input type="range" id="txLh" min="0.8" max="3" step="0.05" value="1.35"><span class="radNum" id="txLhV">×1.35</span></div>
     <div class="menu-label" id="txVaLabel">文字の縦の揃え</div>
     <div class="segRow" id="txVaRow">
@@ -1630,7 +1642,9 @@ kbd{
     <div class="shortcut"><span>テキストを改行する</span><span class="keys"><kbd>Shift＋Enter</kbd>(Enterで確定)</span></div>
     <div class="shortcut"><span>整列する</span><span class="keys"><kbd>選んで整列ボタン</kbd></span></div>
     <div class="shortcut"><span>ガイド線を引く</span><span class="keys"><kbd>定規ON</kbd>→端からドラッグ</span></div>
-    <div class="shortcut"><span>距離を測る</span><span class="keys"><kbd>メジャー</kbd>→ドラッグ(<kbd>Shift</kbd>で水平垂直)</span></div>
+    <div class="shortcut"><span>距離を測る(複数を常時表示可)</span><span class="keys"><kbd>メジャー</kbd>→ドラッグ(<kbd>Shift</kbd>で水平垂直)</span></div>
+    <div class="shortcut"><span>測った線を消す</span><span class="keys">メジャー中に<kbd>その線をクリック</kbd></span></div>
+    <div class="shortcut"><span>メジャーは保存・書き出しにも残る</span><span class="keys">残しておけば印刷・PNG/SVGにも反映されます</span></div>
     <div class="shortcut"><span>シャドウ・ふちどり(二重可)</span><span class="keys"><kbd>色とスタイル</kbd>パネル</span></div>
     <div class="shortcut"><span>ふちどりの色・グラデーション</span><span class="keys">上の<kbd>ふち1 / ふち2</kbd>タブ</span></div>
     <div class="shortcut"><span>パスを確定 / 閉じる</span><span class="keys"><kbd>Enter</kbd> / <kbd>最初の点をクリック</kbd></span></div>
@@ -1659,6 +1673,14 @@ kbd{
     <div class="shortcut"><span>図形全体をぼかす</span><span class="keys"><kbd>色とスタイル</kbd>の<kbd>ぼかし</kbd></span></div>
     <div class="shortcut"><span>内側シャドウ</span><span class="keys">シャドウの<kbd>内側</kbd>ボタン(四角・丸・画像・閉じたパスのみ)</span></div>
     <div class="shortcut"><span>シャドウを複数重ねる</span><span class="keys">シャドウの<kbd>＋</kbd>で追加、タブで切替</span></div>
+    <div class="shortcut"><span>文字の左揃え・中央揃え・右揃え</span><span class="keys"><kbd>色とスタイル</kbd>の<kbd>テキスト</kbd></span></div>
+    <div class="shortcut"><span>テキストの折り返し幅を指定</span><span class="keys"><kbd>色とスタイル</kbd>の<kbd>折り返し幅</kbd>(空欄で解除)</span></div>
+    <div class="shortcut"><span>ドラッグで範囲選択</span><span class="keys">何もない所からドラッグ(<kbd>Shift</kbd>で追加選択)</span></div>
+    <div class="shortcut"><span>複数選択をまとめてリサイズ</span><span class="keys">選択枠のハンドルをドラッグ</span></div>
+    <div class="shortcut"><span>コピー / 切り取り / 貼り付け</span><span class="keys"><kbd>Ctrl</kbd>＋<kbd>C</kbd> / <kbd>X</kbd> / <kbd>V</kbd></span></div>
+    <div class="shortcut"><span>スマートガイドを一時的に無視</span><span class="keys"><kbd>Shift</kbd>か<kbd>Ctrl</kbd>を押しながら移動</span></div>
+    <div class="shortcut"><span>画像をトリミング(引き伸ばさず切る)</span><span class="keys"><kbd>Ctrl</kbd>＋ハンドルドラッグ</span></div>
+    <div class="shortcut"><span>図形を型抜き(ハンドルの位置で切り取る)</span><span class="keys"><kbd>Ctrl</kbd>＋ハンドルドラッグ(四角・丸・閉じたパス)</span></div>
   </div>
 </div>
 
@@ -1708,6 +1730,13 @@ kbd{
         <button class="seg" data-scale="3">×3</button>
         <button class="seg" data-scale="4">×4</button>
       </div>
+    </div>
+    <div id="expPosSec">
+      <div class="menu-label">余白・位置</div>
+      <div class="radRow"><span class="radLbl">余白</span><input type="range" id="expMargin" min="0" max="120" step="5" value="60"><span class="radNum" id="expMarginV">60px</span></div>
+      <div class="radRow"><span class="radLbl">横位置</span><input type="range" id="expPosX" min="-100" max="100" step="5" value="0"><span class="radNum" id="expPosXV">中央</span></div>
+      <div class="radRow"><span class="radLbl">縦位置</span><input type="range" id="expPosY" min="-100" max="100" step="5" value="0"><span class="radNum" id="expPosYV">中央</span></div>
+      <div class="segRow"><button class="seg" id="expPosReset">中央に戻す</button></div>
     </div>
     <div id="expSizeLabel"></div>
     </div>
@@ -3425,6 +3454,7 @@ let expContent=null,expFmt='png',expBg='transparent';
 let expRange='all',expFrameId=null;
 /* 仕上がり: 'fit'=実寸のまま / 'landscape'|'portrait'=A4用紙に合わせる */
 let expPaper='landscape',expScale=1;
+let expMargin=60,expPosX=0,expPosY=0;   /* 用紙に合わせる時の余白(px)・横位置/縦位置(-100〜100、0=中央) */
 const MAX_PX=16384;   /* Canvasの1辺の上限(これを超えると生成に失敗する) */
 
 /* いま書き出す図形の並び(フレームと中身の前後関係は元のまま保つ) */
@@ -3466,10 +3496,14 @@ function composePage(content,orient,bgMode){
     ctx.fillStyle='#FFFFFF';
     ctx.fillRect(0,0,pw,ph);
   }
-  const m=60;
+  const m=expMargin;
   const k=Math.min((pw-m*2)/content.width,(ph-m*2)/content.height);
   const w=content.width*k,h=content.height*k;
-  ctx.drawImage(content,(pw-w)/2,(ph-h)/2,w,h);
+  /* 横位置・縦位置(-100〜100)ぶん、中央からその軸の余った幅の中でずらす */
+  const slackX=Math.max(0,(pw-m*2)-w),slackY=Math.max(0,(ph-m*2)-h);
+  const x=(pw-w)/2+slackX/2*(expPosX/100);
+  const y=(ph-h)/2+slackY/2*(expPosY/100);
+  ctx.drawImage(content,x,y,w,h);
   return cv;
 }
 /* PNG以外(JPEG/PDF)は透明を扱えず、印刷でのインク節約のため常にライト固定 */
@@ -3557,9 +3591,20 @@ async function rebuildExpContent(){
   const shapes=rangeShapes();
   if(!shapes||!shapes.length){expContent=null;return;}
   const{box,pad}=rangeBox(shapes);
+  let scale=expPaper==='fit'?expScale:2;   /* 用紙に合わせるときは既定2倍(縮小されるので粗くならない) */
+  if(expPaper!=='fit'){
+    /* ⚠️内容が広い(データが多い)ワイヤーだと、中間canvasが端末のGPUテクスチャ上限
+       (多くは8192〜16384px)を超え、書き出し自体は成功してもプレビュー・印刷が
+       白紙になることがあった。用紙に合わせる場合はどのみち縮小して使うだけなので、
+       内容が広い時は自動でスケールを下げて中間canvasを安全な大きさに収める */
+    const cw=(box.x2-box.x1)+pad*2,ch=(box.y2-box.y1)+pad*2;
+    const SAFE_PX=8000;
+    scale=Math.min(scale,SAFE_PX/Math.max(cw,ch,1));
+  }
   expContent=await makeWireCanvas(curDoc(),{
-    shapes,box,pad,
-    scale:expPaper==='fit'?expScale:2   /* 用紙に合わせるときは常に2倍(縮小されるので粗くならない) */
+    shapes,box,pad,scale,
+    measures:measuresOn?curDoc().measures:null,
+    measureBg
   });
 }
 /* 文書: 実際のページを縮小表示する印刷前プレビュー(ページ送り付き) */
@@ -3638,6 +3683,7 @@ function updateExportDlg(){
   $('#expPaperRow').previousElementSibling.style.display=isSvg?'none':'block';
   /* 倍率は実寸のときだけ(用紙に合わせる場合は出力サイズがA4で決まるため) */
   $('#expScaleSec').style.display=(expPaper==='fit'&&!isSvg)?'block':'none';
+  $('#expPosSec').style.display=(expPaper!=='fit'&&!isSvg)?'block':'none';
   if(!expContent){$('#expPrev').removeAttribute('src');$('#expSizeLabel').textContent='';return;}
   const out=finalCanvas();
   if(isSvg){
@@ -3690,12 +3736,36 @@ $('#expBgRow').addEventListener('click',e=>{
   const b=e.target.closest('.seg');
   if(b){expBg=b.dataset.bg;updateExportDlg();}
 });
+/* 余白・位置(用紙に合わせる時のみ)。中身の再生成(rebuildExpContent)は不要で
+   composePageの引数を変えるだけなので、changeExpより軽いupdateExportDlgのみでよい */
+['expMargin','expPosX','expPosY'].forEach(id=>$('#'+id).addEventListener('pointerdown',e=>e.stopPropagation()));
+$('#expMargin').addEventListener('input',()=>{
+  expMargin=+$('#expMargin').value;
+  $('#expMarginV').textContent=expMargin+'px';
+  updateExportDlg();
+});
+$('#expPosX').addEventListener('input',()=>{
+  expPosX=+$('#expPosX').value;
+  $('#expPosXV').textContent=expPosX===0?'中央':(expPosX>0?'右'+expPosX+'%':'左'+(-expPosX)+'%');
+  updateExportDlg();
+});
+$('#expPosY').addEventListener('input',()=>{
+  expPosY=+$('#expPosY').value;
+  $('#expPosYV').textContent=expPosY===0?'中央':(expPosY>0?'下'+expPosY+'%':'上'+(-expPosY)+'%');
+  updateExportDlg();
+});
+$('#expPosReset').onclick=()=>{
+  expPosX=0;expPosY=0;
+  $('#expPosX').value=0;$('#expPosXV').textContent='中央';
+  $('#expPosY').value=0;$('#expPosYV').textContent='中央';
+  updateExportDlg();
+};
 $('#expCancel').onclick=closeExportDlg;
 $('#exportBack').onclick=closeExportDlg;
 /* ワイヤーをベクターSVGとして書き出す(ロゴ・アイコン用)。
    画面用のshapeSvg/グラデ/シャドウ/クリップをそのまま使い、
    テーマ依存のvar(--ink)だけライト配色の実色に置き換える */
-function makeWireSvg(shapes,box,pad,bgMode){
+function makeWireSvg(shapes,box,pad,bgMode,measures,measureBg){
   svgInlineImages=true;   /* 書き出すSVG単体で画像が表示できるようdataURLを埋め込む */
   try{
   const tc=THEME_COLORS.light;
@@ -3715,6 +3785,8 @@ function makeWireSvg(shapes,box,pad,bgMode){
     const one=withShadow(sp,shapeSvg(sp));
     body+=f?`<g clip-path="url(#fc_${f.id})">${one}</g>`:one;
   });
+  /* メジャー(残っていれば書き出しにも含める) */
+  if(measures&&measures.length)measures.forEach(m=>{body+=measureSvg(m,1,measureBg);});
   const bg=bgMode==='transparent'?'':`<rect x="${x1-pad}" y="${y1-pad}" width="${W}" height="${H}" fill="#FFFFFF"/>`;
   let out=`<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${W}" height="${H}" viewBox="${x1-pad} ${y1-pad} ${W} ${H}">${bg}<defs>${defs}</defs>${body}</svg>`;
   out=out.replaceAll('var(--ink)',tc.ink);
@@ -3741,7 +3813,7 @@ $('#expSave').onclick=()=>{
     const shapes=rangeShapes();
     if(!shapes||!shapes.length)return;
     const{box,pad}=rangeBox(shapes);
-    const svg=makeWireSvg(shapes,box,pad,expBg);
+    const svg=makeWireSvg(shapes,box,pad,expBg,measuresOn?curDoc().measures:null,measureBg);
     download(name+'.svg',URL.createObjectURL(new Blob([svg],{type:'image/svg+xml'})));
     toast(expBg==='transparent'?'SVGを保存しました(背景透明・ベクター)':'SVGを保存しました(ベクター)');
     closeExportDlg();
@@ -4116,7 +4188,15 @@ async function makeWireCanvas(w,opt){
       if(im){
         ctx.globalAlpha=base*fa;
         if(hasImgFx(s))ctx.filter=fxCss(s);
-        ctx.drawImage(im,-s.w/2,-s.h/2,s.w,s.h);
+        if(s.imgBox){
+          /* トリミング済み: 元の画像は動かさず、見える窓だけで切り取る */
+          ctx.save();
+          ctx.beginPath();ctx.rect(-s.w/2,-s.h/2,s.w,s.h);ctx.clip();
+          ctx.drawImage(im,s.imgBox.x-s.x,s.imgBox.y-s.y,s.imgBox.w,s.imgBox.h);
+          ctx.restore();
+        }else{
+          ctx.drawImage(im,-s.w/2,-s.h/2,s.w,s.h);
+        }
         ctx.filter='none';
         ctx.globalAlpha=base;shClear();
       }
@@ -4209,6 +4289,34 @@ async function makeWireCanvas(w,opt){
       ctx.restore();
     }
   });
+  /* メジャー(残っていれば書き出しにも含める。SVG版のmeasureSvgのz=1と同じ見た目) */
+  if(opt.measures&&opt.measures.length){
+    const mBg=opt.measureBg!==false;
+    opt.measures.forEach(m=>{
+      ctx.save();
+      const dx=m.x2-m.x1,dy=m.y2-m.y1,len=Math.hypot(dx,dy);
+      const fsz=12,sw2=1.5;
+      const mx=(m.x1+m.x2)/2,my=(m.y1+m.y2)/2;
+      const label=`${Math.round(len)}px`;
+      ctx.strokeStyle='#E8564F';ctx.fillStyle='#E8564F';
+      ctx.lineWidth=sw2;
+      ctx.beginPath();ctx.moveTo(m.x1,m.y1);ctx.lineTo(m.x2,m.y2);ctx.stroke();
+      ctx.beginPath();ctx.arc(m.x1,m.y1,3,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.arc(m.x2,m.y2,3,0,Math.PI*2);ctx.fill();
+      const bw=(label.length*0.62+1)*fsz,bh=fsz*1.6;
+      ctx.font=`700 ${fsz}px system-ui,sans-serif`;
+      ctx.textAlign='center';ctx.textBaseline='middle';
+      if(mBg){
+        const rx=mx-bw/2,ry=my-bh-8;
+        ctx.beginPath();
+        if(ctx.roundRect)ctx.roundRect(rx,ry,bw,bh,4);else ctx.rect(rx,ry,bw,bh);
+        ctx.fill();
+        ctx.fillStyle='#fff';
+      }
+      ctx.fillText(label,mx,my-bh/2-8);
+      ctx.restore();
+    });
+  }
   return cv;
 }
 
@@ -4245,7 +4353,13 @@ let eraseMode=false,eraseSize=20,eraseStroke=null;  /* 消しゴム */
 let imgAdjust=false;              /* 図形の中の画像をドラッグで調整 */
 let txPick=false,txSel=null;      /* 文字を選ぶモード / 選んだ範囲 {sid,a,b} */
 let rulersOn=false;               /* 定規とガイド(ドキュメントごとに保存) */
+let measuresOn=true;              /* メジャーの表示/非表示(定規と同じくドキュメントごとに記憶) */
+let measureBg=true;               /* メジャーのラベルに背景(赤い箱)を付けるか */
 let measureMode=false,measure=null;  /* メジャー(pxを測る) */
+let marquee=null;   /* 背景ドラッグでの範囲選択(ワールド座標のx1,y1,x2,y2) */
+let lastWireMouse=null;   /* キャンバス上の最後のカーソル位置(ワールド座標。貼り付け先に使う) */
+let pathPointMode=true;   /* パス選択時に点(アンカー)を出すか。falseなら大きさのハンドルのみ(四隅で被って掴みにくい時用) */
+let cropPreview=null;   /* Ctrl+ハンドルドラッグ中のトリミング/型抜きプレビュー(四隅の配列) */
 let selAnchor=null;               /* 選択中のパスの点 {sid,i} */
 let wDrag=null,wLpTimer=null;
 let smartGuideV=null,smartGuideH=null;   /* 移動中に他の図形へ吸着した位置(表示用の補助線) */
@@ -4271,6 +4385,14 @@ function rotV(p,deg){
   return{x:p.x*c-p.y*si,y:p.x*si+p.y*c};
 }
 function escXml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+/* 点と線分の距離(メジャーのクリック削除の当たり判定に使う) */
+function distToSeg(p,a,b){
+  const dx=b.x-a.x,dy=b.y-a.y;
+  const len2=dx*dx+dy*dy;
+  const t=len2?clamp(((p.x-a.x)*dx+(p.y-a.y)*dy)/len2,0,1):0;
+  const qx=a.x+dx*t,qy=a.y+dy*t;
+  return Math.hypot(p.x-qx,p.y-qy);
+}
 
 /* ---------- 定規(スケール) ----------
    画面の上と左に目盛りを出す。ワールド座標1=1pxなので目盛りがそのまま実寸。
@@ -4329,6 +4451,21 @@ function setRulers(on){
   if(d&&d.shapes){if(on)d.ruler=true;else delete d.ruler;save();}
   document.body.classList.toggle('rulers',on);
   if(on)drawRulers();
+  renderWire();
+}
+/* メジャーの表示/非表示(定規と同じくドキュメントごとに記憶する)。
+   データ(d.measures)自体は消さず、見せる/隠すだけを切り替える */
+function setMeasuresOn(on){
+  measuresOn=on;
+  const d=curDoc();
+  if(d&&d.shapes){if(on)delete d.measureShow;else d.measureShow=false;save();}
+  renderWire();updateWireBtns();
+}
+/* メジャーのラベルに背景(赤い箱)を付けるか */
+function setMeasureBg(on){
+  measureBg=on;
+  const d=curDoc();
+  if(d&&d.shapes){if(on)delete d.measureBg;else d.measureBg=false;save();}
   renderWire();
 }
 addEventListener('resize',()=>{if(rulersOn)drawRulers();});
@@ -4936,6 +5073,7 @@ function cloneShape(s){
   if(s.grad)c.grad=JSON.parse(JSON.stringify(s.grad));
   if(s.sgrad)c.sgrad=JSON.parse(JSON.stringify(s.sgrad));
   if(s.imgFill)c.imgFill={...s.imgFill};
+  if(s.imgBox)c.imgBox={...s.imgBox};
   if(s.rs)c.rs=s.rs.slice();
   if(s.wp)c.wp=s.wp.slice();
   if(s.cattr)c.cattr=s.cattr.map(a=>a?{...a}:a);
@@ -5238,7 +5376,11 @@ function shapeSvg(s){
     /* 枠線(太さ0で枠なし)。色はグラデーションも使える */
     const fr=sw>0?`<rect x="${-s.w/2}" y="${-s.h/2}" width="${s.w}" height="${s.h}" fill="none" stroke="${paint||'var(--ink)'}" stroke-opacity="${fa}" stroke-width="${sw}"/>`:'';
     const fx=hasImgFx(s)?` filter="url(#wfx_${s.id})"`:'';
-    return`<g data-id="${s.id}" ${tr}><image href="${imgHref(s.src)}" x="${-s.w/2}" y="${-s.h/2}" width="${s.w}" height="${s.h}" preserveAspectRatio="none" opacity="${fa}"${fx}/>${fr}</g>`;
+    /* Ctrl+ハンドルでトリミング済みなら、元の画像は動かさず見える窓(w/h)だけで切り取る */
+    const img=s.imgBox
+      ?`<clipPath id="icrop_${s.id}"><rect x="${-s.w/2}" y="${-s.h/2}" width="${s.w}" height="${s.h}"/></clipPath><g clip-path="url(#icrop_${s.id})"><image href="${imgHref(s.src)}" x="${s.imgBox.x-s.x}" y="${s.imgBox.y-s.y}" width="${s.imgBox.w}" height="${s.imgBox.h}" preserveAspectRatio="none" opacity="${fa}"${fx}/></g>`
+      :`<image href="${imgHref(s.src)}" x="${-s.w/2}" y="${-s.h/2}" width="${s.w}" height="${s.h}" preserveAspectRatio="none" opacity="${fa}"${fx}/>`;
+    return`<g data-id="${s.id}" ${tr}>${img}${fr}</g>`;
   }
   /* テキスト(色は文字色として使う)。文字ごとにサイズ・太さ・フォント・
      字間・斜体・回転・位置を変えられるよう、1文字ずつ置いていく */
@@ -5309,9 +5451,10 @@ function handlesFor(s){
   return[[-1,-1],[0,-1],[1,-1],[-1,0],[1,0],[-1,1],[0,1],[1,1]];
 }
 function selSvg(s){
-  const hw=s.w/2,hh=s.h/2,r=7/wz,sw=1.5/wz,pad=5/wz;
-  /* デバイスは外装まで含めた枠を出す(ハンドル位置は画面の端のまま) */
-  const lb=(isFrame(s)&&s.device)?frameFullLocalBox(s):{x1:-hw-pad,y1:-hh-pad,x2:hw+pad,y2:hh+pad};
+  const hw=s.w/2,hh=s.h/2,r=7/wz,sw=1.5/wz;
+  /* デバイスは外装まで含めた枠を出す(ハンドル位置は画面の端のまま)。
+     それ以外は実際の大きさぴったりに合わせる(パディングなし) */
+  const lb=(isFrame(s)&&s.device)?frameFullLocalBox(s):{x1:-hw,y1:-hh,x2:hw,y2:hh};
   const ox=lb.x1,oy=lb.y1,ow=lb.x2-lb.x1,oh=lb.y2-lb.y1;
   if(s.locked){
     /* 固定中: グレー枠のみ(ハンドルなし) */
@@ -5321,9 +5464,9 @@ function selSvg(s){
   h+=`<rect x="${ox}" y="${oy}" width="${ow}" height="${oh}" fill="none" stroke="var(--accent)" stroke-width="${sw}" stroke-dasharray="${5/wz} ${4/wz}"/>`;
   /* 回転ハンドル(デバイスは外装の上に出す) */
   h+=`<line x1="0" y1="${oy}" x2="0" y2="${oy-23/wz}" stroke="var(--accent)" stroke-width="${sw}"/>`;
-  h+=`<circle data-handle="rot" cx="0" cy="${oy-28/wz}" r="${r}" fill="var(--node-bg)" stroke="var(--accent)" stroke-width="${sw}"/>`;
+  h+=`<circle data-handle="rot" cx="0" cy="${oy-28/wz}" r="${r}" fill="transparent" stroke="var(--accent)" stroke-width="${sw}"/>`;
   handlesFor(s).forEach(([sx,sy])=>{
-    h+=`<rect data-handle="${sx},${sy}" x="${sx*hw-r}" y="${sy*hh-r}" width="${r*2}" height="${r*2}" rx="${2/wz}" fill="var(--node-bg)" stroke="var(--accent)" stroke-width="${sw}"/>`;
+    h+=`<rect data-handle="${sx},${sy}" x="${sx*hw-r}" y="${sy*hh-r}" width="${r*2}" height="${r*2}" rx="${2/wz}" fill="transparent" stroke="var(--accent)" stroke-width="${sw}"/>`;
   });
   return h+'</g>';
 }
@@ -5425,23 +5568,22 @@ function renderWire(){
     if(smartGuideV!==null)html+=`<line x1="${smartGuideV}" x2="${smartGuideV}" y1="${-E}" y2="${E}" stroke="#E858C8" stroke-width="${gw}" pointer-events="none"/>`;
     if(smartGuideH!==null)html+=`<line y1="${smartGuideH}" y2="${smartGuideH}" x1="${-E}" x2="${E}" stroke="#E858C8" stroke-width="${gw}" pointer-events="none"/>`;
   }
-  /* メジャー(測った距離の表示) */
-  if(measure){
-    const m=measure,dx=m.x2-m.x1,dy=m.y2-m.y1,len=Math.hypot(dx,dy);
-    const fsz=12/wz,sw2=1.5/wz;
-    const mx=(m.x1+m.x2)/2,my=(m.y1+m.y2)/2;
-    const label=`${Math.round(Math.abs(dx))} × ${Math.round(Math.abs(dy))}　${Math.round(len)}px`;
-    const bw=(label.length*0.62+1)*fsz,bh=fsz*1.6;
-    html+=`<g pointer-events="none">
-      <line x1="${m.x1}" y1="${m.y1}" x2="${m.x2}" y2="${m.y1}" stroke="#E8564F" stroke-width="${sw2*0.7}" stroke-dasharray="${4/wz} ${3/wz}"/>
-      <line x1="${m.x2}" y1="${m.y1}" x2="${m.x2}" y2="${m.y2}" stroke="#E8564F" stroke-width="${sw2*0.7}" stroke-dasharray="${4/wz} ${3/wz}"/>
-      <line x1="${m.x1}" y1="${m.y1}" x2="${m.x2}" y2="${m.y2}" stroke="#E8564F" stroke-width="${sw2}"/>
-      <circle cx="${m.x1}" cy="${m.y1}" r="${3/wz}" fill="#E8564F"/>
-      <circle cx="${m.x2}" cy="${m.y2}" r="${3/wz}" fill="#E8564F"/>
-      <rect x="${mx-bw/2}" y="${my-bh-8/wz}" width="${bw}" height="${bh}" rx="${4/wz}" fill="#E8564F"/>
-      <text x="${mx}" y="${my-bh/2-8/wz}" font-size="${fsz}" font-weight="700" fill="#fff" text-anchor="middle" dominant-baseline="central">${label}</text>
-    </g>`;
+  /* Ctrl+ハンドルドラッグ中のトリミング/型抜きプレビュー */
+  if(cropPreview){
+    const d2=cropPreview.map(p=>`${p.x},${p.y}`).join(' ');
+    html+=`<polygon points="${d2}" fill="var(--danger)" fill-opacity="0.1" stroke="var(--danger)" stroke-width="${1.5/wz}" stroke-dasharray="${4/wz} ${3/wz}" pointer-events="none"/>`;
   }
+  /* 範囲選択の矩形(背景ドラッグ中) */
+  if(marquee){
+    const mx1=Math.min(marquee.x1,marquee.x2),mx2=Math.max(marquee.x1,marquee.x2);
+    const my1=Math.min(marquee.y1,marquee.y2),my2=Math.max(marquee.y1,marquee.y2);
+    html+=`<rect x="${mx1}" y="${my1}" width="${mx2-mx1}" height="${my2-my1}" fill="var(--accent)" fill-opacity="0.12" stroke="var(--accent)" stroke-width="${1.2/wz}" pointer-events="none"/>`;
+  }
+  /* メジャー(測った距離の表示。確定済み=常時表示のものと、ドラッグ中の1本)。
+     measuresOn(定規と同じく記憶される表示/非表示)がfalseなら確定済みは隠す。
+     ドラッグ中のものは今まさに測っているので常に見せる */
+  if(measuresOn&&d.measures&&d.measures.length)d.measures.forEach(m=>{html+=measureSvg(m,wz,measureBg);});
+  if(measure)html+=measureSvg(measure,wz,measureBg);
   const ss=selShapes();
   const adjusting=imgAdjust&&ss.length===1&&ss[0].imgFill&&!ss[0].locked;
   const picking=txPick&&ss.length===1&&ss[0].type==='text'&&!ss[0].locked;
@@ -5449,10 +5591,11 @@ function renderWire(){
   else if(picking)html+=textPickSvg(ss[0]);    /* 文字選択中も同じくハンドルは出さない */
   else if(ss.length===1)html+=selSvg(ss[0]);
   else if(ss.length>1)html+=multiSelSvg(ss);
-  /* パスは点を出して自由変形できるように */
+  /* パスは点を出して自由変形できるように。ただし大きさのハンドルと四隅で
+     被って掴みにくい時は pathPointMode を切り替えて隠せる(#wirePtModeBtn) */
   if(penShape)html+=pathEditSvg(penShape);
   else if(ss.length===1&&ss[0].type==='path'&&!ss[0].locked
-    &&!(wDrag&&wDrag.mode==='wbrush'))html+=pathEditSvg(ss[0]);
+    &&!(wDrag&&wDrag.mode==='wbrush')&&pathPointMode)html+=pathEditSvg(ss[0]);
   /* 消しゴムの軌跡プレビュー */
   if(eraseStroke&&eraseStroke.length){
     const d=eraseStroke.map((p,i)=>(i?'L':'M')+p.x+' '+p.y).join('');
@@ -5479,12 +5622,19 @@ function updateWireBtns(){
   $('#wireMultiBtn').classList.toggle('active',wMulti);
   $('#wireRulerBtn').classList.toggle('active',rulersOn);
   $('#wireMeasureBtn').classList.toggle('active',measureMode);
+  $('#wireMeasureShowBtn').classList.toggle('active',measuresOn);
   $('#wireAlignBtn').disabled=!any;
   $('#wirePenBtn').classList.toggle('active',penMode);
   $('#wireEraserBtn').classList.toggle('active',eraseMode);
   $('#wireCutBtn').disabled=ss.length<2;
-  /* 選択が無くなったらスタイルパネルは閉じる */
-  if(!any&&$('#fillMenu').classList.contains('on'))$('#fillMenu').classList.remove('on');
+  $('#wirePtModeBtn').disabled=!(one&&one.type==='path');
+  $('#wirePtModeBtn').classList.toggle('active',!pathPointMode);
+  /* 選んだ段階で色とスタイルパネルを自動で開く(開いていれば内容も追従)。
+     選択が無くなったら(空クリック・Escapeなど)自動で閉じる */
+  if(any){
+    if(!$('#fillMenu').classList.contains('on')){$('#fillMenu').classList.add('on');placeFillMenu();}
+    updateStyleMenu();
+  }else if($('#fillMenu').classList.contains('on'))$('#fillMenu').classList.remove('on');
 }
 /* 図形の四隅(回転後のワールド座標)。外接円で概算すると大きな図形ほど
    枠が実物より大きくずれるため、実際の角を使う */
@@ -5513,9 +5663,40 @@ function cornersBox(ss,pad){
 }
 /* 複数選択時の全体枠 */
 function multiSelSvg(ss){
-  const{x1,y1,x2,y2}=cornersBox(ss,6/wz);
-  const sw=1.5/wz;
-  return`<rect x="${x1}" y="${y1}" width="${x2-x1}" height="${y2-y1}" fill="none" stroke="var(--accent)" stroke-width="${sw}" stroke-dasharray="${5/wz} ${4/wz}" pointer-events="none"/>`;
+  const{x1,y1,x2,y2}=cornersBox(ss,0);
+  const sw=1.5/wz,r=7/wz;
+  let h=`<rect x="${x1}" y="${y1}" width="${x2-x1}" height="${y2-y1}" fill="none" stroke="var(--accent)" stroke-width="${sw}" stroke-dasharray="${5/wz} ${4/wz}" pointer-events="none"/>`;
+  /* 複数選択もハンドルでまとめてリサイズできるように(位置・大きさを同じ比率で拡縮) */
+  if(ss.some(s=>!s.locked)){
+    const cx=(x1+x2)/2,cy=(y1+y2)/2,hw=(x2-x1)/2,hh=(y2-y1)/2;
+    [[-1,-1],[0,-1],[1,-1],[-1,0],[1,0],[-1,1],[0,1],[1,1]].forEach(([sx,sy])=>{
+      const hx=cx+sx*hw,hy=cy+sy*hh;
+      h+=`<rect data-handle="${sx},${sy}" data-multi="1" x="${hx-r}" y="${hy-r}" width="${r*2}" height="${r*2}" rx="${2/wz}" fill="transparent" stroke="var(--accent)" stroke-width="${sw}"/>`;
+    });
+  }
+  return h;
+}
+/* メジャー(計測線)の描画。z=1(既定)なら書き出し用の固定サイズ、画面表示ではwzで
+   拡大縮小しても太さ・文字サイズが一定に見えるようスケールする。
+   bg=falseならラベルは背景(赤い箱)なしの文字だけになる(既定true) */
+function measureSvg(m,z,bg){
+  z=z||1;
+  if(bg===undefined)bg=true;
+  const dx=m.x2-m.x1,dy=m.y2-m.y1,len=Math.hypot(dx,dy);
+  const fsz=12/z,sw2=1.5/z;
+  const mx=(m.x1+m.x2)/2,my=(m.y1+m.y2)/2;
+  const label=`${Math.round(len)}px`;
+  const bw=(label.length*0.62+1)*fsz,bh=fsz*1.6;
+  const labelSvg=bg
+    ?`<rect x="${mx-bw/2}" y="${my-bh-8/z}" width="${bw}" height="${bh}" rx="${4/z}" fill="#E8564F"/>
+      <text x="${mx}" y="${my-bh/2-8/z}" font-size="${fsz}" font-weight="700" fill="#fff" text-anchor="middle" dominant-baseline="central">${label}</text>`
+    :`<text x="${mx}" y="${my-bh/2-8/z}" font-size="${fsz}" font-weight="700" fill="#E8564F" text-anchor="middle" dominant-baseline="central">${label}</text>`;
+  return`<g pointer-events="none">
+    <line x1="${m.x1}" y1="${m.y1}" x2="${m.x2}" y2="${m.y2}" stroke="#E8564F" stroke-width="${sw2}"/>
+    <circle cx="${m.x1}" cy="${m.y1}" r="${3/z}" fill="#E8564F"/>
+    <circle cx="${m.x2}" cy="${m.y2}" r="${3/z}" fill="#E8564F"/>
+    ${labelSvg}
+  </g>`;
 }
 /* 固定中の鍵マーク */
 function lockSvg(s){
@@ -5538,6 +5719,9 @@ function openWire(id){
   document.body.classList.add('wire-mode');
   const dd=curDoc();
   dd.guides=dd.guides||{v:[],h:[]};
+  dd.measures=dd.measures||[];
+  measuresOn=dd.measureShow!==false;
+  measureBg=dd.measureBg!==false;
   rulersOn=!!dd.ruler;
   document.body.classList.toggle('rulers',rulersOn);
   if(rulersOn)requestAnimationFrame(drawRulers);
@@ -5718,12 +5902,28 @@ function textLayout(s){
   const lh=s.lh===undefined?1.35:s.lh;
   const va=s.va||'bottom';
   /* 改行で分ける。書式は文字の位置で覚えているので、改行文字もindexを消費する */
-  const lines=[];let cur=[];
+  let lines=[];let cur=[];
   raw.forEach((ch,i)=>{
     if(ch==='\n'){lines.push(cur);cur=[];return;}
     cur.push({ch,i,a:charAttr(s,i)});
   });
   lines.push(cur);
+  /* 折り返し幅(s.wrapW)が指定してあれば、幅を超える手前で自動改行する(横書きのみ・
+     文字単位。日本語は単語の区切りが無いためどの言語でも文字単位で折り返す) */
+  if(s.wrapW&&!s.vert){
+    const wrapped=[];
+    lines.forEach(ln=>{
+      if(!ln.length){wrapped.push(ln);return;}
+      let row=[],pos=0;
+      ln.forEach(c=>{
+        const m=charMetrics(c.ch,c.a);
+        if(row.length&&pos+m.w>s.wrapW){wrapped.push(row);row=[];pos=0;}
+        row.push(c);pos+=m.w+c.a.ls;
+      });
+      wrapped.push(row);
+    });
+    lines=wrapped;
+  }
   let lean=0;
   const L=lines.map(ln=>{
     let pos=0,maxFs=0,A=0,D=0;
@@ -5744,14 +5944,18 @@ function textLayout(s){
   });
   let off=0;
   L.forEach(l=>{l.top=off;off+=l.lineH;});
-  const along=Math.max(0,...L.map(l=>l.total));  /* 行の長さの最大 */
+  /* 折り返し幅を指定している時は、その幅を基準に揃える(内容がそれより
+     短くても、指定した箱の幅の中で左/中央/右揃えが効くように) */
+  const along=(s.wrapW&&!s.vert)?s.wrapW:Math.max(0,...L.map(l=>l.total));  /* 行の長さの最大 */
   const across=off;                              /* 行を積んだ長さ */
   const w=s.vert?across+lean:Math.max(20,along+lean);
   const h=s.vert?Math.max(20,along):across;
+  /* 横方向の揃え(横書きのみ。縦書きは常に中央) */
+  const align=s.vert?'center':(s.align||'center');
   L.forEach(l=>{
     /* 行の中身(ベースライン上下)を行送りの中央に置く */
     const contentTop=l.top+(l.lineH-(l.A+l.D))/2;
-    const indent=(along-l.total)/2;              /* 行は中央で揃える */
+    const indent=align==='left'?0:align==='right'?(along-l.total):(along-l.total)/2;
     l.chars.forEach(c=>{
       if(s.vert){
         /* 縦書き: 列は右から左。文字は列の幅の中央に置く */
@@ -6014,6 +6218,42 @@ function dupSel(){
   wireSel=copies.map(c=>c.id);
   save();renderWire();
   toast('複製しました');
+}
+/* ---------- コピー&ペースト(このアプリ内だけの独自クリップボード。
+   ワイヤーをまたいでも貼り付けられるようdocに保存せずJS変数で保持) ---------- */
+let shapeClipboard=null;
+function copySel(cut){
+  const ss=selShapes();if(!ss.length)return;
+  shapeClipboard=withFrameChildren(ss).map(s=>cloneShape(s));
+  if(cut){
+    pushUndo();delSel();
+    toast('切り取りました');
+  }else toast('コピーしました');
+}
+function pasteShapes(){
+  const d=curDoc();
+  if(!d||!d.shapes||!shapeClipboard||!shapeClipboard.length)return;
+  pushUndo();
+  /* カーソル(最後にキャンバス上にあった位置)に、コピーした図形全体の中心が来るように配置 */
+  const box=cornersBox(shapeClipboard,0);
+  const cx=(box.x1+box.x2)/2,cy=(box.y1+box.y2)/2;
+  const target=lastWireMouse||{x:cx,y:cy};
+  const dx=target.x-cx,dy=target.y-cy;
+  const gidMap=new Map();
+  const copies=shapeClipboard.map(s=>{
+    const c=cloneShape(s);
+    c.id=uid();c.x=s.x+dx;c.y=s.y+dy;
+    delete c.locked;
+    if(s.gid){
+      if(!gidMap.has(s.gid))gidMap.set(s.gid,uid());
+      c.gid=gidMap.get(s.gid);
+    }
+    return c;
+  });
+  d.shapes.push(...copies);
+  wireSel=copies.map(c=>c.id);selAnchor=null;
+  save();renderWire();updateStyleMenu();
+  toast('貼り付けました');
 }
 /* 穴を埋める(切り取りに使った図形の跡を消す) */
 function removeHole(s,ci){
@@ -6909,7 +7149,11 @@ $('#wireMeasureBtn').onclick=()=>{
   else{exitPen();exitEraser();exitBrush();finishWireText();}
   wireView.style.cursor=measureMode?'crosshair':'';
   renderWire();updateWireBtns();
-  toast(measureMode?'メジャー: ドラッグで距離を測ります(Shiftで水平・垂直)':'メジャーを終了しました');
+  toast(measureMode?'メジャー: ドラッグで水平・垂直を測ります(Shiftかctrlで斜めも自由に)':'メジャーを終了しました');
+};
+$('#wireMeasureShowBtn').onclick=()=>{
+  setMeasuresOn(!measuresOn);
+  toast(measuresOn?'メジャーを表示します':'メジャーを隠しました(データは残ります)');
 };
 
 /* ---------- 整列 ----------
@@ -6996,6 +7240,23 @@ function startResize(s,sx,sy){
   }
   return d;
 }
+/* 複数選択をまとめてリサイズ(位置・大きさを同じ比率で拡縮。各図形自身の回転はそのまま) */
+function startGroupResize(ss,sx,sy){
+  const movable=ss.filter(s=>!s.locked);
+  if(!movable.length)return null;
+  const box=cornersBox(movable,0);
+  const bw=box.x2-box.x1,bh=box.y2-box.y1;
+  const ax=sx>0?box.x1:(sx<0?box.x2:(box.x1+box.x2)/2);
+  const ay=sy>0?box.y1:(sy<0?box.y2:(box.y1+box.y2)/2);
+  const cp=a=>a.map(p=>({x:p.x,y:p.y,h1:p.h1&&{...p.h1},h2:p.h2&&{...p.h2}}));
+  const items=movable.map(s=>{
+    const it={s,x0:s.x,y0:s.y,w0:s.w,h0:s.h,fs0:s.fs};
+    if(s.type==='path'){it.pts0=cp(s.pts);if(s.holes)it.holes0=s.holes.map(cp);}
+    if(s.type==='text'&&s.cattr)it.cattr0=s.cattr.map(c=>c?{...c}:c);
+    return it;
+  });
+  return{mode:'gresize',sx,sy,ax,ay,bw0:bw,bh0:bh,items};
+}
 wireView.addEventListener('pointerdown',e=>{
   if(e.button===2)return;   /* 右クリックは contextmenu で処理する */
   hidePopups();   /* スタイルパネルは開いたままにする */
@@ -7022,9 +7283,21 @@ wireView.addEventListener('pointerdown',e=>{
     renderWire();
     return;
   }
-  /* メジャー: ドラッグで距離を測る */
+  /* メジャー: ドラッグで距離を測る(常時複数残せる)。既にある計測線の上ならクリックで削除 */
   if(measureMode){
     const p=s2w(e.clientX,e.clientY);
+    const list=curDoc().measures;
+    if(list&&list.length){
+      const tol=8/wz;
+      const hit=list.findIndex(m=>distToSeg(p,{x:m.x1,y:m.y1},{x:m.x2,y:m.y2})<tol);
+      if(hit>=0){
+        pushUndo();
+        list.splice(hit,1);
+        save();renderWire();
+        toast('メジャーを削除しました');
+        return;
+      }
+    }
     measure={x1:p.x,y1:p.y,x2:p.x,y2:p.y};
     wDrag={mode:'measure'};
     renderWire();
@@ -7148,11 +7421,27 @@ wireView.addEventListener('pointerdown',e=>{
   }
   const handle=e.target.closest('[data-handle]');
   if(handle){
-    const s=oneSel();if(!s||s.locked)return;
-    pushUndo();
     const hv=handle.dataset.handle;
-    if(hv==='rot')wDrag={mode:'rotate',s};
-    else{const[sx,sy]=hv.split(',').map(Number);wDrag=startResize(s,sx,sy);}
+    if(handle.dataset.multi){
+      if(hv==='rot')return;   /* 複数選択の回転はまだ非対応 */
+      const[sx,sy]=hv.split(',').map(Number);
+      const g=startGroupResize(selShapes(),sx,sy);
+      if(!g)return;
+      pushUndo();
+      wDrag=g;
+      return;
+    }
+    const s=oneSel();if(!s||s.locked)return;
+    if(hv==='rot'){pushUndo();wDrag={mode:'rotate',s};return;}
+    const[sx,sy]=hv.split(',').map(Number);
+    /* Ctrl+ハンドルドラッグ: 拡縮ではなく型抜き(画像はトリミング、図形は前面図形と同じ切り取り) */
+    if(e.ctrlKey&&(s.type==='image'||CUT_OK(s))){
+      const al=rotV({x:-sx*s.w/2,y:-sy*s.h/2},s.rot||0);
+      wDrag={mode:s.type==='image'?'imgcrop':'shapecrop',s,sx,sy,ax:s.x+al.x,ay:s.y+al.y,w0:s.w,h0:s.h,rot0:s.rot||0};
+      return;
+    }
+    pushUndo();
+    wDrag=startResize(s,sx,sy);
     return;
   }
   const gid=e.target.closest('g[data-id]');
@@ -7173,9 +7462,11 @@ wireView.addEventListener('pointerdown',e=>{
       selAnchor=null;
       renderWire();
     }
-    /* 端の近くを長押し → リサイズ(単一選択・非固定のみ) */
+    /* 端の近くを長押し → リサイズ(単一選択・非固定のみ)。
+       テキストは小さい図形が多く端の判定域が本体全体を覆ってしまい、動かそうと
+       しただけでリサイズになってしまうため対象外(周りのハンドルからのみ変形) */
     let edge=null;
-    if(wireSel.length===1&&!s.locked&&!(isFrame(s)&&s.sizeLock)){
+    if(wireSel.length===1&&!s.locked&&!(isFrame(s)&&s.sizeLock)&&s.type!=='text'){
       const p=s2w(e.clientX,e.clientY);
       const lp=rotV({x:p.x-s.x,y:p.y-s.y},-(s.rot||0));
       const t=14/wz;
@@ -7184,7 +7475,6 @@ wireView.addEventListener('pointerdown',e=>{
       else{
         if(lp.x>s.w/2-t)sx=1;else if(lp.x<-s.w/2+t)sx=-1;
         if(lp.y>s.h/2-t)sy=1;else if(lp.y<-s.h/2+t)sy=-1;
-        if(s.type==='text'&&(sx||sy)){sx=sx||(lp.x>0?1:-1);sy=0;} /* テキストはコーナー相当の等倍 */
       }
       if(sx||sy)edge=[sx,sy];
     }
@@ -7201,10 +7491,20 @@ wireView.addEventListener('pointerdown',e=>{
     }
     return;
   }
-  /* 背景: 選択解除 + パン */
+  /* 背景: 従来通りドラッグは画面移動(パン)。Shift/Ctrlを押しながらだと範囲選択(マーキー選択)になる */
+  if(e.button===1){
+    wDrag={mode:'pan',x:e.clientX,y:e.clientY,px:wpx,py:wpy};
+    return;
+  }
+  if(e.shiftKey||e.ctrlKey){
+    wDrag={mode:'marquee-maybe',startX:e.clientX,startY:e.clientY,additive:wMulti||e.shiftKey,base:[...wireSel]};
+    return;
+  }
   if(wireSel.length||selAnchor){wireSel=[];selAnchor=null;renderWire();}
   wDrag={mode:'pan',x:e.clientX,y:e.clientY,px:wpx,py:wpy};
 });
+/* ドラッグ中かどうかに関わらず、貼り付け先に使うためカーソル位置を常に覚えておく */
+wireView.addEventListener('pointermove',e=>{lastWireMouse=s2w(e.clientX,e.clientY);},{passive:true});
 wireView.addEventListener('pointermove',e=>{
   if(!wirePointers.has(e.pointerId))return;
   wirePointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
@@ -7248,7 +7548,8 @@ wireView.addEventListener('pointermove',e=>{
   }
   if(wDrag.mode==='measure'){
     measure.x2=p.x;measure.y2=p.y;
-    if(e.shiftKey){   /* Shiftで水平・垂直に固定 */
+    /* 既定は水平・垂直に固定、Shift/Ctrlを押しながらだと斜めも自由に測れる */
+    if(!e.shiftKey&&!e.ctrlKey){
       if(Math.abs(measure.x2-measure.x1)>Math.abs(measure.y2-measure.y1))measure.y2=measure.y1;
       else measure.x2=measure.x1;
     }
@@ -7274,6 +7575,32 @@ wireView.addEventListener('pointermove',e=>{
     wpx=wDrag.px+e.clientX-wDrag.x;wpy=wDrag.py+e.clientY-wDrag.y;
     wireViewApply();return;
   }
+  if(wDrag.mode==='marquee-maybe'){
+    if(Math.hypot(e.clientX-wDrag.startX,e.clientY-wDrag.startY)>4){
+      const p0=s2w(wDrag.startX,wDrag.startY);
+      const additive=wDrag.additive,base=wDrag.base;
+      if(!additive){wireSel=[];selAnchor=null;}
+      wDrag={mode:'marquee',x1:p0.x,y1:p0.y,additive,base};
+    }else return;
+  }
+  if(wDrag.mode==='marquee'){
+    const p=s2w(e.clientX,e.clientY);
+    marquee={x1:wDrag.x1,y1:wDrag.y1,x2:p.x,y2:p.y};
+    const bx1=Math.min(wDrag.x1,p.x),bx2=Math.max(wDrag.x1,p.x);
+    const by1=Math.min(wDrag.y1,p.y),by2=Math.max(wDrag.y1,p.y);
+    /* 範囲と交差する図形を選ぶ(グループはまとめて)。フレーム自体は対象外
+       (フレームは中に置いた図形の大半を包むため、範囲選択のたびに毎回
+       つられて選ばれてしまうのを防ぐ。フレームはラベルから選ぶ) */
+    const ids=new Set(wDrag.additive?wDrag.base:[]);
+    curDoc().shapes.forEach(s=>{
+      if(isFrame(s))return;
+      const b=cornersBox([s],0);
+      if(b.x1<bx2&&b.x2>bx1&&b.y1<by2&&b.y2>by1)groupIds(s).forEach(id=>ids.add(id));
+    });
+    wireSel=[...ids];
+    renderWire();
+    return;
+  }
   if(wDrag.mode==='maybe'){
     if(Math.hypot(e.clientX-wDrag.startX,e.clientY-wDrag.startY)>6){
       wDrag.moved=true;clearTimeout(wLpTimer);
@@ -7290,40 +7617,43 @@ wireView.addEventListener('pointermove',e=>{
   if(wDrag.mode==='move'){
     wDrag.items.forEach(it=>{it.s.x=p.x+it.ox;it.s.y=p.y+it.oy;});
     /* 吸着(端と中心が近づいたらぴったり合わせる): 定規のガイド線 + 他の図形の端・中心(スマートガイド)。
-       両方の候補から一番近いものを選ぶ */
-    const tol=6/wz;
-    const bb=cornersBox(wDrag.items.map(it=>it.s),0);
-    let dx=null,dxMag=Infinity,dy=null,dyMag=Infinity,guideV=null,guideH=null;
-    if(rulersOn){
-      const g=curDoc().guides;
-      if(g&&(g.v.length||g.h.length)){
-        [bb.x1,(bb.x1+bb.x2)/2,bb.x2].forEach(x=>g.v.forEach(gx=>{
-          const df=gx-x,m=Math.abs(df);
-          if(m<tol&&m<dxMag){dx=df;dxMag=m;}
-        }));
-        [bb.y1,(bb.y1+bb.y2)/2,bb.y2].forEach(y=>g.h.forEach(gy=>{
-          const df=gy-y,m=Math.abs(df);
-          if(m<tol&&m<dyMag){dy=df;dyMag=m;}
-        }));
+       両方の候補から一番近いものを選ぶ。Shift/CtrlキーでCanva同様に一時的に無効化できる */
+    let dx=null,dy=null,guideV=null,guideH=null;
+    if(!e.shiftKey&&!e.ctrlKey){
+      const tol=6/wz;
+      const bb=cornersBox(wDrag.items.map(it=>it.s),0);
+      let dxMag=Infinity,dyMag=Infinity;
+      if(rulersOn){
+        const g=curDoc().guides;
+        if(g&&(g.v.length||g.h.length)){
+          [bb.x1,(bb.x1+bb.x2)/2,bb.x2].forEach(x=>g.v.forEach(gx=>{
+            const df=gx-x,m=Math.abs(df);
+            if(m<tol&&m<dxMag){dx=df;dxMag=m;}
+          }));
+          [bb.y1,(bb.y1+bb.y2)/2,bb.y2].forEach(y=>g.h.forEach(gy=>{
+            const df=gy-y,m=Math.abs(df);
+            if(m<tol&&m<dyMag){dy=df;dyMag=m;}
+          }));
+        }
       }
+      const movingIds=new Set(wDrag.items.map(it=>it.s.id));
+      curDoc().shapes.forEach(s=>{
+        if(movingIds.has(s.id))return;
+        const ob=cornersBox([s],0);
+        [ob.x1,(ob.x1+ob.x2)/2,ob.x2].forEach(tx=>{
+          [bb.x1,(bb.x1+bb.x2)/2,bb.x2].forEach(x=>{
+            const df=tx-x,m=Math.abs(df);
+            if(m<tol&&m<dxMag){dx=df;dxMag=m;guideV=tx;}
+          });
+        });
+        [ob.y1,(ob.y1+ob.y2)/2,ob.y2].forEach(ty=>{
+          [bb.y1,(bb.y1+bb.y2)/2,bb.y2].forEach(y=>{
+            const df=ty-y,m=Math.abs(df);
+            if(m<tol&&m<dyMag){dy=df;dyMag=m;guideH=ty;}
+          });
+        });
+      });
     }
-    const movingIds=new Set(wDrag.items.map(it=>it.s.id));
-    curDoc().shapes.forEach(s=>{
-      if(movingIds.has(s.id))return;
-      const ob=cornersBox([s],0);
-      [ob.x1,(ob.x1+ob.x2)/2,ob.x2].forEach(tx=>{
-        [bb.x1,(bb.x1+bb.x2)/2,bb.x2].forEach(x=>{
-          const df=tx-x,m=Math.abs(df);
-          if(m<tol&&m<dxMag){dx=df;dxMag=m;guideV=tx;}
-        });
-      });
-      [ob.y1,(ob.y1+ob.y2)/2,ob.y2].forEach(ty=>{
-        [bb.y1,(bb.y1+bb.y2)/2,bb.y2].forEach(y=>{
-          const df=ty-y,m=Math.abs(df);
-          if(m<tol&&m<dyMag){dy=df;dyMag=m;guideH=ty;}
-        });
-      });
-    });
     if(dx!==null)wDrag.items.forEach(it=>{it.s.x+=dx;});
     if(dy!==null)wDrag.items.forEach(it=>{it.s.y+=dy;});
     smartGuideV=guideV;smartGuideH=guideH;
@@ -7442,6 +7772,70 @@ wireView.addEventListener('pointermove',e=>{
     s.x=ax+off.x;s.y=ay+off.y;
     renderWire();return;
   }
+  if(wDrag.mode==='gresize'){
+    const{sx,sy,ax,ay,bw0,bh0,items}=wDrag;
+    let nbw=sx?Math.max(10,sx>0?(p.x-ax):(ax-p.x)):bw0;
+    let nbh=sy?Math.max(10,sy>0?(p.y-ay):(ay-p.y)):bh0;
+    /* Shift+四隅ドラッグで全体の縦横比を保つ */
+    if(e.shiftKey&&sx&&sy&&bw0>0&&bh0>0){
+      const r0=bw0/bh0;
+      if(nbw/bw0>=nbh/bh0)nbh=nbw/r0; else nbw=nbh*r0;
+    }
+    const kx=sx?nbw/bw0:1,ky=sy?nbh/bh0:1;
+    items.forEach(it=>{
+      const s=it.s;
+      s.x=ax+(it.x0-ax)*kx;
+      s.y=ay+(it.y0-ay)*ky;
+      if(s.type==='text'){
+        const k=(kx+ky)/2;   /* 文字はfs一本なので両軸の平均で反応させる */
+        s.fs=clamp(it.fs0*k,8,200);
+        if(it.cattr0){
+          s.cattr=it.cattr0.map(c=>(c&&c.fs!==undefined)?{...c,fs:clamp(c.fs*k,8,200)}:(c?{...c}:c));
+        }
+        measureWText(s);
+      }else{
+        s.w=Math.max(1,it.w0*kx);
+        s.h=Math.max(1,it.h0*ky);
+        if(s.type==='path'&&it.pts0){
+          const sc=arr=>arr.map(p0=>{
+            const q={x:p0.x*kx,y:p0.y*ky};
+            if(p0.h1)q.h1={x:p0.h1.x*kx,y:p0.h1.y*ky};
+            if(p0.h2)q.h2={x:p0.h2.x*kx,y:p0.h2.y*ky};
+            return q;
+          });
+          s.pts=sc(it.pts0);
+          if(it.holes0)s.holes=it.holes0.map(sc);
+        }
+      }
+    });
+    renderWire();return;
+  }
+  /* Ctrl+ハンドルドラッグ: 画像はトリミング(引き伸ばさず見える範囲だけ変える) */
+  if(wDrag.mode==='imgcrop'){
+    const{s,sx,sy,ax,ay,w0,h0,rot0}=wDrag;
+    const dl=rotV({x:p.x-ax,y:p.y-ay},-rot0);
+    const nw=sx?Math.max(10,dl.x*sx):w0,nh=sy?Math.max(10,dl.y*sy):h0;
+    const off=rotV({x:sx*nw/2,y:sy*nh/2},rot0);
+    wDrag.nw=nw;wDrag.nh=nh;wDrag.ncx=ax+off.x;wDrag.ncy=ay+off.y;
+    const c=[[-nw/2,-nh/2],[nw/2,-nh/2],[nw/2,nh/2],[-nw/2,nh/2]].map(([lx,ly])=>{
+      const v=rotV({x:lx,y:ly},rot0);return{x:wDrag.ncx+v.x,y:wDrag.ncy+v.y};
+    });
+    cropPreview=c;
+    renderWire();return;
+  }
+  /* Ctrl+ハンドルドラッグ: 図形は前面の図形と同じ仕組みで型抜き(切り取り) */
+  if(wDrag.mode==='shapecrop'){
+    const{s,sx,sy,ax,ay,w0,h0,rot0}=wDrag;
+    const dl=rotV({x:p.x-ax,y:p.y-ay},-rot0);
+    const nw=sx?Math.max(10,dl.x*sx):w0,nh=sy?Math.max(10,dl.y*sy):h0;
+    const off=rotV({x:sx*nw/2,y:sy*nh/2},rot0);
+    wDrag.nw=nw;wDrag.nh=nh;wDrag.ncx=ax+off.x;wDrag.ncy=ay+off.y;
+    const c=[[-nw/2,-nh/2],[nw/2,-nh/2],[nw/2,nh/2],[-nw/2,nh/2]].map(([lx,ly])=>{
+      const v=rotV({x:lx,y:ly},rot0);return{x:wDrag.ncx+v.x,y:wDrag.ncy+v.y};
+    });
+    cropPreview=c;
+    renderWire();return;
+  }
 });
 function wireUp(e){
   wirePointers.delete(e.pointerId);
@@ -7456,7 +7850,68 @@ function wireUp(e){
     return;
   }
   if(dg.mode==='free-draw'){finishFreeStroke();return;}
-  if(dg.mode==='measure')return;   /* 測った結果は次の操作まで残す */
+  if(dg.mode==='measure'){
+    /* 測った結果を確定して常時表示のリストへ加える(点だけ=動かなかった場合は追加しない) */
+    if(measure&&Math.hypot(measure.x2-measure.x1,measure.y2-measure.y1)>2/wz){
+      const d=curDoc();
+      pushUndo();
+      d.measures=d.measures||[];
+      d.measures.push({x1:measure.x1,y1:measure.y1,x2:measure.x2,y2:measure.y2});
+      save();
+    }
+    measure=null;
+    renderWire();
+    return;
+  }
+  if(dg.mode==='marquee-maybe'){
+    /* 動かなかった=ただのクリック → 従来どおり選択解除 */
+    if(!dg.additive&&(wireSel.length||selAnchor)){wireSel=[];selAnchor=null;renderWire();}
+    return;
+  }
+  if(dg.mode==='marquee'){
+    marquee=null;
+    renderWire();
+    return;
+  }
+  if(dg.mode==='imgcrop'){
+    cropPreview=null;
+    if(dg.nw===undefined){renderWire();return;}   /* 動かなかった=何もしない */
+    const s=dg.s;
+    pushUndo();
+    /* 元の画像の全体位置・大きさ(ワールド座標)を最初のトリミングの時だけ確定する。
+       以後はこの箱を動かさず、見える窓(s.x/y/w/h)だけを変えることで
+       「引き伸ばさずに切れる」トリミングになる */
+    if(!s.imgBox)s.imgBox={x:s.x-s.w/2,y:s.y-s.h/2,w:s.w,h:s.h};
+    s.w=dg.nw;s.h=dg.nh;s.x=dg.ncx;s.y=dg.ncy;
+    save();renderWire();updateStyleMenu();
+    toast('画像をトリミングしました');
+    return;
+  }
+  if(dg.mode==='shapecrop'){
+    cropPreview=null;
+    if(dg.nw===undefined){renderWire();return;}
+    const s=dg.s,rot0=dg.rot0;
+    const corners=[[-dg.nw/2,-dg.nh/2],[dg.nw/2,-dg.nh/2],[dg.nw/2,dg.nh/2],[-dg.nw/2,dg.nh/2]].map(([lx,ly])=>{
+      const v=rotV({x:lx,y:ly},rot0);return{x:dg.ncx+v.x,y:dg.ncy+v.y};
+    });
+    pushUndo();
+    const res=applyCut([s],ctx=>{
+      const BIG=1e5;
+      ctx.beginPath();
+      ctx.rect(-BIG,-BIG,BIG*2,BIG*2);
+      ctx.moveTo(corners[0].x,corners[0].y);
+      ctx.lineTo(corners[1].x,corners[1].y);
+      ctx.lineTo(corners[2].x,corners[2].y);
+      ctx.lineTo(corners[3].x,corners[3].y);
+      ctx.closePath();
+      ctx.fill('evenodd');
+    });
+    if(!res.changed){histOf().undo.pop();updateHistBtns();renderWire();return;}
+    wireSel=[];selAnchor=null;
+    save();renderWire();
+    toast(res.gone?'図形を消しました':'型抜きしました');
+    return;
+  }
   if(dg.mode==='wbrush'){
     if(dg.raf)cancelAnimationFrame(dg.raf);
     if(dg.pending&&applyWidthBrush(dg.s,dg.pending))dg.moved=true;
@@ -7476,7 +7931,7 @@ function wireUp(e){
     if(!penShape)pathNormalize(dg.s);   /* 描画中は確定時にまとめて整える */
     save();renderWire();
   }
-  if(dg.mode==='move'||dg.mode==='resize'||dg.mode==='rotate')save();
+  if(dg.mode==='move'||dg.mode==='resize'||dg.mode==='rotate'||dg.mode==='gresize')save();
   if(dg.mode==='move'&&(smartGuideV!==null||smartGuideH!==null)){
     smartGuideV=null;smartGuideH=null;renderWire();
   }
@@ -7592,6 +8047,9 @@ function wireKeydown(e){
   if(ctrl&&e.key.toLowerCase()==='z'&&!e.shiftKey){e.preventDefault();undo();return;}
   if(ctrl&&(e.key.toLowerCase()==='y'||(e.key.toLowerCase()==='z'&&e.shiftKey))){e.preventDefault();redo();return;}
   if(ctrl&&e.key.toLowerCase()==='d'){e.preventDefault();dupSel();return;}
+  if(ctrl&&e.key.toLowerCase()==='c'){e.preventDefault();copySel(false);return;}
+  if(ctrl&&e.key.toLowerCase()==='x'){e.preventDefault();copySel(true);return;}
+  if(ctrl&&e.key.toLowerCase()==='v'){if(shapeClipboard&&shapeClipboard.length){e.preventDefault();pasteShapes();}return;}
   if(ctrl&&e.key.toLowerCase()==='g'){e.preventDefault();groupToggle();return;}
   if(ctrl&&e.key==='0'){e.preventDefault();fitWire();return;}
   if(ctrl&&(e.key==='+'||e.key==='=')){e.preventDefault();wireZoomAt(viewW()/2,viewH()/2,1.2);return;}
@@ -7829,6 +8287,16 @@ $('#txVaRow').addEventListener('click',e=>{
   const b=e.target.closest('.seg');
   if(b)setBlockAttr('va',b.dataset.va);
 });
+$('#txAlignRow').addEventListener('click',e=>{
+  const b=e.target.closest('.seg');
+  if(b)setBlockAttr('align',b.dataset.align);
+});
+$('#txWrap').addEventListener('pointerdown',e=>e.stopPropagation());
+$('#txWrap').addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter')e.target.blur();});
+$('#txWrap').addEventListener('change',()=>{
+  const v=+$('#txWrap').value;
+  setBlockAttr('wrapW',(isNaN(v)||v<=0)?undefined:v);
+});
 $('#txLh').addEventListener('pointerdown',e=>{e.stopPropagation();pushUndo();});
 $('#txLh').addEventListener('input',()=>{
   const v=+$('#txLh').value;
@@ -8031,6 +8499,8 @@ const CTX_ITEMS=[
   {act:'eraser', label:'消しゴム', btn:'wireEraserBtn'},
   {act:'ruler', label:'定規 / ガイド', btn:'wireRulerBtn'},
   {act:'measure', label:'メジャー', btn:'wireMeasureBtn'},
+  {act:'measureshow', label:'メジャーの表示 / 非表示', btn:'wireMeasureShowBtn'},
+  {act:'measurebg', label:'メジャーの背景 あり / なし'},
   {act:'fit', label:'全体を表示', btn:'wireFitBtn'},
   {sep:1},
   {act:'undo', label:'元に戻す', btn:'wireUndoBtn', need:s=>s.undo},
@@ -8061,6 +8531,8 @@ function updateWireCtx(){
     el.classList.toggle('disabled',!!(it.need&&!it.need(st)));
     if(it.act==='togglebar')el.lastChild.textContent=wireBarHidden?'ツールバーを表示':'ツールバーを隠す';
     if(it.act==='group')el.lastChild.textContent=(st.n>=2&&selShapes().every(s=>s.gid&&s.gid===selShapes()[0].gid))?'グループを解除':'グループ化';
+    if(it.act==='measureshow')el.lastChild.textContent=measuresOn?'メジャーを隠す':'メジャーを表示';
+    if(it.act==='measurebg')el.lastChild.textContent=measureBg?'メジャーの背景を外す':'メジャーの背景を付ける';
   });
 }
 function openWireCtx(x,y){
@@ -8115,6 +8587,8 @@ function wireAction(act,x,y){
       openMenuAt($('#eraserMenu'),x,y);break;
     case'ruler':$('#wireRulerBtn').onclick();break;
     case'measure':$('#wireMeasureBtn').onclick();break;
+    case'measureshow':$('#wireMeasureShowBtn').onclick();break;
+    case'measurebg':setMeasureBg(!measureBg);toast(measureBg?'メジャーの背景を付けます':'メジャーの背景を外します(文字だけ)');break;
     case'fit':fitWire();break;
     case'undo':undo();break;
     case'redo':redo();break;
@@ -8140,6 +8614,13 @@ wireView.addEventListener('contextmenu',e=>{
   openWireCtx(e.clientX,e.clientY);
 });
 $('#wireLockBtn').onclick=lockToggle;
+$('#wirePtModeBtn').onclick=()=>{
+  const s=oneSel();
+  if(!s||s.type!=='path'){toast('パスの図形を選んでください');return;}
+  pathPointMode=!pathPointMode;
+  renderWire();updateWireBtns();
+  toast(pathPointMode?'パスの点を表示します':'大きさのハンドルだけを表示します(点は隠れます)');
+};
 $('#wireMultiBtn').onclick=()=>{
   wMulti=!wMulti;
   updateWireBtns();
@@ -8562,6 +9043,12 @@ function updateStyleMenu(){
     $('#txVaRow').style.display=showVa?'flex':'none';
     document.querySelectorAll('#txVaRow .seg').forEach(b=>
       b.classList.toggle('active',b.dataset.va===(t0.va||'bottom')));
+    /* 横の揃え・折り返し幅も横書きのときだけ(縦書きは対象外) */
+    $('#txAlignRow').style.display=showVa?'flex':'none';
+    document.querySelectorAll('#txAlignRow .seg').forEach(b=>
+      b.classList.toggle('active',b.dataset.align===(t0.align||'center')));
+    $('#txWrapRow').style.display=showVa?'flex':'none';
+    if(document.activeElement!==$('#txWrap'))$('#txWrap').value=t0.wrapW?Math.round(t0.wrapW):'';
     $('#txTargetLabel').innerHTML=rng
       ?`▼ ここから下は<b>選んだ ${rng.b-rng.a+1} 文字</b>に効きます`
       :'▼ ここから下は<b>テキスト全体</b>に効きます';
