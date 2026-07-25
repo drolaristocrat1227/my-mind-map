@@ -202,7 +202,10 @@ body.wire-mode .menu .map-only{display:none;}
 }
 #menuGrip span{font-size:10px;font-weight:500;color:var(--ink-soft);}
 .radRow{display:flex;align-items:center;gap:8px;padding:3px 12px;}
-.radLbl{font-size:11px;font-weight:600;color:var(--ink-soft);width:26px;flex:none;}
+/* ラベルは3文字(透明度・ぼかし・位置X 等)が1行に収まる幅にする。
+   それ以上長いものは個別に width を指定する(明るさ/カーニング等)。
+   nowrap を付けて、想定外に長い語が来ても2行に折り返さず気づけるようにする */
+.radLbl{font-size:11px;font-weight:600;color:var(--ink-soft);width:38px;flex:none;white-space:nowrap;}
 .radRow input[type=range]{flex:1;min-width:0;accent-color:var(--accent);height:18px;}
 .radNum{font-size:11px;font-weight:600;color:var(--ink-soft);width:26px;text-align:right;flex:none;}
 /* スライダー横の数値は手入力もできる */
@@ -581,6 +584,32 @@ body.text-mode #docBar{display:flex;}
 .iconbtn:disabled{opacity:.3;pointer-events:none;}
 .iconbtn.active{background:color-mix(in srgb,var(--accent) 15%,transparent);color:var(--accent);}
 .iconbtn svg{width:19px;height:19px;stroke:currentColor;stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round;}
+/* ワイヤーが空のときの案内。
+   全体は pointer-events:none にしてキャンバス操作の邪魔をせず、
+   ボタンだけ操作できるようにする(押せる案内=そのまま最初の一歩になる) */
+#wireEmpty{
+  position:fixed;left:50%;top:calc(50% - 20px);transform:translate(-50%,-50%);
+  z-index:8;display:none;flex-direction:column;align-items:center;gap:6px;
+  text-align:center;pointer-events:none;user-select:none;
+  padding:0 20px;max-width:100%;
+}
+body.wire-mode #wireEmpty.on{display:flex;}
+.we-title{font-size:17px;font-weight:700;color:var(--ink);}
+.we-sub{font-size:12.5px;color:var(--ink-soft);margin-bottom:12px;}
+.we-btns{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;pointer-events:auto;}
+.we-btn{
+  width:172px;padding:16px 12px 13px;border-radius:15px;
+  background:var(--panel);border:1.5px dashed var(--panel-border);
+  display:flex;flex-direction:column;align-items:center;gap:5px;
+  color:var(--ink-soft);transition:border-color .15s,color .15s,background .15s;
+}
+.we-btn:hover{border-color:var(--accent);color:var(--accent);background:color-mix(in srgb,var(--accent) 6%,var(--panel));}
+.we-btn svg{width:26px;height:26px;stroke:currentColor;stroke-width:1.6;fill:none;stroke-linecap:round;stroke-linejoin:round;}
+.we-btn span{font-size:13px;font-weight:650;color:var(--ink);}
+.we-btn:hover span{color:var(--accent);}
+.we-btn small{font-size:10.5px;color:var(--ink-soft);}
+.we-tip{font-size:11px;color:var(--ink-soft);opacity:.85;margin-top:14px;}
+.we-tip b{color:var(--ink);font-weight:650;}
 /* ツールバーの表示/非表示 */
 body.wirebar-off #wireBar{display:none;}
 body:not(.wire-mode) #wireBarToggleBtn{display:none;}
@@ -818,8 +847,15 @@ body:not(.wire-mode) #layerPanel{display:none;}
 .brandGrp{margin-top:3px;}
 .brandGrpHead{display:flex;align-items:center;gap:6px;padding:2px 12px 0;}
 .brandGrpHead .gname{font-size:10.5px;font-weight:700;color:var(--ink-soft);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.brandGrpHead .gadd{font-size:14px;color:var(--accent);cursor:pointer;line-height:1;padding:0 4px;flex:none;}
-.brandGrpHead .gadd:hover{opacity:.7;}
+/* 色を追加する＋。スウォッチ列の末尾に同じ大きさのタイルとして置く */
+.gadd{
+  width:22px;height:22px;border-radius:50%;flex:none;
+  border:1.5px dashed var(--panel-border);background:transparent;
+  color:var(--ink-soft);font-size:12px;line-height:1;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:color .12s,border-color .12s;
+}
+.gadd:hover{color:var(--accent);border-color:var(--accent);}
 .brandTools{display:flex;gap:8px;padding:5px 12px 2px;}
 .brandTools button{font-size:10.5px;font-weight:650;color:var(--ink-soft);padding:3px 9px;border-radius:7px;background:var(--btn-hover);}
 .brandTools button:hover{color:var(--ink);}
@@ -1005,6 +1041,24 @@ kbd{
 <div id="rulerCorner"></div>
 <div id="wireView">
   <svg id="wireSvg"><g id="wireWorld"></g></svg>
+</div>
+<!-- ワイヤーが空のときの案内(図形を置くと自動で消える) -->
+<div id="wireEmpty">
+  <div class="we-title">ワイヤーフレームを作る</div>
+  <div class="we-sub">まず媒体の大きさ(フレーム)を置くと、実寸で作れます</div>
+  <div class="we-btns">
+    <button class="we-btn" id="weFrame">
+      <svg viewBox="0 0 24 24"><path d="M8 3v18M16 3v18M3 8h18M3 16h18"/></svg>
+      <span>フレームを置く</span>
+      <small>スマホ・PC・SNSなど</small>
+    </button>
+    <button class="we-btn" id="weParts">
+      <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="6" rx="1.5"/><rect x="3" y="14" width="8" height="6" rx="1.5"/><path d="M15 17h6"/></svg>
+      <span>UIパーツを置く</span>
+      <small>ボタン・入力欄・カード</small>
+    </button>
+  </div>
+  <div class="we-tip">下のツールバー、またはキャンバスを<b>右クリック</b>でいつでも同じ操作ができます</div>
 </div>
 <div id="wireBar" class="glass">
   <button class="iconbtn menu-btn" id="wireFrameBtn" title="フレームを追加(媒体の大きさをピクセルで指定)">
@@ -1619,7 +1673,7 @@ kbd{
     <div class="shortcut"><span>フレーム(媒体の大きさ)を置く</span><span class="keys"><kbd>ツールバー左端</kbd>＝定型サイズ</span></div>
     <div class="shortcut"><span>端末モックアップ(ノートPC/タブレット/スマホ)</span><span class="keys">フレーム一覧の<kbd>モックアップ</kbd></span></div>
     <div class="shortcut"><span>色とスタイルの項目を開閉</span><span class="keys">見出し(<kbd>シャドウ</kbd>等)をクリック</span></div>
-    <div class="shortcut"><span>ブランドカラーを保存</span><span class="keys">グループの<kbd>＋</kbd> / 右クリックで削除</span></div>
+    <div class="shortcut"><span>ブランドカラーを保存</span><span class="keys">色の並びの末尾の<kbd>＋</kbd> / 右クリックで削除</span></div>
     <div class="shortcut"><span>ブランドカラーの名前・グループ管理</span><span class="keys"><kbd>編集 / 名前</kbd>ボタン</span></div>
     <div class="shortcut"><span>右クリックで操作メニュー</span><span class="keys">キャンバスを<kbd>右クリック</kbd></span></div>
     <div class="shortcut"><span>最前面 / 最背面へ</span><span class="keys">ツールバー or 右クリック</span></div>
@@ -5687,6 +5741,8 @@ function renderWire(){
   }
   wireWorld.innerHTML=html;
   $('#nodeCount').textContent=d.shapes.length+' 図形';
+  /* 図形が1つも無い間だけ案内を出す(何か置けば自動で消える) */
+  $('#wireEmpty').classList.toggle('on',!d.shapes.length);
   updateWireBtns();
   if(layerPanelOpen)renderLayerPanel();
 }
@@ -6127,6 +6183,12 @@ function addIcon(iconId){
    組み合わせた「グループ」として一度に配置する。置いた後は普通の図形として
    自由に編集できる(専用のデータ型は持たない)。座標は部品の中心を(0,0)とした
    相対位置で書き、addPart()で配置先へまとめて平行移動する。
+   ⚠️色は必ず実際のHEXで指定すること。パーツは「デザインの見本」であり
+   ツールのテーマ(ライト/ダーク)で見た目が変わってはいけない。テキストに
+   fill:null を使うと var(--ink) にフォールバックしてテーマ連動になり、
+   白い土台(カード・ナビバー等)の上でダークテーマ時に白文字が白背景に乗って
+   消える。なお四角の fill:null は「塗りなし(透明)」という別の意味なので、
+   アウトラインボタンのように意図している場合はそのままでよい。
    ============================================================ */
 const UI_PARTS=[
   {id:'btnPrimary',n:'ボタン(塗り)',build:()=>[
@@ -6144,7 +6206,7 @@ const UI_PARTS=[
   {id:'checkbox',n:'チェックボックス',build:()=>[
     {type:'rect',x:-70,y:0,w:20,h:20,rot:0,fill:'#FFFFFF',noStroke:false,sc:'#8B93A6',sw:1.5,r:4},
     {type:'icon',x:-70,y:0,w:14,h:14,rot:0,fill:'#4A7DE8',noStroke:true,iconId:'check'},
-    {type:'text',x:8,y:0,rot:0,fill:null,text:'チェックボックス',fs:14,fw:400,va:'middle'}
+    {type:'text',x:8,y:0,rot:0,fill:'#23262D',text:'チェックボックス',fs:14,fw:400,va:'middle'}
   ]},
   {id:'toggle',n:'トグルスイッチ',build:()=>[
     {type:'rect',x:0,y:0,w:44,h:24,rot:0,fill:'#4A7DE8',noStroke:true,r:12},
@@ -6159,7 +6221,7 @@ const UI_PARTS=[
   {id:'card',n:'カード',build:()=>[
     {type:'rect',x:0,y:0,w:220,h:260,rot:0,fill:'#FFFFFF',noStroke:true,r:14,shadows:[{ang:90,dist:4,b:16,c:'#000000',a:0.12}]},
     {type:'rect',x:0,y:-60,w:196,h:110,rot:0,fill:'#E9ECF2',noStroke:true,r:8},
-    {type:'text',x:-86,y:20,rot:0,fill:null,text:'見出し',fs:15,fw:700,va:'middle'},
+    {type:'text',x:-86,y:20,rot:0,fill:'#23262D',text:'見出し',fs:15,fw:700,va:'middle'},
     {type:'text',x:-86,y:44,rot:0,fill:'#8B93A6',text:'説明テキスト',fs:12,fw:400,va:'middle'}
   ]},
   {id:'searchBar',n:'検索バー',build:()=>[
@@ -6170,7 +6232,7 @@ const UI_PARTS=[
   {id:'navbar',n:'ナビゲーションバー',build:()=>[
     {type:'rect',x:0,y:0,w:320,h:56,rot:0,fill:'#FFFFFF',noStroke:false,sc:'#E7E9EE',sw:1,r:0},
     {type:'icon',x:-140,y:0,w:20,h:20,rot:0,fill:'#23262D',noStroke:true,iconId:'arrowLeft'},
-    {type:'text',x:0,y:0,rot:0,fill:null,text:'タイトル',fs:16,fw:700,va:'middle'},
+    {type:'text',x:0,y:0,rot:0,fill:'#23262D',text:'タイトル',fs:16,fw:700,va:'middle'},
     {type:'icon',x:140,y:0,w:20,h:20,rot:0,fill:'#23262D',noStroke:true,iconId:'settings'}
   ]}
 ];
@@ -6567,11 +6629,17 @@ function renderBrandColors(){
   const box=$('#brandBox');
   if(box){
     let html='';
+    /* グループが1つだけの時は、見出し(「ブランドカラー」)と同じ名前がすぐ下に
+       もう一度出て紛らわしいので、グループ名の行は出さない。
+       ＋(色を追加)はスウォッチ列の末尾にタイルとして常に置く */
+    const single=groups.length===1;
     groups.forEach(g=>{
       const sws=g.colors.map((c,i)=>
         `<button class="sw" data-fill="${c.hex}" data-brand="1" data-gid="${g.id}" data-idx="${i}" style="background:${c.hex}" title="${escXml((c.name?c.name+' ':'')+c.hex)}（右クリックで削除）"></button>`
       ).join('');
-      html+=`<div class="brandGrp"><div class="brandGrpHead"><span class="gname">${escXml(g.name||'（無名）')}</span><span class="gadd" data-gadd="${g.id}" title="今の色をこのグループに追加">＋</span></div><div class="swatches">${sws||'<span class="brandEmpty">まだ色がありません</span>'}</div></div>`;
+      const add=`<button class="gadd" data-gadd="${g.id}" title="今の色をこのグループに追加">＋</button>`;
+      const head=single?'':`<div class="brandGrpHead"><span class="gname">${escXml(g.name||'（無名）')}</span></div>`;
+      html+=`<div class="brandGrp">${head}<div class="swatches">${sws}${add}</div></div>`;
     });
     box.innerHTML=html+`<div class="brandTools"><button id="brandNewGroup">＋ グループ</button><button id="brandEditBtn">編集 / 名前</button></div>`;
   }
@@ -8220,6 +8288,14 @@ $('#partsList').addEventListener('click',e=>{
   hideMenus();
   addPart(b.dataset.part);
 });
+/* 空のときの案内から、そのまま最初の一歩を始められるようにする。
+   ツールバーの同じボタンと同じメニューをボタンの真下に開く */
+function openMenuUnder(menu,btn){
+  const r=btn.getBoundingClientRect();
+  openMenuAt(menu,r.left+r.width/2-90,r.bottom+8);
+}
+$('#weFrame').onclick=e=>openMenuUnder($('#frameMenu'),e.currentTarget);
+$('#weParts').onclick=e=>openMenuUnder($('#partsMenu'),e.currentTarget);
 /* パネルの外観セレクタ(端末モックアップの付け外し) */
 $('#frDevice').innerHTML='<option value="">なし(ただのフレーム)</option>'+DEVICES.map(d=>
   `<option value="${d.k}">${escXml(d.n)}</option>`).join('');
