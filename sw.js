@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hirameki-map-v1';
+const CACHE_NAME = 'ntd-v2';
 const CORE_ASSETS = [
   './',
   './index.html',
