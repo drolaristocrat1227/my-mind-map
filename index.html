@@ -838,6 +838,18 @@ body.wirebar-off #wireHint{bottom:18px;}
 #backupRow button:hover{color:var(--ink);background:var(--btn-active);}
 #backupRow button svg{width:14px;height:14px;stroke:currentColor;stroke-width:1.9;fill:none;stroke-linecap:round;stroke-linejoin:round;flex:none;}
 #backupHint{margin:-6px 12px 12px;font-size:10.5px;color:var(--ink-soft);line-height:1.5;}
+/* アップデート行 */
+#updateRow{display:flex;align-items:center;gap:10px;margin:0 12px 16px;}
+#updateRow button{
+  flex:none;padding:9px 14px;border-radius:10px;border:none;
+  background:var(--btn-hover);font-size:11.5px;font-weight:650;color:var(--ink-soft);
+  display:flex;align-items:center;justify-content:center;gap:5px;transition:all .15s;
+}
+#updateRow button:hover{color:var(--ink);background:var(--btn-active);}
+#updateRow button:disabled{opacity:.5;pointer-events:none;}
+#updateRow button svg{width:14px;height:14px;stroke:currentColor;stroke-width:1.9;fill:none;stroke-linecap:round;stroke-linejoin:round;flex:none;}
+#verLabel{font-size:10.5px;color:var(--ink-soft);line-height:1.4;min-width:0;}
+#verLabel b{color:var(--accent);font-weight:700;}
 
 /* ============================================================
    メニュー(エクスポート・右クリック)
@@ -1541,6 +1553,11 @@ kbd{
       <button id="backupLoadBtn"><svg viewBox="0 0 24 24"><path d="M12 17V4m0 0l-4.5 4.5M12 4l4.5 4.5M4 20h16"/></svg>復元</button>
     </div>
     <input type="file" id="backupInput" accept=".json" hidden>
+    <!-- アップデート(配信中の版と比べて、新しければ入れ替える) -->
+    <div id="updateRow">
+      <button id="updateBtn"><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-.6 4M20 5v6h-6"/></svg>更新を確認</button>
+      <span id="verLabel"></span>
+    </div>
   </div>
 </div>
 
@@ -1730,11 +1747,14 @@ kbd{
     <div class="shortcut"><span>重ね順(最前面・前面・背面・最背面)</span><span class="keys">ツールバーの<kbd>重ね順</kbd></span></div>
     <div class="shortcut"><span>消しゴム・型抜き・定規・メジャーなど</span><span class="keys">ツールバー右の<kbd>…</kbd>(その他の道具)</span></div>
     <div class="shortcut"><span>操作のヒントを表示 / 隠す</span><span class="keys"><kbd>…</kbd>メニューの<kbd>操作のヒント</kbd></span></div>
+    <div class="shortcut"><span>アプリを最新版にする</span><span class="keys">一覧の下の<kbd>更新を確認</kbd></span></div>
     <div class="shortcut"><span>下のツールバーを隠す / 表示</span><span class="keys">上部の<kbd>ツールバー</kbd>ボタン</span></div>
     <div class="shortcut"><span>フレームのピクセル指定</span><span class="keys"><kbd>色とスタイル</kbd>の上部</span></div>
     <div class="shortcut"><span>図形・画像の大きさをpx指定</span><span class="keys"><kbd>色とスタイル</kbd>の<kbd>大きさ(px)</kbd></span></div>
     <div class="shortcut"><span>縦横比を保って拡大縮小</span><span class="keys"><kbd>Shift</kbd>＋四隅をドラッグ</span></div>
-    <div class="shortcut"><span>フレームごと動かす</span><span class="keys"><kbd>名前をつかんでドラッグ</kbd></span></div>
+    <div class="shortcut"><span>フレーム名の表示 / 非表示</span><span class="keys"><kbd>…</kbd>メニューの<kbd>フレーム名</kbd>(既定は非表示)</span></div>
+    <div class="shortcut"><span>フレームを選ぶ</span><span class="keys">中身のない所をクリック / <kbd>レイヤー</kbd>から / 名前を表示してクリック</span></div>
+    <div class="shortcut"><span>フレームごと動かす</span><span class="keys">名前を表示して<kbd>名前をつかんでドラッグ</kbd></span></div>
     <div class="shortcut"><span>フレーム・図形だけ書き出す</span><span class="keys"><kbd>保存メニュー</kbd>の<kbd>書き出す範囲</kbd></span></div>
     <div class="shortcut"><span>ロゴ・アイコンの書き出し</span><span class="keys"><kbd>SVG</kbd>(ベクター) / <kbd>WebP</kbd></span></div>
     <div class="shortcut"><span>手書きをきれいに整える</span><span class="keys">描き終えて<kbd>1〜2秒そのまま保持</kbd></span></div>
@@ -1905,6 +1925,13 @@ kbd{
 
 <script>
 'use strict';
+/* ============================================================
+   アプリの版。更新のたびにここを上げる。
+   「更新を確認」は、この文字列を配信中のindex.htmlから読み直して
+   手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
+   必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
+   ============================================================ */
+const APP_VERSION='2026-07-26.1';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -3153,10 +3180,13 @@ function countDescDocs(node){
 
 /* ---- 削除確認ダイアログ ---- */
 let confirmCb=null;
-function askConfirm(msg,sub,cb){
+/* okLabel は省略すると「削除」(このダイアログの主な用途)。
+   更新など削除以外に使う時は必ず渡すこと(「削除」と出ると誤解を招くため) */
+function askConfirm(msg,sub,cb,okLabel){
   $('#confirmMsg').textContent=msg;
   $('#confirmSub').textContent=sub||'';
   $('#confirmSub').style.display=sub?'block':'none';
+  $('#confirmOk').textContent=okLabel||'削除';
   confirmCb=cb;
   $('#confirmWrap').classList.add('on');
 }
@@ -3530,6 +3560,59 @@ function backupAll(){
 }
 $('#backupSaveBtn').onclick=backupAll;
 $('#backupLoadBtn').onclick=()=>$('#backupInput').click();
+
+/* ---------- アップデート ----------
+   このアプリはPWAで、sw.jsが「まずキャッシュを返してから裏で取り直す」方式なので、
+   更新しても普通のリロードでは1回目は古いままになる。
+   このボタンは 配信中のindex.htmlから APP_VERSION を読み直して手元と比べ、
+   新しければキャッシュを全部消してから読み込み直す。 */
+async function fetchLatestVersion(){
+  /* ⚠️キャッシュを確実に避ける(クエリ + no-store)。でないと古い版を読んで
+     「最新です」と誤って言ってしまう */
+  const res=await fetch('./index.html?v='+Date.now(),{cache:'no-store'});
+  if(!res.ok)throw new Error('HTTP '+res.status);
+  const txt=await res.text();
+  const m=txt.match(/const APP_VERSION='([^']+)'/);
+  if(!m)throw new Error('版が読めません');
+  return m[1];
+}
+async function applyUpdate(){
+  try{
+    const keys=await caches.keys();
+    await Promise.all(keys.map(k=>caches.delete(k)));
+  }catch(e){}
+  try{
+    const reg=navigator.serviceWorker&&await navigator.serviceWorker.getRegistration();
+    if(reg)await reg.unregister();   /* 次の読み込みで新しいsw.jsを取り直す */
+  }catch(e){}
+  location.reload();
+}
+function showVer(txt,isNew){
+  const el=$('#verLabel');if(!el)return;
+  el.innerHTML=isNew?`<b>${escXml(txt)}</b>`:escXml(txt);
+}
+async function checkForUpdate(){
+  const btn=$('#updateBtn');
+  btn.disabled=true;
+  showVer('確認しています…');
+  try{
+    const latest=await fetchLatestVersion();
+    if(latest===APP_VERSION){
+      showVer('最新版です (v'+APP_VERSION+')');
+      toast('すでに最新版です');
+    }else{
+      showVer('新しい版 v'+latest+' があります',true);
+      askConfirm('新しい版に更新しますか？',
+        `v${APP_VERSION} → v${latest} に入れ替えます。作ったデータは端末に保存されているのでそのまま残ります。`,
+        ()=>applyUpdate(),'更新する');
+    }
+  }catch(e){
+    /* ローカルのfile://で開いている時などは取得できない */
+    showVer('確認できませんでした (v'+APP_VERSION+')');
+    toast('更新を確認できませんでした(通信を確認してください)');
+  }finally{ btn.disabled=false; }
+}
+$('#updateBtn').onclick=checkForUpdate;
 $('#backupInput').addEventListener('change',e=>{
   const file=e.target.files[0];if(!file)return;
   const reader=new FileReader();
@@ -4565,6 +4648,16 @@ let pathPointMode=true;   /* パス選択時に点(アンカー)を出すか。f
    ツールバーの表示設定と同じくlocalStorageで覚える(ドキュメントには保存しない) */
 let wireHintOn=true;
 try{wireHintOn=localStorage.getItem('wireHintOff')!=='1';}catch(e){}
+/* フレーム名の表示。既定は非表示(作っている画面の見た目を邪魔しないため)。
+   ドキュメントごとではなく「作業の好み」なのでlocalStorageで覚える */
+let frameLabelOn=false;
+try{frameLabelOn=localStorage.getItem('frameLabelOn')==='1';}catch(e){}
+function setFrameLabelOn(on){
+  frameLabelOn=on;
+  try{localStorage.setItem('frameLabelOn',on?'1':'0');}catch(e){}
+  renderWire();
+  toast(on?'フレーム名を表示します':'フレーム名を隠しました(選んでいる間は出ます)');
+}
 function setWireHintOn(on){
   wireHintOn=on;
   try{localStorage.setItem('wireHintOff',on?'0':'1');}catch(e){}
@@ -5796,7 +5889,11 @@ function renderWire(){
   }});
   /* グリッド(列組みの目安。画面上だけの表示で書き出しには含まない) */
   d.shapes.forEach(s=>{if(isFrame(s)&&s.grid&&s.grid.on)html+=frameGridSvg(s);});
-  d.shapes.forEach(s=>{if(isFrame(s))html+=frameLabelSvg(s);});
+  /* フレームの名前は既定では出さない(作っている画面の邪魔になるため)。
+     選んでいるフレームだけは、何を選んでいるか分かるよう常に出す */
+  d.shapes.forEach(s=>{
+    if(isFrame(s)&&(frameLabelOn||wireSel.includes(s.id)))html+=frameLabelSvg(s);
+  });
   d.shapes.forEach(s=>{if(s.locked)html+=lockSvg(s);});
   /* ガイド線(定規ON時のみ)。掴んで動かせる・定規に戻すと消える */
   if(rulersOn&&d.guides){
@@ -7504,7 +7601,7 @@ $('#moreMenu').addEventListener('click',e=>{
   const mi=e.target.closest('.mi');if(!mi||mi.classList.contains('disabled'))return;
   /* 表示のON/OFFはメニューを開いたまま状態だけ更新すると効果が分かりやすい。
      逆に、そのあとキャンバスを操作する道具(メジャー・消しゴム等)は閉じる */
-  const stay=['measureshow','measurebg','hint','multi','ptmode','ruler'].includes(mi.dataset.act);
+  const stay=['measureshow','measurebg','hint','multi','ptmode','ruler','framelabel'].includes(mi.dataset.act);
   if(!stay)hideMenus();
   /* 消しゴムのようにサブメニューを開く項目があるので、開く位置を渡す */
   const r=mi.getBoundingClientRect();
@@ -8854,6 +8951,7 @@ const MORE_ITEMS=[
   {act:'cut', label:'前面の図形で切り取る', btn:'wireCutBtn', need:s=>s.n>=2},
   {sep:1},
   {head:'測る・そろえる'},
+  {act:'framelabel', label:'フレーム名の表示', icon:'<svg viewBox="0 0 24 24"><path d="M4 7h9M4 11h6"/><rect x="3.5" y="14.5" width="17" height="6" rx="1.5"/></svg>'},
   {act:'ruler', label:'定規とガイド', btn:'wireRulerBtn'},
   {act:'measure', label:'メジャー', btn:'wireMeasureBtn'},
   {act:'measureshow', label:'メジャーの表示 / 非表示', btn:'wireMeasureShowBtn'},
@@ -8877,12 +8975,13 @@ function updateMoreMenu(){
     /* いま入っているモードが分かるように、トグル系は色を付ける */
     const on={eraser:eraseMode,ruler:rulersOn,measure:measureMode,
       measureshow:measuresOn,measurebg:measureBg,multi:wMulti,
-      ptmode:!pathPointMode,hint:wireHintOn}[it.act];
+      ptmode:!pathPointMode,hint:wireHintOn,framelabel:frameLabelOn}[it.act];
     el.classList.toggle('active',!!on);
     const lbl=el.querySelector('.mi-lbl');
     if(it.act==='measureshow')lbl.textContent=measuresOn?'メジャーを隠す':'メジャーを表示';
     if(it.act==='measurebg')lbl.textContent=measureBg?'メジャーの背景を外す':'メジャーの背景を付ける';
     if(it.act==='hint')lbl.textContent=wireHintOn?'操作のヒントを隠す':'操作のヒントを表示';
+    if(it.act==='framelabel')lbl.textContent=frameLabelOn?'フレーム名を隠す':'フレーム名を表示';
     if(it.act==='lock')lbl.textContent=(st.any&&selShapes().every(s=>s.locked))?'固定を解除':'固定する';
   });
 }
@@ -8958,6 +9057,7 @@ function wireAction(act,x,y){
     case'measurebg':setMeasureBg(!measureBg);toast(measureBg?'メジャーの背景を付けます':'メジャーの背景を外します(文字だけ)');break;
     case'ptmode':$('#wirePtModeBtn').onclick();break;
     case'hint':setWireHintOn(!wireHintOn);break;
+    case'framelabel':setFrameLabelOn(!frameLabelOn);break;
     case'order':openMenuAt($('#orderMenu'),x,y);break;
     case'more':updateMoreMenu();openMenuAt($('#moreMenu'),x,y);break;
     case'fit':fitWire();break;
@@ -10687,6 +10787,7 @@ $('#p1restore').onclick=()=>{paneState='split';applyMulti();};
 function startApp(){
 selectedId=cur().root.id;
 renderBrandColors();   /* 保存したブランドカラーをパレットに反映 */
+showVer('v'+APP_VERSION);
 applyTheme();
 applyView();
 if(isWire()){
