@@ -610,6 +610,10 @@ body.wire-mode #wireEmpty.on{display:flex;}
 .we-btn small{font-size:10.5px;color:var(--ink-soft);}
 .we-tip{font-size:11px;color:var(--ink-soft);opacity:.85;margin-top:14px;}
 .we-tip b{color:var(--ink);font-weight:650;}
+/* ツールバーに出さず「その他」メニューへ回した道具。
+   ⚠️消さずにDOMに残すのは、メニューがこのアイコンとonclickをそのまま流用するため
+   (右クリックメニューもツールバーのSVGを複製して作っている) */
+#wireBar .bar-more{display:none;}
 /* ツールバーの表示/非表示 */
 body.wirebar-off #wireBar{display:none;}
 body:not(.wire-mode) #wireBarToggleBtn{display:none;}
@@ -656,7 +660,12 @@ body:not(.wire-mode) #layerPanel{display:none;}
 /* 右クリックのメニュー: 使えない項目は暗くしてクリック不可 */
 .menu .mi.disabled{opacity:.32;pointer-events:none;color:var(--ink-soft);}
 .menu .mi.disabled svg{opacity:.45;}
+/* いま入っているモードは色を付けて分かるようにする(その他メニュー用) */
+.menu .mi.active{color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,transparent);}
+/* 項目数が多いので、右クリックメニューだけ行を少し詰めて全体の高さを抑える */
 #wireCtxMenu{max-height:88vh;overflow-y:auto;min-width:212px;}
+#wireCtxMenu .mi{padding:7px 12px;}
+#wireCtxMenu .menu-label{padding-top:6px;}
 #wireCtxMenu .mi .kbd{margin-left:auto;font-size:10px;color:var(--ink-soft);font-weight:600;}
 
 /* ============================================================
@@ -714,6 +723,22 @@ body:not(.wire-mode) #layerPanel{display:none;}
 }
 #hint.on{opacity:1;}
 #hint b{color:var(--ink);font-weight:650;}
+/* ワイヤーの操作ヒント。いま何ができるかを操作中にその場で出す(隠し操作の発見用)。
+   ツールバーの真上に置き、隠している時は下げる */
+#wireHint{
+  position:fixed;bottom:78px;left:50%;transform:translateX(-50%);z-index:15;
+  padding:7px 16px;border-radius:99px;
+  font-size:11.5px;color:var(--ink-soft);white-space:nowrap;
+  max-width:calc(100vw - 24px);overflow:hidden;text-overflow:ellipsis;
+  display:none;pointer-events:none;
+}
+body.wire-mode #wireHint.on{display:block;}
+body.wirebar-off #wireHint{bottom:18px;}
+#wireHint b{color:var(--ink);font-weight:650;}
+#wireHint .k{
+  display:inline-block;padding:1px 6px;margin:0 2px;border-radius:5px;
+  background:var(--btn-active);color:var(--ink);font-weight:650;font-size:10.5px;
+}
 
 /* ============================================================
    ドロワー(マップ一覧)
@@ -723,7 +748,7 @@ body:not(.wire-mode) #layerPanel{display:none;}
 #drawerBack{position:absolute;inset:0;background:rgba(0,0,0,.20);opacity:0;transition:opacity .25s;}
 #drawerWrap.on #drawerBack{opacity:1;}
 #drawer{
-  position:absolute;top:0;left:0;bottom:0;width:300px;max-width:85vw;
+  position:absolute;top:0;left:0;bottom:0;width:340px;max-width:88vw;
   border-radius:0 20px 20px 0;border-left:none;
   display:flex;flex-direction:column;
   transform:translateX(-100%);transition:transform .28s cubic-bezier(.2,.8,.2,1);
@@ -776,17 +801,22 @@ body:not(.wire-mode) #layerPanel{display:none;}
 }
 .mapItem .mi-body{flex:1;min-width:0;}
 .mapItem .mi-name{font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.mapItem .mi-meta{font-size:11px;color:var(--ink-soft);margin-top:2px;}
+.mapItem .mi-meta{font-size:11px;color:var(--ink-soft);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+/* 操作ボタン(複製・削除・名前)は普段は場所を取らない。
+   常時表示にすると幅300pxのドロワーで90pxも占有してしまい、
+   少し長い名前がすぐ見切れるため、ホバー時だけ出す(Gmailの行と同じ考え方) */
+.mapItem .mi-actions{display:none;align-items:center;gap:2px;flex:none;margin-left:4px;}
+.mapItem:hover .mi-actions{display:flex;}
 .mapItem .del,.mapItem .dup,.mapItem .ren{
   width:30px;height:30px;border-radius:8px;flex:none;
   display:flex;align-items:center;justify-content:center;color:var(--ink-soft);
-  opacity:0;transition:opacity .15s,background .15s;
+  opacity:.7;transition:opacity .15s,background .15s;
 }
-.mapItem:hover .del,.mapItem:hover .dup,.mapItem:hover .ren{opacity:.7;}
 .mapItem .del:hover,.mapItem .dup:hover,.mapItem .ren:hover{opacity:1;background:var(--btn-hover);}
 .mapItem .del.confirm{opacity:1;background:var(--danger);color:#fff;font-size:10px;font-weight:700;width:auto;padding:0 8px;}
 .mapItem .del svg,.mapItem .dup svg,.mapItem .ren svg{width:15px;height:15px;stroke:currentColor;stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round;}
-@media (hover:none){.mapItem .del,.mapItem .dup,.mapItem .ren{opacity:.7;}}
+/* 指で操作する端末はホバーが無いので常に出す */
+@media (hover:none){.mapItem .mi-actions{display:flex;}}
 #drawerFoot{display:flex;flex-wrap:wrap;gap:8px;margin:0 12px 16px;}
 #drawerFoot button{
   flex:1 1 calc(50% - 4px);padding:11px 6px;border-radius:12px;
@@ -1034,6 +1064,8 @@ kbd{
 </div>
 
 <div id="hint" class="glass"><b>Tab</b>：子を追加　<b>Enter</b>：兄弟を追加　<b>ダブルクリック</b>：文字を編集</div>
+<!-- ワイヤー: いまの操作で使える修飾キーを、その場で出す -->
+<div id="wireHint" class="glass"></div>
 
 <!-- ワイヤーフレーム -->
 <div id="rulerTop"><canvas></canvas></div>
@@ -1065,17 +1097,15 @@ kbd{
     <svg viewBox="0 0 24 24"><path d="M8 3v18M16 3v18M3 8h18M3 16h18"/></svg>
   </button>
   <div class="sep"></div>
-  <button class="iconbtn" id="wireLineBtn" title="線を追加">
-    <svg viewBox="0 0 24 24"><path d="M5 19L19 5"/></svg>
-  </button>
+  <!-- 置く(いつでも使える) -->
   <button class="iconbtn" id="wireRectBtn" title="四角を追加">
     <svg viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14"/></svg>
   </button>
-  <button class="iconbtn menu-btn" id="wirePenBtn" title="ペン(パス・手書き)">
-    <svg viewBox="0 0 24 24"><path d="M4 20l4.6-1.3L20 7.4 16.6 4 5.3 15.4z"/><path d="M14.4 6.2l3.4 3.4"/></svg>
-  </button>
   <button class="iconbtn" id="wireEllipseBtn" title="丸を追加">
     <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7.5"/></svg>
+  </button>
+  <button class="iconbtn" id="wireLineBtn" title="線を追加">
+    <svg viewBox="0 0 24 24"><path d="M5 19L19 5"/></svg>
   </button>
   <button class="iconbtn" id="wireTextBtn" title="テキストを追加">
     <svg viewBox="0 0 24 24"><path d="M6 6.5h12M12 6.5V19"/></svg>
@@ -1089,60 +1119,70 @@ kbd{
   <button class="iconbtn menu-btn" id="wirePartsBtn" title="UIパーツを追加">
     <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="6" rx="1.5"/><rect x="3" y="14" width="8" height="6" rx="1.5"/><path d="M15 17h6"/></svg>
   </button>
-  <div class="sep"></div>
-  <button class="iconbtn menu-btn" id="wireEraserBtn" title="消しゴム(なぞった所を切り取る)">
-    <svg viewBox="0 0 24 24"><path d="M8.5 20H20M4.7 16.3l3 3a2 2 0 0 0 2.8 0l8.8-8.8a2 2 0 0 0 0-2.8l-3.5-3.5a2 2 0 0 0-2.8 0L4.7 13.5a2 2 0 0 0 0 2.8z"/><path d="M9.5 8.5l6 6"/></svg>
-  </button>
-  <button class="iconbtn" id="wireCutBtn" title="前面の図形で切り取る(型抜き)">
-    <svg viewBox="0 0 24 24"><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="18" r="2.5"/><path d="M8.4 16.3L18 4M15.6 16.3L6 4"/></svg>
+  <button class="iconbtn menu-btn" id="wirePenBtn" title="ペン(パス・手書き)">
+    <svg viewBox="0 0 24 24"><path d="M4 20l4.6-1.3L20 7.4 16.6 4 5.3 15.4z"/><path d="M14.4 6.2l3.4 3.4"/></svg>
   </button>
   <div class="sep"></div>
+  <!-- 選んだものに効く(選択が無いとまとめて無効になる) -->
+  <button class="iconbtn" id="wireFillBtn" title="色とスタイル">
+    <svg viewBox="0 0 24 24"><path d="M12 4.5s5.5 6 5.5 9.7a5.5 5.5 0 0 1-11 0C6.5 10.5 12 4.5 12 4.5z"/></svg>
+  </button>
+  <button class="iconbtn menu-btn" id="wireOrderBtn" title="重ね順(最前面・前面・背面・最背面)">
+    <svg viewBox="0 0 24 24"><rect x="7" y="3.5" width="11" height="8" rx="1.8"/><path d="M6 8.5H4.5A1.5 1.5 0 0 0 3 10v9a1.5 1.5 0 0 0 1.5 1.5h9A1.5 1.5 0 0 0 15 19v-1.5"/></svg>
+  </button>
   <button class="iconbtn menu-btn" id="wireAlignBtn" title="整列(選んだものを揃える)">
     <svg viewBox="0 0 24 24"><path d="M4 3.5v17"/><rect x="7" y="6" width="13" height="4" rx="1.2"/><rect x="7" y="14" width="8" height="4" rx="1.2"/></svg>
   </button>
-  <button class="iconbtn" id="wireRulerBtn" title="定規とガイド(端からドラッグでガイド線)">
-    <svg viewBox="0 0 24 24"><rect x="2.5" y="9" width="19" height="6.5" rx="1.5" transform="rotate(-35 12 12)"/><path d="M8.2 13.4l1.5 2.1M11.5 11.1l1.1 1.5M14.7 8.8l1.5 2.1" transform="rotate(0 12 12)"/></svg>
-  </button>
-  <button class="iconbtn" id="wireMeasureBtn" title="メジャー(ドラッグしてpxを測る)">
-    <svg viewBox="0 0 24 24"><path d="M4 20L20 4M4 20l2.5-.4L6 17M20 4l-2.5.4L18 7M9.5 14.5l1.5 1.5M13 11l1.5 1.5"/></svg>
-  </button>
-  <button class="iconbtn" id="wireMeasureShowBtn" title="測ったメジャーの表示/非表示(定規と同じく記憶されます)">
-    <svg viewBox="0 0 24 24"><path d="M2 12s3.8-7 10-7 10 7 10 7-3.8 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
-  </button>
-  <div class="sep"></div>
-  <button class="iconbtn" id="wireMultiBtn" title="複数選択モード(Shift+クリックでも可)">
-    <svg viewBox="0 0 24 24"><rect x="4" y="4" width="12" height="12" rx="2" stroke-dasharray="3 3"/><path d="M17.5 14v7M14 17.5h7"/></svg>
-  </button>
   <button class="iconbtn" id="wireGroupBtn" title="グループ化">
     <svg viewBox="0 0 24 24"><path d="M3 5V3h2M19 3h2v2M21 19v2h-2M5 21H3v-2"/><rect x="6" y="6" width="7" height="7" rx="1.5"/><rect x="11" y="11" width="7" height="7" rx="1.5"/></svg>
-  </button>
-  <button class="iconbtn" id="wireLockBtn" title="固定(移動・変形・削除を禁止)">
-    <svg viewBox="0 0 24 24"><rect x="5.5" y="10.5" width="13" height="9" rx="2"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/></svg>
-  </button>
-  <button class="iconbtn" id="wirePtModeBtn" title="パスの点⇔大きさのハンドルを切り替え(四隅で被って掴みにくい時に)">
-    <svg viewBox="0 0 24 24"><path d="M5 19c8 0 6-14 14-14"/><circle cx="5" cy="19" r="1.6" fill="currentColor" stroke="none"/><circle cx="19" cy="5" r="1.6" fill="currentColor" stroke="none"/></svg>
-  </button>
-  <div class="sep"></div>
-  <button class="iconbtn" id="wireFillBtn" title="塗りの色(テキストは文字色)">
-    <svg viewBox="0 0 24 24"><path d="M12 4.5s5.5 6 5.5 9.7a5.5 5.5 0 0 1-11 0C6.5 10.5 12 4.5 12 4.5z"/></svg>
-  </button>
-  <button class="iconbtn" id="wireFrontBtn" title="最前面へ移動">
-    <svg viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="2"/><path d="M12 3.5l3 3M12 3.5l-3 3M4 12H2.6M21.4 12H20M12 21.4V20"/></svg>
-  </button>
-  <button class="iconbtn" id="wireUpBtn" title="前面へ移動">
-    <svg viewBox="0 0 24 24"><rect x="8.5" y="4" width="11.5" height="11.5" rx="2"/><path d="M15.5 20H6a2 2 0 0 1-2-2V8.5"/></svg>
-  </button>
-  <button class="iconbtn" id="wireDownBtn" title="背面へ移動">
-    <svg viewBox="0 0 24 24"><rect x="4" y="8.5" width="11.5" height="11.5" rx="2"/><path d="M8.5 4H18a2 2 0 0 1 2 2v9.5"/></svg>
-  </button>
-  <button class="iconbtn" id="wireBackBtn" title="最背面へ移動">
-    <svg viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="2"/><path d="M12 20.5l3-3M12 20.5l-3-3M4 12H2.6M21.4 12H20M12 2.6V4"/></svg>
   </button>
   <button class="iconbtn" id="wireDupBtn" title="複製 (Ctrl+D)">
     <svg viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>
   </button>
   <button class="iconbtn" id="wireDelBtn" title="削除 (Delete)">
     <svg viewBox="0 0 24 24"><path d="M5 7h14M10 7V5.5A1.5 1.5 0 0 1 11.5 4h1A1.5 1.5 0 0 1 14 5.5V7m-7.5 0l.8 12a1.5 1.5 0 0 0 1.5 1.4h6.4a1.5 1.5 0 0 0 1.5-1.4l.8-12"/></svg>
+  </button>
+  <div class="sep"></div>
+  <!-- たまに使う道具はここへ集約(バーには出さない) -->
+  <button class="iconbtn menu-btn" id="wireMoreBtn" title="その他の道具(消しゴム・型抜き・定規・メジャーなど)">
+    <svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
+  </button>
+  <!-- ↓バーには出さないがDOMには残す。メニューがこのアイコンとonclickをそのまま使う -->
+  <button class="iconbtn menu-btn bar-more" id="wireEraserBtn" title="消しゴム(なぞった所を切り取る)">
+    <svg viewBox="0 0 24 24"><path d="M8.5 20H20M4.7 16.3l3 3a2 2 0 0 0 2.8 0l8.8-8.8a2 2 0 0 0 0-2.8l-3.5-3.5a2 2 0 0 0-2.8 0L4.7 13.5a2 2 0 0 0 0 2.8z"/><path d="M9.5 8.5l6 6"/></svg>
+  </button>
+  <button class="iconbtn bar-more" id="wireCutBtn" title="前面の図形で切り取る(型抜き)">
+    <svg viewBox="0 0 24 24"><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="18" r="2.5"/><path d="M8.4 16.3L18 4M15.6 16.3L6 4"/></svg>
+  </button>
+  <button class="iconbtn bar-more" id="wireRulerBtn" title="定規とガイド(端からドラッグでガイド線)">
+    <svg viewBox="0 0 24 24"><rect x="2.5" y="9" width="19" height="6.5" rx="1.5" transform="rotate(-35 12 12)"/><path d="M8.2 13.4l1.5 2.1M11.5 11.1l1.1 1.5M14.7 8.8l1.5 2.1" transform="rotate(0 12 12)"/></svg>
+  </button>
+  <button class="iconbtn bar-more" id="wireMeasureBtn" title="メジャー(ドラッグしてpxを測る)">
+    <svg viewBox="0 0 24 24"><path d="M4 20L20 4M4 20l2.5-.4L6 17M20 4l-2.5.4L18 7M9.5 14.5l1.5 1.5M13 11l1.5 1.5"/></svg>
+  </button>
+  <button class="iconbtn bar-more" id="wireMeasureShowBtn" title="測ったメジャーの表示/非表示">
+    <svg viewBox="0 0 24 24"><path d="M2 12s3.8-7 10-7 10 7 10 7-3.8 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+  </button>
+  <button class="iconbtn bar-more" id="wireMultiBtn" title="複数選択モード(Shift+クリックでも可)">
+    <svg viewBox="0 0 24 24"><rect x="4" y="4" width="12" height="12" rx="2" stroke-dasharray="3 3"/><path d="M17.5 14v7M14 17.5h7"/></svg>
+  </button>
+  <button class="iconbtn bar-more" id="wireLockBtn" title="固定(移動・変形・削除を禁止)">
+    <svg viewBox="0 0 24 24"><rect x="5.5" y="10.5" width="13" height="9" rx="2"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/></svg>
+  </button>
+  <button class="iconbtn bar-more" id="wirePtModeBtn" title="パスの点⇔大きさのハンドルを切り替え">
+    <svg viewBox="0 0 24 24"><path d="M5 19c8 0 6-14 14-14"/><circle cx="5" cy="19" r="1.6" fill="currentColor" stroke="none"/><circle cx="19" cy="5" r="1.6" fill="currentColor" stroke="none"/></svg>
+  </button>
+  <button class="iconbtn bar-more" id="wireFrontBtn" title="最前面へ移動">
+    <svg viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="2"/><path d="M12 3.5l3 3M12 3.5l-3 3M4 12H2.6M21.4 12H20M12 21.4V20"/></svg>
+  </button>
+  <button class="iconbtn bar-more" id="wireUpBtn" title="前面へ移動">
+    <svg viewBox="0 0 24 24"><rect x="8.5" y="4" width="11.5" height="11.5" rx="2"/><path d="M15.5 20H6a2 2 0 0 1-2-2V8.5"/></svg>
+  </button>
+  <button class="iconbtn bar-more" id="wireDownBtn" title="背面へ移動">
+    <svg viewBox="0 0 24 24"><rect x="4" y="8.5" width="11.5" height="11.5" rx="2"/><path d="M8.5 4H18a2 2 0 0 1 2 2v9.5"/></svg>
+  </button>
+  <button class="iconbtn bar-more" id="wireBackBtn" title="最背面へ移動">
+    <svg viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="2"/><path d="M12 20.5l3-3M12 20.5l-3-3M4 12H2.6M21.4 12H20M12 2.6V4"/></svg>
   </button>
   <div class="sep"></div>
   <button class="iconbtn" id="wireUndoBtn" title="元に戻す (Ctrl+Z)">
@@ -1428,6 +1468,8 @@ kbd{
   <div class="menu-label">アイコンを追加</div>
   <div id="iconGrid"></div>
 </div>
+<div id="orderMenu" class="menu glass"></div>
+<div id="moreMenu" class="menu glass"></div>
 <div id="partsMenu" class="menu glass">
   <div class="menu-label">UIパーツを追加</div>
   <div id="partsList"></div>
@@ -1676,7 +1718,9 @@ kbd{
     <div class="shortcut"><span>ブランドカラーを保存</span><span class="keys">色の並びの末尾の<kbd>＋</kbd> / 右クリックで削除</span></div>
     <div class="shortcut"><span>ブランドカラーの名前・グループ管理</span><span class="keys"><kbd>編集 / 名前</kbd>ボタン</span></div>
     <div class="shortcut"><span>右クリックで操作メニュー</span><span class="keys">キャンバスを<kbd>右クリック</kbd></span></div>
-    <div class="shortcut"><span>最前面 / 最背面へ</span><span class="keys">ツールバー or 右クリック</span></div>
+    <div class="shortcut"><span>重ね順(最前面・前面・背面・最背面)</span><span class="keys">ツールバーの<kbd>重ね順</kbd></span></div>
+    <div class="shortcut"><span>消しゴム・型抜き・定規・メジャーなど</span><span class="keys">ツールバー右の<kbd>…</kbd>(その他の道具)</span></div>
+    <div class="shortcut"><span>操作のヒントを表示 / 隠す</span><span class="keys"><kbd>…</kbd>メニューの<kbd>操作のヒント</kbd></span></div>
     <div class="shortcut"><span>下のツールバーを隠す / 表示</span><span class="keys">上部の<kbd>ツールバー</kbd>ボタン</span></div>
     <div class="shortcut"><span>フレームのピクセル指定</span><span class="keys"><kbd>色とスタイル</kbd>の上部</span></div>
     <div class="shortcut"><span>図形・画像の大きさをpx指定</span><span class="keys"><kbd>色とスタイル</kbd>の<kbd>大きさ(px)</kbd></span></div>
@@ -3057,6 +3101,8 @@ $('#newMapBtn').onclick=()=>{
 };
 function fmtDate(t){
   const d=new Date(t);
+  /* updatedを持たない古い/壊れたデータでも「NaN/NaN NaN:NaN」と出さない */
+  if(!t||isNaN(d.getTime()))return'—';
   return`${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
 }
 const TRASH_SVG='<svg viewBox="0 0 24 24"><path d="M5 7h14M10 7V5.5A1.5 1.5 0 0 1 11.5 4h1A1.5 1.5 0 0 1 14 5.5V7m-7.5 0l.8 12a1.5 1.5 0 0 0 1.5 1.4h6.4a1.5 1.5 0 0 0 1.5-1.4l.8-12"/></svg>';
@@ -3131,9 +3177,13 @@ function docRow(node,depth){
     meta='文書 ・ '+t.pages.length+'ページ ・ '+fmtDate(t.updated);
   }
   item.innerHTML=`${icon}<div class="mi-body"><div class="mi-name"></div><div class="mi-meta">${meta}</div></div>
-    <button class="dup" title="複製">${DUP_SVG}</button>
-    <button class="del" title="削除">${TRASH_SVG}</button>`;
-  item.querySelector('.mi-name').textContent=obj.name;
+    <div class="mi-actions">
+      <button class="dup" title="複製">${DUP_SVG}</button>
+      <button class="del" title="削除">${TRASH_SVG}</button>
+    </div>`;
+  const nameEl=item.querySelector('.mi-name');
+  nameEl.textContent=obj.name;
+  nameEl.title=obj.name;   /* 長くて見切れても、ホバーで全体を確認できる */
   item.addEventListener('click',e=>{
     if(suppressMapClick)return;
     if(e.target.closest('.del')||e.target.closest('.dup'))return;
@@ -3185,10 +3235,14 @@ function containerRow(entry,depth){
   const n=countDescDocs(entry);
   item.innerHTML=`${icon}
     <div class="mi-body"><div class="mi-name"></div><div class="mi-meta">${proj?'プロジェクト':'フォルダ'} ・ ${n}件</div></div>
-    <button class="ren" title="名前を変更"><svg viewBox="0 0 24 24"><path d="M14.5 5.5l4 4L8 20H4v-4L14.5 5.5z"/></svg></button>
-    <button class="del" title="削除">${TRASH_SVG}</button>
+    <div class="mi-actions">
+      <button class="ren" title="名前を変更"><svg viewBox="0 0 24 24"><path d="M14.5 5.5l4 4L8 20H4v-4L14.5 5.5z"/></svg></button>
+      <button class="del" title="削除">${TRASH_SVG}</button>
+    </div>
     <div class="chev"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>`;
-  item.querySelector('.mi-name').textContent=entry.name;
+  const fNameEl=item.querySelector('.mi-name');
+  fNameEl.textContent=entry.name;
+  fNameEl.title=entry.name;   /* 長くて見切れても、ホバーで全体を確認できる */
   item.addEventListener('click',e=>{
     if(suppressMapClick)return;
     if(e.target.closest('.del')||e.target.closest('.ren')||e.target.closest('input'))return;
@@ -4497,6 +4551,50 @@ let measureMode=false,measure=null;  /* メジャー(pxを測る) */
 let marquee=null;   /* 背景ドラッグでの範囲選択(ワールド座標のx1,y1,x2,y2) */
 let lastWireMouse=null;   /* キャンバス上の最後のカーソル位置(ワールド座標。貼り付け先に使う) */
 let pathPointMode=true;   /* パス選択時に点(アンカー)を出すか。falseなら大きさのハンドルのみ(四隅で被って掴みにくい時用) */
+/* ---------- 操作ヒント ----------
+   Shift/Ctrl等の「知らないと辿り着けない操作」を、いさ使える場面でだけ出す。
+   ツールバーの表示設定と同じくlocalStorageで覚える(ドキュメントには保存しない) */
+let wireHintOn=true;
+try{wireHintOn=localStorage.getItem('wireHintOff')!=='1';}catch(e){}
+function setWireHintOn(on){
+  wireHintOn=on;
+  try{localStorage.setItem('wireHintOff',on?'0':'1');}catch(e){}
+  updateWireHint();
+  toast(on?'操作のヒントを表示します':'操作のヒントを隠しました');
+}
+/* いまの状況に合ったヒント文を返す(空文字なら出さない) */
+function wireHintText(){
+  const K=s=>`<span class="k">${s}</span>`;
+  if(wDrag){
+    if(wDrag.mode==='move')return `${K('Shift')}${K('Ctrl')} を押しながらでガイドを無視`;
+    if(wDrag.mode==='resize'||wDrag.mode==='gresize')return `${K('Shift')} で縦横比を保つ`;
+    if(wDrag.mode==='measure')return `${K('Shift')}${K('Ctrl')} を押しながらで斜めに測る`;
+    if(wDrag.mode==='marquee')return '囲んだ図形をまとめて選択';
+    if(wDrag.mode==='imgcrop'||wDrag.mode==='shapecrop')return '離すと切り取ります';
+    if(wDrag.mode==='rotate')return '15°ごとに吸着します';
+    return '';
+  }
+  if(penMode)return `${K('クリック')}で角 / ${K('ドラッグ')}で曲線 ・ ${K('Enter')}で確定`;
+  if(eraseMode)return 'なぞった所を切り取ります';
+  if(measureMode)return `${K('ドラッグ')}で水平・垂直 / ${K('Shift')}${K('Ctrl')}で斜め ・ 線を${K('クリック')}で削除`;
+  const ss=selShapes();
+  if(ss.length===1&&!ss[0].locked){
+    const s=ss[0];
+    if(s.type==='text')return `${K('ダブルクリック')}で文字を編集 ・ ${K('Ctrl')}${K('C')}${K('V')}でコピー&貼り付け`;
+    if(s.type==='image'||CUT_OK(s))return `角を${K('Shift')}で縦横比 / 角を${K('Ctrl')}で切り取り`;
+    return `${K('Ctrl')}${K('D')}で複製 ・ ${K('Delete')}で削除`;
+  }
+  if(ss.length>1)return `枠のハンドルでまとめて拡大縮小 ・ ${K('Ctrl')}${K('G')}でグループ化`;
+  return `${K('ドラッグ')}で画面移動 / ${K('Shift')}${K('Ctrl')}を押しながらで範囲選択`;
+}
+function updateWireHint(){
+  const el=$('#wireHint');if(!el)return;
+  const txt=(wireHintOn&&isWire())?wireHintText():'';
+  if(el.dataset.txt===txt)return;   /* 変わった時だけDOMを触る(ドラッグ中に毎フレーム来るため) */
+  el.dataset.txt=txt;
+  el.innerHTML=txt;
+  el.classList.toggle('on',!!txt);
+}
 let cropPreview=null;   /* Ctrl+ハンドルドラッグ中のトリミング/型抜きプレビュー(四隅の配列) */
 let selAnchor=null;               /* 選択中のパスの点 {sid,i} */
 let wDrag=null,wLpTimer=null;
@@ -5743,6 +5841,7 @@ function renderWire(){
   $('#nodeCount').textContent=d.shapes.length+' 図形';
   /* 図形が1つも無い間だけ案内を出す(何か置けば自動で消える) */
   $('#wireEmpty').classList.toggle('on',!d.shapes.length);
+  updateWireHint();
   updateWireBtns();
   if(layerPanelOpen)renderLayerPanel();
 }
@@ -5764,11 +5863,14 @@ function updateWireBtns(){
   $('#wireMeasureBtn').classList.toggle('active',measureMode);
   $('#wireMeasureShowBtn').classList.toggle('active',measuresOn);
   $('#wireAlignBtn').disabled=!any;
+  $('#wireOrderBtn').disabled=!any;
   $('#wirePenBtn').classList.toggle('active',penMode);
   $('#wireEraserBtn').classList.toggle('active',eraseMode);
   $('#wireCutBtn').disabled=ss.length<2;
   $('#wirePtModeBtn').disabled=!(one&&one.type==='path');
   $('#wirePtModeBtn').classList.toggle('active',!pathPointMode);
+  /* 「その他」はいま何かのモードに入っている時だけ色を付けて気づけるようにする */
+  $('#wireMoreBtn').classList.toggle('active',eraseMode||measureMode||rulersOn||wMulti||!pathPointMode);
   /* 選んだ段階で色とスタイルパネルを自動で開く(開いていれば内容も追従)。
      選択が無くなったら(空クリック・Escapeなど)自動で閉じる */
   if(any){
@@ -7368,6 +7470,32 @@ $('#alignMenu').addEventListener('click',e=>{
   hideMenus();
   alignSel(mi.dataset.al);
 });
+/* 重ね順(4つのボタンを1つにまとめたメニュー) */
+$('#wireOrderBtn').onclick=e=>{
+  if(!selShapes().length){toast('図形を選んでください');return;}
+  openBarMenu($('#orderMenu'),e.currentTarget);
+};
+$('#orderMenu').addEventListener('click',e=>{
+  const mi=e.target.closest('.mi');if(!mi||mi.classList.contains('disabled'))return;
+  hideMenus();
+  wireAction(mi.dataset.act);
+});
+/* その他の道具 */
+$('#wireMoreBtn').onclick=e=>{
+  updateMoreMenu();
+  openBarMenu($('#moreMenu'),e.currentTarget);
+};
+$('#moreMenu').addEventListener('click',e=>{
+  const mi=e.target.closest('.mi');if(!mi||mi.classList.contains('disabled'))return;
+  /* 表示のON/OFFはメニューを開いたまま状態だけ更新すると効果が分かりやすい。
+     逆に、そのあとキャンバスを操作する道具(メジャー・消しゴム等)は閉じる */
+  const stay=['measureshow','measurebg','hint','multi','ptmode','ruler'].includes(mi.dataset.act);
+  if(!stay)hideMenus();
+  /* 消しゴムのようにサブメニューを開く項目があるので、開く位置を渡す */
+  const r=mi.getBoundingClientRect();
+  wireAction(mi.dataset.act,r.left,r.top);
+  if(stay)updateMoreMenu();
+});
 
 /* 固定/解除 */
 function lockToggle(){
@@ -8087,6 +8215,7 @@ function wireUp(e){
   if(dg.mode==='move'&&(smartGuideV!==null||smartGuideH!==null)){
     smartGuideV=null;smartGuideH=null;renderWire();
   }
+  updateWireHint();   /* ドラッグが終わったら通常のヒントに戻す */
 }
 wireView.addEventListener('pointerup',wireUp);
 wireView.addEventListener('pointercancel',wireUp);
@@ -8144,21 +8273,38 @@ wireView.addEventListener('wheel',e=>{
 /* ---------- テキスト編集 ---------- */
 const wtInput=$('#wireTextInput');
 let wtShape=null,wtSnap=null;
+let wtCenter={x:0,y:0};
 function beginWireText(s){
   finishWireText();
   wtShape=s;wtSnap=snapshot();
   wtInput.value=s.text;
   wtInput.style.display='block';
-  wtInput.style.left=(s.x*wz+wpx)+'px';
-  wtInput.style.top=(s.y*wz+wpy)+'px';
+  wtCenter={x:s.x*wz+wpx,y:s.y*wz+wpy};
+  wtInput.style.top=wtCenter.y+'px';
   wtInput.style.fontSize=clamp(s.fs*wz,10,80)+'px';
   wtInput.style.fontWeight=s.fw||500;
-  wtInput.style.width=Math.max(100,(s.w+50)*wz)+'px';
+  /* 図形と同じフォントで編集できるようにする(明朝の文字をゴシックで打つズレを無くす) */
+  wtInput.style.fontFamily=fontStack(s.ff||'gothic');
   fitWtInput();
   wtInput.focus();wtInput.select();
 }
-/* 行数に合わせて高さを合わせる(改行しても入力欄が隠れないように) */
+/* 入力内容に合わせて幅と高さを追従させる。
+   ⚠️white-space:pre(折り返さない)＋overflow:hidden なので、幅を内容に合わせて
+   広げないと、打った文字が右へはみ出して見えなくなる(固定幅だと長文が打てない) */
 function fitWtInput(){
+  const cs=getComputedStyle(wtInput);
+  const cv=fitWtInput.cv||(fitWtInput.cv=document.createElement('canvas'));
+  const ctx=cv.getContext('2d');
+  ctx.font=`${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+  let w=0;
+  String(wtInput.value||'').split('\n').forEach(l=>{w=Math.max(w,ctx.measureText(l).width);});
+  const pad=parseFloat(cs.paddingLeft)+parseFloat(cs.paddingRight)
+    +parseFloat(cs.borderLeftWidth)+parseFloat(cs.borderRightWidth);
+  const maxW=Math.max(120,innerWidth-32);
+  const bw=clamp(Math.ceil(w+pad+14),100,maxW);   /* +14 はカーソルぶんの余裕 */
+  wtInput.style.width=bw+'px';
+  /* 中央寄せ(translate -50%)のまま画面外へ出ないよう、左右だけ寄せ直す */
+  wtInput.style.left=clamp(wtCenter.x,bw/2+8,Math.max(bw/2+8,innerWidth-bw/2-8))+'px';
   wtInput.style.height='auto';
   wtInput.style.height=(wtInput.scrollHeight+2)+'px';
 }
@@ -8633,34 +8779,26 @@ $('#layerList').addEventListener('pointerdown',e=>{
 /* ---------- 右クリックのメニュー(ツールバーと同じ操作) ---------- */
 /* [act, 見出し, アイコン元ボタンID(あれば流用), 使える条件] sep:1で区切り線 */
 const CTX_ITEMS=[
+  {head:'置く'},
   {act:'frame', label:'フレーム / モックアップ', btn:'wireFrameBtn'},
-  {act:'line', label:'線を追加', btn:'wireLineBtn'},
   {act:'rect', label:'四角を追加', btn:'wireRectBtn'},
   {act:'ellipse', label:'丸を追加', btn:'wireEllipseBtn'},
+  {act:'line', label:'線を追加', btn:'wireLineBtn'},
   {act:'text', label:'テキストを追加', btn:'wireTextBtn'},
   {act:'image', label:'画像を追加', btn:'wireImgBtn'},
-  {act:'pen', label:'ペン / 手書き', btn:'wirePenBtn'},
   {act:'icon', label:'アイコンを追加', btn:'wireIconBtn'},
   {act:'parts', label:'UIパーツを追加', btn:'wirePartsBtn'},
+  {act:'pen', label:'ペン / 手書き', btn:'wirePenBtn'},
   {sep:1},
+  {head:'選んだものに'},
   {act:'fill', label:'色とスタイル', btn:'wireFillBtn', need:s=>s.any},
-  {act:'front', label:'最前面へ', btn:'wireFrontBtn', need:s=>s.any},
-  {act:'up', label:'前面へ', btn:'wireUpBtn', need:s=>s.any},
-  {act:'down', label:'背面へ', btn:'wireDownBtn', need:s=>s.any},
-  {act:'back', label:'最背面へ', btn:'wireBackBtn', need:s=>s.any},
+  {act:'order', label:'重ね順', btn:'wireOrderBtn', need:s=>s.any},
   {act:'align', label:'整列', btn:'wireAlignBtn', need:s=>s.any},
   {act:'group', label:'グループ化 / 解除', btn:'wireGroupBtn', need:s=>s.n>=2},
-  {act:'lock', label:'固定 / 解除', btn:'wireLockBtn', need:s=>s.any},
-  {act:'cut', label:'前面の図形で切り取る', btn:'wireCutBtn', need:s=>s.n>=2},
-  {act:'dup', label:'複製', btn:'wireDupBtn', need:s=>s.any},
-  {act:'delete', label:'削除', btn:'wireDelBtn', need:s=>s.any},
+  {act:'dup', label:'複製', btn:'wireDupBtn', need:s=>s.any, kbd:'Ctrl+D'},
+  {act:'delete', label:'削除', btn:'wireDelBtn', need:s=>s.any, kbd:'Delete'},
   {sep:1},
-  {act:'multi', label:'複数選択モード', btn:'wireMultiBtn'},
-  {act:'eraser', label:'消しゴム', btn:'wireEraserBtn'},
-  {act:'ruler', label:'定規 / ガイド', btn:'wireRulerBtn'},
-  {act:'measure', label:'メジャー', btn:'wireMeasureBtn'},
-  {act:'measureshow', label:'メジャーの表示 / 非表示', btn:'wireMeasureShowBtn'},
-  {act:'measurebg', label:'メジャーの背景 あり / なし'},
+  {act:'more', label:'その他の道具…', btn:'wireMoreBtn'},
   {act:'fit', label:'全体を表示', btn:'wireFitBtn'},
   {sep:1},
   {act:'undo', label:'元に戻す', btn:'wireUndoBtn', need:s=>s.undo},
@@ -8669,30 +8807,84 @@ const CTX_ITEMS=[
   {act:'togglebar', label:'ツールバーを隠す / 表示', icon:'<svg viewBox="0 0 24 24"><rect x="3" y="15" width="18" height="5" rx="1.5"/><path d="M6.5 17.5h3M13 17.5h5"/></svg>'}
 ];
 let lastCtx={x:0,y:0};
-/* メニューを作る(アイコンは対応するツールバーボタンから流用) */
-(function buildWireCtx(){
-  const m=$('#wireCtxMenu');
-  m.innerHTML=CTX_ITEMS.map(it=>{
+/* 項目の配列から .mi のメニューを組み立てる(アイコンは対応するツールバーボタンから流用)。
+   右クリックメニュー・重ね順・その他の3つで同じ作り方を共有する */
+function buildMenuItems(items){
+  return items.map(it=>{
     if(it.sep)return'<hr>';
+    if(it.head)return`<div class="menu-label">${escXml(it.head)}</div>`;
     let icon=it.icon||'';
     if(!icon&&it.btn){const b=$('#'+it.btn);if(b){const svg=b.querySelector('svg');if(svg)icon=svg.outerHTML;}}
-    return`<button class="mi" data-act="${it.act}">${icon}${escXml(it.label)}</button>`;
+    const kbd=it.kbd?`<span class="kbd">${escXml(it.kbd)}</span>`:'';
+    /* ラベルはspanで包む(状態に応じて文言を差し替えるとき、テキストノードの
+       位置に依存せず確実に書き換えられるように) */
+    return`<button class="mi" data-act="${it.act}">${icon}<span class="mi-lbl">${escXml(it.label)}</span>${kbd}</button>`;
   }).join('');
+}
+(function buildWireCtx(){
+  $('#wireCtxMenu').innerHTML=buildMenuItems(CTX_ITEMS);
 })();
+/* ---------- 重ね順メニュー(4つのボタンを1つにまとめたもの) ---------- */
+const ORDER_ITEMS=[
+  {act:'front', label:'最前面へ', btn:'wireFrontBtn'},
+  {act:'up',    label:'ひとつ前面へ', btn:'wireUpBtn'},
+  {act:'down',  label:'ひとつ背面へ', btn:'wireDownBtn'},
+  {act:'back',  label:'最背面へ', btn:'wireBackBtn'}
+];
+$('#orderMenu').innerHTML=buildMenuItems(ORDER_ITEMS);
+/* ---------- その他の道具メニュー ---------- */
+const MORE_ITEMS=[
+  {head:'加工'},
+  {act:'eraser', label:'消しゴム', btn:'wireEraserBtn'},
+  {act:'cut', label:'前面の図形で切り取る', btn:'wireCutBtn', need:s=>s.n>=2},
+  {sep:1},
+  {head:'測る・そろえる'},
+  {act:'ruler', label:'定規とガイド', btn:'wireRulerBtn'},
+  {act:'measure', label:'メジャー', btn:'wireMeasureBtn'},
+  {act:'measureshow', label:'メジャーの表示 / 非表示', btn:'wireMeasureShowBtn'},
+  {act:'measurebg', label:'メジャーの背景 あり / なし'},
+  {sep:1},
+  {head:'選択・編集の補助'},
+  {act:'multi', label:'複数選択モード', btn:'wireMultiBtn'},
+  {act:'lock', label:'固定 / 解除', btn:'wireLockBtn', need:s=>s.any},
+  {act:'ptmode', label:'パスの点 / 大きさのハンドル', btn:'wirePtModeBtn', need:s=>s.path},
+  {sep:1},
+  {act:'hint', label:'操作のヒントを表示', icon:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.6v.1"/></svg>'}
+];
+$('#moreMenu').innerHTML=buildMenuItems(MORE_ITEMS);
+/* 状態に応じて無効化・ラベルの出し分けを行う(右クリックメニューと同じ考え方) */
+function updateMoreMenu(){
+  const st=ctxState();
+  MORE_ITEMS.forEach(it=>{
+    if(it.sep||it.head)return;
+    const el=$(`#moreMenu .mi[data-act="${it.act}"]`);if(!el)return;
+    el.classList.toggle('disabled',!!(it.need&&!it.need(st)));
+    /* いま入っているモードが分かるように、トグル系は色を付ける */
+    const on={eraser:eraseMode,ruler:rulersOn,measure:measureMode,
+      measureshow:measuresOn,measurebg:measureBg,multi:wMulti,
+      ptmode:!pathPointMode,hint:wireHintOn}[it.act];
+    el.classList.toggle('active',!!on);
+    const lbl=el.querySelector('.mi-lbl');
+    if(it.act==='measureshow')lbl.textContent=measuresOn?'メジャーを隠す':'メジャーを表示';
+    if(it.act==='measurebg')lbl.textContent=measureBg?'メジャーの背景を外す':'メジャーの背景を付ける';
+    if(it.act==='hint')lbl.textContent=wireHintOn?'操作のヒントを隠す':'操作のヒントを表示';
+    if(it.act==='lock')lbl.textContent=(st.any&&selShapes().every(s=>s.locked))?'固定を解除':'固定する';
+  });
+}
 function ctxState(){
   const ss=selShapes();const h=histOf();
-  return{any:ss.length>0,n:ss.length,undo:h.undo.length>0,redo:h.redo.length>0};
+  return{any:ss.length>0,n:ss.length,undo:h.undo.length>0,redo:h.redo.length>0,
+    path:ss.length===1&&ss[0].type==='path'};
 }
 function updateWireCtx(){
   const st=ctxState();
   CTX_ITEMS.forEach(it=>{
-    if(it.sep)return;
+    if(it.sep||it.head)return;
     const el=$(`#wireCtxMenu .mi[data-act="${it.act}"]`);if(!el)return;
     el.classList.toggle('disabled',!!(it.need&&!it.need(st)));
-    if(it.act==='togglebar')el.lastChild.textContent=wireBarHidden?'ツールバーを表示':'ツールバーを隠す';
-    if(it.act==='group')el.lastChild.textContent=(st.n>=2&&selShapes().every(s=>s.gid&&s.gid===selShapes()[0].gid))?'グループを解除':'グループ化';
-    if(it.act==='measureshow')el.lastChild.textContent=measuresOn?'メジャーを隠す':'メジャーを表示';
-    if(it.act==='measurebg')el.lastChild.textContent=measureBg?'メジャーの背景を外す':'メジャーの背景を付ける';
+    const lbl=el.querySelector('.mi-lbl');
+    if(it.act==='togglebar')lbl.textContent=wireBarHidden?'ツールバーを表示':'ツールバーを隠す';
+    if(it.act==='group')lbl.textContent=(st.n>=2&&selShapes().every(s=>s.gid&&s.gid===selShapes()[0].gid))?'グループを解除':'グループ化';
   });
 }
 function openWireCtx(x,y){
@@ -8749,6 +8941,10 @@ function wireAction(act,x,y){
     case'measure':$('#wireMeasureBtn').onclick();break;
     case'measureshow':$('#wireMeasureShowBtn').onclick();break;
     case'measurebg':setMeasureBg(!measureBg);toast(measureBg?'メジャーの背景を付けます':'メジャーの背景を外します(文字だけ)');break;
+    case'ptmode':$('#wirePtModeBtn').onclick();break;
+    case'hint':setWireHintOn(!wireHintOn);break;
+    case'order':openMenuAt($('#orderMenu'),x,y);break;
+    case'more':updateMoreMenu();openMenuAt($('#moreMenu'),x,y);break;
     case'fit':fitWire();break;
     case'undo':undo();break;
     case'redo':redo();break;
@@ -8759,7 +8955,7 @@ $('#wireCtxMenu').addEventListener('click',e=>{
   const mi=e.target.closest('.mi');if(!mi||mi.classList.contains('disabled'))return;
   const act=mi.dataset.act;
   /* サブメニューを開くものはメニューを閉じない(openMenuAt側で切替) */
-  if(!['frame','pen','align','eraser','icon','parts'].includes(act))hideMenus();
+  if(!['frame','pen','align','eraser','icon','parts','order','more'].includes(act))hideMenus();
   wireAction(act,lastCtx.x,lastCtx.y);
 });
 wireView.addEventListener('contextmenu',e=>{
