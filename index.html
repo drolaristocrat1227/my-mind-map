@@ -1260,6 +1260,12 @@ kbd{
     <div class="numRow"><span class="radLbl">Y</span><input type="number" id="posY" step="1"><span class="unit">px</span></div>
     <div class="numRow"><span class="radLbl">回転</span><input type="number" id="posRot" step="1"><span class="unit">°</span></div>
   </div>
+  <!-- ホームページ(HTML)に書き出した時、押すと開くリンク -->
+  <div id="linkSec">
+    <hr>
+    <div class="menu-label">リンク(ホームページ書き出し時に押せるようになります)</div>
+    <div class="numRow"><span class="radLbl">URL</span><input type="text" id="lnkUrl" spellcheck="false" autocomplete="off" placeholder="https://…  /  mailto:…  /  tel:…"></div>
+  </div>
   <div id="textSec">
     <hr>
     <div class="menu-label">テキスト</div>
@@ -1849,6 +1855,17 @@ kbd{
       <button class="seg" data-fmt="jpeg">JPEG</button>
       <button class="seg" data-fmt="pdf">PDF</button>
       <button class="seg" data-fmt="svg">SVG</button>
+      <button class="seg" data-fmt="html">HTML</button>
+    </div>
+    <!-- ホームページ(HTML): フレーム1枚=1ページ。スマホ用を選ぶと画面幅で切り替える -->
+    <div id="expHtmlSec" style="display:none">
+      <div class="menu-label">ホームページにするフレーム</div>
+      <div class="numRow"><span class="radLbl">PC用</span><select id="expPcSel"></select></div>
+      <div class="numRow"><span class="radLbl">スマホ用</span><select id="expSpSel"></select></div>
+      <div class="menu-label">ページの情報(検索結果・SNSで表示されます)</div>
+      <div class="numRow"><span class="radLbl">タイトル</span><input type="text" id="expSiteTitle" spellcheck="false" autocomplete="off"></div>
+      <div class="numRow"><span class="radLbl">説明文</span><input type="text" id="expSiteDesc" spellcheck="false" autocomplete="off" placeholder="省略できます"></div>
+      <div id="expHtmlNote" style="font-size:11.5px;line-height:1.55;color:var(--ink-soft);padding:6px 2px 2px"></div>
     </div>
     <div class="menu-label">仕上がり</div>
     <div class="segRow" id="expPaperRow">
@@ -3825,7 +3842,11 @@ async function openExportDlg(){
     expFrameId=(frames.find(f=>ss.includes(f))||frames[0]||{}).id||null;
     if(ss.length===1&&isFrame(ss[0]))expRange='frame';
     else if(ss.length)expRange='sel';
-  }
+    /* 前回HTMLを選んでいたら、そのままフレーム単位で開く(フレームが無ければ画像に戻す) */
+    if(expFmt==='html'){if(frames.length)expRange='frame';else expFmt='png';}
+    if(expSpFrameId&&!frames.some(f=>f.id===expSpFrameId))expSpFrameId='';
+  }else if(expFmt==='html')expFmt='png';
+  $('#expSiteTitle').value=curDoc().name||'';
   /* 図形・フレーム単位は実寸が既定、全体は今までどおり用紙に合わせる */
   expPaper=expRange==='all'?'landscape':'fit';
   expScale=1;
@@ -3926,7 +3947,38 @@ function updateExportDlg(){
   document.querySelectorAll('#expBgRow .seg').forEach(b=>b.classList.toggle('active',b.dataset.bg===expBg));
   /* SVGはワイヤーだけ(マップ・文書はベクター化していない) */
   $('#expFmtRow').querySelector('[data-fmt="svg"]').style.display=wire?'':'none';
-  if(!wire&&expFmt==='svg')expFmt='png';
+  $('#expFmtRow').querySelector('[data-fmt="html"]').style.display=wire?'':'none';
+  if(!wire&&(expFmt==='svg'||expFmt==='html'))expFmt='png';
+  const isHtml=expFmt==='html';
+  /* ホームページ(HTML): 範囲・用紙・倍率・背景は使わず、フレームとページ情報だけを選ぶ */
+  $('#expHtmlSec').style.display=isHtml?'block':'none';
+  $('#expRangeSec').style.display=(wire&&!isHtml)?'block':'none';
+  $('#expPrint').textContent=isHtml?'ブラウザで確認':'印刷';
+  if(isHtml){
+    const frames=curDoc().shapes.filter(isFrame);
+    const opt=f=>`<option value="${f.id}">${escXml(f.name||'フレーム')} (${Math.round(f.w)}×${Math.round(f.h)})</option>`;
+    $('#expPcSel').innerHTML=frames.map(opt).join('');
+    if(expFrameId)$('#expPcSel').value=expFrameId;
+    $('#expSpSel').innerHTML='<option value="">なし(どの画面でも同じフレーム)</option>'
+      +frames.filter(f=>f.id!==expFrameId).map(opt).join('');
+    $('#expSpSel').value=expSpFrameId&&expSpFrameId!==expFrameId?expSpFrameId:'';
+    ['#expPaperRow','#expScaleSec','#expPosSec','#expSplitSec','#expBgSec','#expWirePagerRow'].forEach(q=>$(q).style.display='none');
+    $('#expPaperRow').previousElementSibling.style.display='none';
+    const pc=expFrame();
+    const sp=$('#expSpSel').value?frames.find(f=>f.id===$('#expSpSel').value):null;
+    $('#expSizeLabel').classList.remove('over');
+    $('#expSizeLabel').textContent=pc
+      ?(sp?`画面幅${SITE_BP}px以上は「${pc.name||'フレーム'}」、未満は「${sp.name||'フレーム'}」を表示します`
+          :`「${pc.name||'フレーム'}」(${Math.round(pc.w)}px幅)を画面の幅に合わせて表示します`)
+      :'';
+    $('#expHtmlNote').innerHTML='・フレームの中にある図形だけがページになります<br>'
+      +'・文字・四角・丸・画像はHTML/CSSに、それ以外の図形はSVGに変換します<br>'
+      +'・リンクは「色とスタイル」の「リンク」で図形ごとに設定できます<br>'
+      +'・画像はファイルの中に埋め込むので、HTMLファイル1つで表示できます';
+    $('#expSave').disabled=!pc;$('#expPrint').disabled=!pc;
+    $('#expPrev').src=expContent?finalCanvas().toDataURL('image/png'):'';
+    return;
+  }
   const isSvg=expFmt==='svg';
   /* 透明を選べるのは PNG / WebP / SVG */
   $('#expBgSec').style.display=(expFmt==='png'||expFmt==='webp'||isSvg)?'block':'none';
@@ -3993,7 +4045,27 @@ $('#expPaperRow').addEventListener('click',e=>{
 });
 $('#expFmtRow').addEventListener('click',e=>{
   const b=e.target.closest('.seg');
-  if(b){expFmt=b.dataset.fmt;updateExportDlg();}
+  if(!b)return;
+  if(b.dataset.fmt==='html'){
+    /* ホームページはフレーム単位(フレーム=1ページ)。プレビューもそのフレームを実寸で出す */
+    const frames=curDoc().shapes.filter(isFrame);
+    if(!frames.length){toast('先にフレームを作ってください(フレーム1枚が1ページになります)');return;}
+    changeExp(()=>{
+      expFmt='html';expRange='frame';expPaper='fit';expScale=1;
+      if(!frames.some(f=>f.id===expFrameId))expFrameId=frames[0].id;
+    });
+    return;
+  }
+  const wasHtml=expFmt==='html';
+  expFmt=b.dataset.fmt;
+  /* HTMLで隠していた用紙・倍率などの欄を出し直す */
+  if(wasHtml)changeExp(()=>{});else updateExportDlg();
+});
+$('#expPcSel').addEventListener('change',()=>changeExp(()=>{expFrameId=$('#expPcSel').value;}));
+$('#expSpSel').addEventListener('change',()=>{expSpFrameId=$('#expSpSel').value;updateExportDlg();});
+['expSiteTitle','expSiteDesc'].forEach(id=>{
+  $('#'+id).addEventListener('pointerdown',e=>e.stopPropagation());
+  $('#'+id).addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter')e.target.blur();});
 });
 $('#expBgRow').addEventListener('click',e=>{
   const b=e.target.closest('.seg');
@@ -4066,6 +4138,254 @@ function makeWireSvg(shapes,box,pad,bgMode,measures,measureBg){
   return out;
   }finally{svgInlineImages=false;}
 }
+/* ============================================================
+   ホームページ(HTML)として書き出す
+   フレーム1枚 = 1ページ。スマホ用のフレームも選ぶと、画面幅で自動的に切り替える。
+   文字・四角・丸・画像はHTML/CSSの要素にし(文字は検索・コピーできる本物の文字)、
+   CSSでは再現しにくい図形(パス・アイコン・線・ふちどり文字など)は、
+   画面と同じSVGをそのまま埋め込む(見た目を崩さないため)。
+   ページはデザインの幅で組み、表示する画面の幅に合わせて全体を拡大縮小する。
+   ============================================================ */
+const SITE_BP=768;   /* これより狭い画面ではスマホ用フレームを出す */
+let expSpFrameId='';
+const cssNum=v=>Math.round(v*100)/100;
+/* style="…" の中に書くので、フォント名の " は ' にする */
+const cssFont=k=>fontStack(k).replace(/"/g,"'");
+/* 色＋濃さ → CSSの色 */
+function cssCol(c,a){
+  if(a===undefined)a=1;
+  if(!c)return'transparent';
+  if(c==='var(--ink)')c=THEME_COLORS.light.ink;
+  if(a>=1)return c;
+  const m=/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(c);
+  if(m){
+    let h=m[1];if(h.length===3)h=h.split('').map(x=>x+x).join('');
+    return`rgba(${parseInt(h.slice(0,2),16)},${parseInt(h.slice(2,4),16)},${parseInt(h.slice(4,6),16)},${cssNum(a)})`;
+  }
+  return`color-mix(in srgb, ${c} ${cssNum(a*100)}%, transparent)`;
+}
+/* グラデーション → CSS。CSSで同じ形にならないもの(まとめてグラデ・中心をずらした線形)はnull */
+function cssGrad(s,g,a){
+  if(!g||g.box)return null;
+  const st=gradStops(g).map(x=>`${cssCol(x.c,(x.a===undefined?1:x.a)*a)} ${cssNum(clamp(x.p,0,1)*100)}%`).join(', ');
+  if(g.type==='radial'){
+    const b=gradBox(s),q=gradGeom(s,g);
+    return`radial-gradient(circle ${cssNum(q.r)}px at ${cssNum(q.cx-b.x)}px ${cssNum(q.cy-b.y)}px, ${st})`;
+  }
+  if((g.cx!==undefined&&g.cx!==0.5)||(g.cy!==undefined&&g.cy!==0.5))return null;
+  /* アプリの0°=右向き、CSSの0°=上向き。覆う長さの決め方は両者で同じ */
+  return`linear-gradient(${cssNum((g.angle||0)+90)}deg, ${st})`;
+}
+/* シャドウ → box-shadow / text-shadow。影の向きは画面基準なので、図形の回転ぶん逆回しにする。
+   CSSは先に書いたものが手前、SVG(画面)は後のものが手前なので並びを逆にする */
+function cssShadows(s,text){
+  return shList(s).slice().reverse().map(sh=>{
+    const o=rotV(shOffset(sh),-(s.rot||0));
+    const inner=!text&&sh.inner&&MULTI_SHADOW_TYPES(s);
+    return`${inner?'inset ':''}${cssNum(o.x)}px ${cssNum(o.y)}px ${cssNum(sh.b||0)}px ${cssCol(sh.c,sh.a===undefined?1:sh.a)}`;
+  }).join(', ');
+}
+/* 位置と大きさ(フレームの左上を原点にする)。回転は中心まわり */
+function siteBox(s,o,w,h){
+  const r=s.rot||0;
+  return`left:${cssNum(s.x-o.x-w/2)}px;top:${cssNum(s.y-o.y-h/2)}px;width:${cssNum(w)}px;height:${cssNum(h)}px`
+    +(r?`;transform:rotate(${cssNum(r)}deg)`:'');
+}
+/* 四角・丸 → div。CSSで再現できなければnull */
+function siteCssBox(s,o){
+  if(!(isRectish(s)||s.type==='ellipse')||s.imgFill||s.sgrad)return null;
+  const fa=alphaOf(s,'fill'),sa=alphaOf(s,'stroke');
+  const st=[siteBox(s,o,s.w,s.h)];
+  if(s.grad){const g=cssGrad(s,s.grad,fa);if(!g)return null;st.push('background:'+g);}
+  else if(s.fill)st.push('background-color:'+cssCol(s.fill,fa));
+  if(s.type==='ellipse')st.push('border-radius:50%');
+  else{
+    const rs=rectRadii(s);
+    if(rs.some(v=>v>0))st.push('border-radius:'+rs.map(v=>cssNum(v)+'px').join(' '));
+  }
+  /* 枠線は画面(SVG)と同じく輪郭の線の上に半分ずつ出るよう、outlineを内側へ半分ずらす */
+  const sw=strokeW(s);
+  if(!s.noStroke&&sw>0)st.push(`outline:${cssNum(sw)}px solid ${cssCol(s.sc,sa)};outline-offset:${cssNum(-sw/2)}px`);
+  if(hasSh(s))st.push('box-shadow:'+cssShadows(s));
+  if(s.blur)st.push(`filter:blur(${cssNum(s.blur/2)}px)`);
+  return`<div class="nt-e" style="${st.join(';')}"></div>`;
+}
+/* 画像 → img(トリミング・補正・枠線・影にも対応) */
+function siteImage(s,o){
+  if(s.type!=='image'||s.grad)return null;
+  const fa=alphaOf(s,'fill');
+  const st=[siteBox(s,o,s.w,s.h),'overflow:hidden'];
+  if(fa<1)st.push('opacity:'+cssNum(fa));
+  const fl=[];
+  if(hasImgFx(s))fl.push(fxCss(s));
+  if(s.blur)fl.push(`blur(${cssNum(s.blur/2)}px)`);
+  if(fl.length)st.push('filter:'+fl.join(' '));
+  const sw=strokeW(s);
+  if(sw>0)st.push(`outline:${cssNum(sw)}px solid ${cssCol(s.fill,fa)};outline-offset:${cssNum(-sw/2)}px`);
+  if(hasSh(s))st.push('box-shadow:'+cssShadows(s));
+  const ib=s.imgBox;
+  const pos=ib?`left:${cssNum(ib.x-s.x+s.w/2)}px;top:${cssNum(ib.y-s.y+s.h/2)}px;width:${cssNum(ib.w)}px;height:${cssNum(ib.h)}px`
+    :'left:0;top:0;width:100%;height:100%';
+  const lazy=(s.y-s.h/2-o.y)>1200?' loading="lazy"':'';   /* 最初の画面より下の画像は後から読む */
+  return`<div class="nt-e" style="${st.join(';')}"><img src="${imgHref(s.src)}" alt="${escXml(s.alt||'')}"${lazy} style="position:absolute;${pos}"></div>`;
+}
+/* テキストのうち、HTMLの文字で同じ見た目にできるものか */
+function siteTextOk(s){
+  if(s.type!=='text'||s.vert||s.imgFill||s.grad||olW1(s)||olW2(s))return false;
+  return![...(s.text||'')].some((ch,i)=>{const a=charAttr(s,i);return a.rot||a.dx||a.dy||a.it;});
+}
+/* テキスト → h1/h2/p。改行位置はアプリで組んだとおりに固定する(端末で折り返しが変わらないように) */
+function siteText(s,o,tag){
+  const L=textLayout(s);
+  const fa=alphaOf(s,'fill');
+  const base={fs:s.fs||18,fw:s.fw||400,ff:s.ff||'gothic',ls:s.ls||0};
+  const st=[siteBox(s,o,L.w,L.h),
+    `color:${cssCol(s.fill||'var(--ink)',fa)}`,
+    `font-family:${cssFont(base.ff)}`,`font-size:${cssNum(base.fs)}px`,`font-weight:${base.fw}`];
+  if(base.ls)st.push(`letter-spacing:${cssNum(base.ls)}px`);
+  if(hasSh(s))st.push('text-shadow:'+cssShadows(s,true));
+  if(s.blur)st.push(`filter:blur(${cssNum(s.blur/2)}px)`);
+  const align=s.align||'center';
+  const va=s.va==='top'?'top':s.va==='middle'?'middle':'baseline';
+  const same=(a,b)=>a.fs===b.fs&&a.fw===b.fw&&a.ff===b.ff&&a.ls===b.ls;
+  const lines=L.lines.map(l=>{
+    /* 書式が同じ文字の並びを1つのspanにまとめる */
+    const runs=[];
+    l.chars.forEach(c=>{
+      const r=runs[runs.length-1];
+      if(r&&same(r.a,c.a))r.t+=c.ch;else runs.push({a:c.a,t:c.ch});
+    });
+    const inner=runs.map(r=>{
+      const d=[];
+      if(r.a.ff!==base.ff)d.push(`font-family:${cssFont(r.a.ff)}`);
+      if(r.a.fs!==base.fs)d.push(`font-size:${cssNum(r.a.fs)}px`);
+      if(r.a.fw!==base.fw)d.push(`font-weight:${r.a.fw}`);
+      if(r.a.ls!==base.ls)d.push(`letter-spacing:${cssNum(r.a.ls)}px`);
+      if(va!=='baseline')d.push('vertical-align:'+va);
+      return d.length?`<span style="${d.join(';')}">${escXml(r.t)}</span>`:escXml(r.t);
+    }).join('');
+    return`<span class="nt-l" style="top:${cssNum(l.top)}px;width:${cssNum(L.along)}px;height:${cssNum(l.lineH)}px;line-height:${cssNum(l.lineH)}px;text-align:${align}">${inner}</span>`;
+  }).join('');
+  return`<${tag} class="nt-e nt-t" style="${st.join(';')}">${lines}</${tag}>`;
+}
+/* CSSで再現できない図形は、画面と同じSVGをそのまま置く(はみ出しは見せる) */
+function siteSvg(s,o){
+  let defs=gradDefs(s);
+  if(hasSh(s))defs+=shadowDefs(s);
+  if(s.blur)defs+=blurDefs(s);
+  const b=shapeWorldBox(s);
+  const m=strokeW(s)+(olW1(s)+olW2(s))*2+2;
+  const x=b.x-m,y=b.y-m,w=b.w+m*2,h=b.h+m*2;
+  let svg=`<svg class="nt-e nt-svg" aria-hidden="true" style="left:${cssNum(x-o.x)}px;top:${cssNum(y-o.y)}px" width="${cssNum(w)}" height="${cssNum(h)}" viewBox="${x} ${y} ${w} ${h}">`
+    +(defs?`<defs>${defs}</defs>`:'')+withShadow(s,shapeSvg(s))+'</svg>';
+  return svg.replaceAll('var(--ink)',THEME_COLORS.light.ink).replace(/ data-id="[^"]*"/g,'');
+}
+/* リンク先として安全なものだけ通す(javascript: などは捨てる) */
+function safeHref(u){
+  u=String(u||'').trim();
+  if(!u||/^(javascript|data|vbscript):/i.test(u))return'';
+  return u;
+}
+/* フレームとその中身 → 1ページぶんのHTML */
+function sitePageHtml(f,cls){
+  const d=curDoc(),sh=d.shapes,fi=sh.indexOf(f);
+  const o={x:f.x-f.w/2,y:f.y-f.h/2};
+  const kids=sh.filter((s,i)=>i>fi&&frameAt(sh,i)===f&&!s.hidden);
+  /* 一番大きい文字を見出し(h1)、大きめの文字を小見出し(h2)にする(検索エンジン向け) */
+  const texts=kids.filter(s=>s.type==='text'&&(s.text||'').trim()&&siteTextOk(s));
+  const fsOf=s=>Math.max(...[...s.text].map((_,i)=>charAttr(s,i).fs));
+  const maxFs=texts.length?Math.max(...texts.map(fsOf)):0;
+  let h1=null;
+  texts.forEach(s=>{if(!h1&&fsOf(s)===maxFs)h1=s;});
+  const parts=[];
+  /* フレームの下地(デバイスの外装はホームページには出さない) */
+  const bgShape={...f,rot:0,device:undefined,x:f.x,y:f.y};
+  delete bgShape.shadows;delete bgShape.sh;
+  parts.push(siteCssBox(bgShape,o)||siteSvg(bgShape,o));
+  kids.forEach(s=>{
+    if(s.type==='text'&&!(s.text||'').trim())return;
+    let el=null;
+    if(s.type==='text'&&siteTextOk(s))el=siteText(s,o,s===h1?'h1':fsOf(s)>=28?'h2':'p');
+    else if(s.type==='image')el=siteImage(s,o);
+    else el=siteCssBox(s,o);
+    if(!el)el=siteSvg(s,o);
+    const href=safeHref(s.href);
+    if(href){
+      const ext=/^https?:/i.test(href)?' target="_blank" rel="noopener"':'';
+      el=`<a href="${escXml(href)}"${ext}>${el}</a>`;
+    }
+    parts.push(el);
+  });
+  const bg=(!f.grad&&f.fill)?cssCol(f.fill,alphaOf(f,'fill')):'#FFFFFF';
+  /* 狭い画面用(幅768px未満)のデザインは画面いっぱいまで拡大してよい。広いデザインは等倍まで */
+  const max=f.w<SITE_BP?4:1;
+  return`<div class="nt-view ${cls}" data-w="${Math.round(f.w)}" data-h="${Math.round(f.h)}" data-max="${max}" style="width:${Math.round(f.w)}px;height:${Math.round(f.h)}px;background:${bg}">
+<div class="nt-page" style="width:${Math.round(f.w)}px;height:${Math.round(f.h)}px${f.clip!==false?';overflow:hidden':''}">
+${parts.join('\n')}
+</div>
+</div>`;
+}
+/* ホームページ1枚ぶんのHTMLファイル(画像も埋め込んだ1ファイル) */
+function makeSiteHtml(pc,sp,title,desc){
+  svgInlineImages=true;
+  try{
+    const views=sp?sitePageHtml(pc,'nt-pc')+'\n'+sitePageHtml(sp,'nt-sp'):sitePageHtml(pc,'nt-one');
+    const bg=(!pc.grad&&pc.fill)?cssCol(pc.fill,alphaOf(pc,'fill')):'#FFFFFF';
+    const t=escXml(title||pc.name||'ホームページ'),ds=escXml(desc||'');
+    return`<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${t}</title>
+${ds?`<meta name="description" content="${ds}">\n`:''}<meta property="og:type" content="website">
+<meta property="og:title" content="${t}">
+${ds?`<meta property="og:description" content="${ds}">\n`:''}<meta name="generator" content="NT-D">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:${bg}}
+body{overflow-x:hidden;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+a{color:inherit;text-decoration:none}
+img{display:block;max-width:none}
+.nt-view{position:relative;margin:0 auto;overflow:hidden}
+.nt-page{position:absolute;left:0;top:0;transform-origin:0 0}
+.nt-e{position:absolute}
+.nt-t{white-space:pre;font-style:normal}
+.nt-l{display:block;position:absolute;left:0;white-space:pre}
+.nt-svg{overflow:visible}
+${sp?`@media (max-width:${SITE_BP-0.02}px){.nt-pc{display:none}}
+@media (min-width:${SITE_BP}px){.nt-sp{display:none}}
+`:''}</style>
+</head>
+<body>
+${views}
+<script>
+/* デザインの幅で組んだページを、画面の幅に合わせて拡大縮小する */
+(function(){
+  function fit(){
+    var W=document.documentElement.clientWidth;
+    document.querySelectorAll('.nt-view').forEach(function(v){
+      if(getComputedStyle(v).display==='none')return;
+      var w=+v.dataset.w,h=+v.dataset.h,k=Math.min(W/w,+v.dataset.max||1);
+      v.style.width=w*k+'px';v.style.height=h*k+'px';
+      v.firstElementChild.style.transform='scale('+k+')';
+    });
+  }
+  addEventListener('resize',fit);fit();
+})();
+<\/script>
+</body>
+</html>
+`;
+  }finally{svgInlineImages=false;}
+}
+/* 書き出しダイアログで選んでいるPC用/スマホ用フレームからHTMLを作る */
+function curSiteHtml(){
+  const pc=expFrame();if(!pc)return null;
+  const frames=curDoc().shapes.filter(isFrame);
+  const sp=expSpFrameId&&expSpFrameId!==pc.id?frames.find(f=>f.id===expSpFrameId):null;
+  return makeSiteHtml(pc,sp,$('#expSiteTitle').value.trim(),$('#expSiteDesc').value.trim());
+}
 /* 保存するファイル名(どの範囲を出したか分かるように) */
 function expName(){
   const base=curDoc().name;
@@ -4080,6 +4400,13 @@ $('#expSave').onclick=()=>{
     return;
   }
   const name=expName();
+  if(expFmt==='html'){
+    const html=curSiteHtml();if(!html)return;
+    download(name+'.html',URL.createObjectURL(new Blob([html],{type:'text/html'})));
+    toast('ホームページ(HTML)を保存しました');
+    closeExportDlg();
+    return;
+  }
   if(expFmt==='svg'){
     const shapes=rangeShapes();
     if(!shapes||!shapes.length)return;
@@ -4122,6 +4449,14 @@ $('#expSave').onclick=()=>{
 /* 印刷: 用紙に載せたページを出す(実寸を選んでいる場合は縦横を自動で決める。
    「画面いっぱいに」で複数ページある時は全ページを続けて印刷する) */
 $('#expPrint').onclick=()=>{
+  if(expFmt==='html'&&expMode==='img'){
+    /* 書き出すHTMLを新しいタブで開いて、実際のブラウザでの見え方を確かめる */
+    const html=curSiteHtml();if(!html)return;
+    const url=URL.createObjectURL(new Blob([html],{type:'text/html'}));
+    if(!window.open(url,'_blank'))toast('新しいタブを開けませんでした(ポップアップの許可を確認してください)');
+    setTimeout(()=>URL.revokeObjectURL(url),120000);
+    return;
+  }
   if(!expContent)return;
   const ori=expPaper==='fit'
     ? (expContent.width>=expContent.height?'landscape':'portrait')
@@ -8598,6 +8933,20 @@ function applyPosInput(dim){
 $('#posX').addEventListener('change',()=>applyPosInput('x'));
 $('#posY').addEventListener('change',()=>applyPosInput('y'));
 $('#posRot').addEventListener('change',()=>applyPosInput('rot'));
+/* リンク(ホームページ書き出し時に押せるようにする)。空にするとリンクを外す */
+$('#lnkUrl').addEventListener('pointerdown',e=>e.stopPropagation());
+$('#lnkUrl').addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter')e.target.blur();});
+$('#lnkUrl').addEventListener('change',()=>{
+  const ss=selShapes().filter(s=>!isFrame(s));if(!ss.length)return;
+  let v=$('#lnkUrl').value.trim();
+  /* 「www.～」「example.com」のように書いた時は https:// を補う */
+  if(v&&!/^([a-z][a-z0-9+.-]*:|#|\/|\.)/i.test(v)&&/^[^\s]+\.[a-z]{2,}([\/?#].*)?$/i.test(v))v='https://'+v;
+  if(v&&!safeHref(v)){toast('このリンクは使えません');updateStyleMenu();return;}
+  pushUndo();
+  ss.forEach(s=>{if(v)s.href=v;else delete s.href;});
+  save();updateStyleMenu();
+  toast(v?'リンクを設定しました(HTML書き出しで押せるようになります)':'リンクを外しました');
+});
 /* パネル内の操作でパネル自体がドラッグされないように止める */
 ['frName','frW','frH','frPreset','frDevice'].forEach(id=>
   $('#'+id).addEventListener('pointerdown',e=>e.stopPropagation()));
@@ -9548,6 +9897,15 @@ function updateStyleMenu(){
     if(document.activeElement!==$('#posX'))$('#posX').value=Math.round(posOne.x);
     if(document.activeElement!==$('#posY'))$('#posY').value=Math.round(posOne.y);
     if(document.activeElement!==$('#posRot'))$('#posRot').value=Math.round(posOne.rot||0);
+  }
+  /* リンク: フレーム以外を選んでいる時(ボタンのグループはまとめて同じリンクにする) */
+  const linkable=ss.filter(s=>!isFrame(s));
+  $('#linkSec').style.display=linkable.length?'block':'none';
+  if(linkable.length&&document.activeElement!==$('#lnkUrl')){
+    const h0=linkable[0].href||'';
+    const mixed=linkable.some(s=>(s.href||'')!==h0);
+    $('#lnkUrl').value=mixed?'':h0;
+    $('#lnkUrl').placeholder=mixed?'(図形ごとに違います)':'https://…  /  mailto:…  /  tel:…';
   }
   /* 大きさ(px)入力: 単一選択の図形・画像のみ(フレーム・テキストは別) */
   const szS=(ss.length===1&&sizeableShape(ss[0]))?ss[0]:null;
