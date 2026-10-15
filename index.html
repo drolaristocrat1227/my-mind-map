@@ -1699,6 +1699,15 @@ kbd{
     <hr>
     <div class="menu-label">ぼかし</div>
     <div class="radRow"><span class="radLbl">強さ</span><input type="range" id="blurAmt" min="0" max="40" step="1" value="0"><input type="number" class="radNum" id="blurAmtV" min="0" max="200" value="0"></div>
+    <div id="glassPart">
+      <div class="menu-label">後ろをぼかす(すりガラス・書き出したページで効きます)</div>
+      <div class="segRow" id="glassRow" role="radiogroup">
+        <button class="seg" data-glass="0" role="radio">なし</button>
+        <button class="seg" data-glass="8" role="radio">弱め</button>
+        <button class="seg" data-glass="16" role="radio">ふつう</button>
+        <button class="seg" data-glass="28" role="radio">強め</button>
+      </div>
+    </div>
   </div>
   <div id="imgFillSec">
     <hr>
@@ -2156,6 +2165,24 @@ kbd{
         <button class="seg" data-v="1" role="radio">する(おすすめ)</button>
         <button class="seg" data-v="0" role="radio">しない(元の画像のまま)</button>
       </div>
+      <div class="menu-label">ローディング画面(ページを開いた時)</div>
+      <div class="segRow mWrap" id="expLoaderRow" role="radiogroup">
+        <button class="seg" data-ld="" role="radio">なし</button>
+        <button class="seg" data-ld="spin" role="radio">くるくる</button>
+        <button class="seg" data-ld="dots" role="radio">3つの点</button>
+        <button class="seg" data-ld="bar" role="radio">横に伸びる線</button>
+      </div>
+      <div id="expLoaderEdit">
+        <div class="numRow"><span class="radLbl expHl">背景色</span><input type="color" id="expLdBg"><span class="radLbl">色</span><input type="color" id="expLdFg"></div>
+        <div class="numRow"><span class="radLbl expHl">文字</span><input type="text" id="expLdTxt" spellcheck="false" autocomplete="off" placeholder="例: 会社名(省略可)"></div>
+      </div>
+      <div class="menu-label">カスタムカーソル(マウスのある画面だけ)</div>
+      <div class="segRow mWrap" id="expCursorRow" role="radiogroup">
+        <button class="seg" data-cur="" role="radio">なし</button>
+        <button class="seg" data-cur="dot" role="radio">点がついてくる</button>
+        <button class="seg" data-cur="ring" role="radio">点と輪(輪が遅れて追う)</button>
+      </div>
+      <div class="numRow" id="expCursorEdit"><span class="radLbl expHl">色</span><input type="color" id="expCurC"></div>
       <div class="menu-label">追加のCSS(サイトのすべてのページに効きます)</div>
       <textarea id="expSiteCss" rows="7" spellcheck="false" autocomplete="off" placeholder=".hero-title { letter-spacing: .08em; }&#10;.cta:hover { filter: brightness(1.1); }&#10;#about { scroll-margin-top: 80px; }"></textarea>
       <div id="expCssHint" class="expCssHint"></div>
@@ -2320,7 +2347,7 @@ kbd{
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-15.15';
+const APP_VERSION='2026-10-15.16';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -4471,6 +4498,15 @@ function updateSiteDlg(){
     ?'このデザインのクラス・ID: '+[...cls.map(v=>'<code>.'+escXml(v)+'</code>'),...ids.map(v=>'<code>#'+escXml(v)+'</code>')].join(' ')+'<br>'
     :'クラス名・IDは「色とスタイル」→「ホームページ用の設定」→「HTMLの名前」で付けられます。<br>')
     +'図形の位置・大きさ・色はHTMLに直接書かれているため、変える時は <code>!important</code> を付けてください(例: <code>.cta{background:#000 !important}</code>)。';
+  /* ローディング画面・カスタムカーソル */
+  const ld=c.loader||{},cu=c.cursor||{};
+  document.querySelectorAll('#expLoaderRow .seg').forEach(b=>{const on=b.dataset.ld===(ld.t||'');b.classList.toggle('active',on);b.setAttribute('aria-checked',on?'true':'false');});
+  $('#expLoaderEdit').style.display=ld.t?'block':'none';
+  $('#expLdBg').value=hex6(ld.bg||'#FFFFFF');$('#expLdFg').value=hex6(ld.fg||'#FF2E5E');
+  if(document.activeElement!==$('#expLdTxt'))$('#expLdTxt').value=ld.txt||'';
+  document.querySelectorAll('#expCursorRow .seg').forEach(b=>{const on=b.dataset.cur===(cu.t||'');b.classList.toggle('active',on);b.setAttribute('aria-checked',on?'true':'false');});
+  $('#expCursorEdit').style.display=cu.t?'flex':'none';
+  $('#expCurC').value=hex6(cu.c||'#FF2E5E');
   document.querySelectorAll('#expImgOptRow .seg').forEach(b=>{
     const on=(b.dataset.v==='1')===siteImgOptOn(c);
     b.classList.toggle('active',on);b.setAttribute('aria-checked',on?'true':'false');
@@ -4590,6 +4626,23 @@ $('#expSiteCss').addEventListener('keydown',e=>{
   }
 });
 $('#expSiteCss').addEventListener('pointerdown',e=>e.stopPropagation());
+$('#expLoaderRow').addEventListener('click',e=>{
+  const b=e.target.closest('.seg');if(!b)return;
+  const c=siteCfg();
+  if(b.dataset.ld)c.loader={bg:'#FFFFFF',fg:'#FF2E5E',...(c.loader||{}),t:b.dataset.ld};else delete c.loader;
+  save();updateExportDlg();
+});
+$('#expLdBg').addEventListener('input',()=>{const c=siteCfg();if(c.loader){c.loader.bg=$('#expLdBg').value;save();}});
+$('#expLdFg').addEventListener('input',()=>{const c=siteCfg();if(c.loader){c.loader.fg=$('#expLdFg').value;save();}});
+$('#expLdTxt').addEventListener('input',()=>{const c=siteCfg();if(c.loader){c.loader.txt=$('#expLdTxt').value;save();}});
+$('#expLdTxt').addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter')e.target.blur();});
+$('#expCursorRow').addEventListener('click',e=>{
+  const b=e.target.closest('.seg');if(!b)return;
+  const c=siteCfg();
+  if(b.dataset.cur)c.cursor={c:'#FF2E5E',...(c.cursor||{}),t:b.dataset.cur};else delete c.cursor;
+  save();updateExportDlg();
+});
+$('#expCurC').addEventListener('input',()=>{const c=siteCfg();if(c.cursor){c.cursor.c=$('#expCurC').value;save();}});
 $('#expImgOptRow').addEventListener('click',e=>{
   const b=e.target.closest('.seg');if(!b)return;
   const c=siteCfg();
@@ -4769,6 +4822,8 @@ function siteCssBox(s,o){
   if(!s.noStroke&&sw>0)st.push(`outline:${cssNum(sw)}px solid ${cssCol(s.sc,sa)};outline-offset:${cssNum(-sw/2)}px`);
   if(hasSh(s))st.push('box-shadow:'+cssShadows(s));
   if(s.blur)st.push(`filter:blur(${cssNum(s.blur/2)}px)`);
+  /* すりガラス: 後ろをぼかす */
+  if(s.glass)st.push(`-webkit-backdrop-filter:blur(${cssNum(s.glass)}px) saturate(1.4);backdrop-filter:blur(${cssNum(s.glass)}px) saturate(1.4)`);
   return`<div class="nt-e" style="${st.join(';')}"></div>`;
 }
 /* 画像 → img(トリミング・補正・枠線・影にも対応) */
@@ -6017,6 +6072,34 @@ ${SITE_RANGES.map(({r,mq})=>`@media ${mq}{.nt-view:not(.nt-r-${r}){display:none}
 @keyframes nt-ring{0%{scale:1;opacity:.7}100%{scale:1.7;opacity:0}}
 .nt-lpgrad{background-size:300% 300%!important;animation:nt-grad var(--ld) ease infinite}
 @keyframes nt-grad{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+/* ローディング画面 */
+.nt-loader{display:none}
+.nt-js .nt-loader{position:fixed;inset:0;z-index:2000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:var(--lb);color:var(--lf);font:700 15px/1.5 system-ui,-apple-system,"Hiragino Sans","Yu Gothic UI","Meiryo",sans-serif;letter-spacing:.08em;transition:opacity .5s ease,visibility .5s}
+.nt-loader.nt-done{opacity:0;visibility:hidden}
+.nt-ld-in i{display:none}
+.nt-ld-spin .nt-ld-in{width:44px;height:44px;border-radius:50%;border:4px solid color-mix(in srgb,var(--lf) 20%,transparent);border-top-color:var(--lf);animation:nt-spin .8s linear infinite}
+.nt-ld-dots .nt-ld-in{display:flex;gap:9px}
+.nt-ld-dots i{display:block;width:12px;height:12px;border-radius:50%;background:var(--lf);animation:nt-ldot 1s ease-in-out infinite}
+.nt-ld-dots i:nth-child(2){animation-delay:.15s}.nt-ld-dots i:nth-child(3){animation-delay:.3s}
+@keyframes nt-ldot{0%,80%,100%{scale:.5;opacity:.4}40%{scale:1;opacity:1}}
+.nt-ld-bar .nt-ld-in{width:160px;height:3px;border-radius:3px;overflow:hidden;background:color-mix(in srgb,var(--lf) 20%,transparent)}
+.nt-ld-bar i:first-child{display:block;width:40%;height:100%;background:var(--lf);animation:nt-lbar 1.1s ease-in-out infinite}
+@keyframes nt-lbar{0%{translate:-100% 0}100%{translate:250% 0}}
+.nt-loader p{margin:0}
+/* カスタムカーソル */
+.nt-cur{display:none}
+@media (hover:hover) and (pointer:fine){
+.nt-js .nt-cur{display:block}
+.nt-curon,.nt-curon *{cursor:none!important}
+.nt-curon input,.nt-curon textarea,.nt-curon select{cursor:auto!important}
+}
+.nt-cur i{position:fixed;left:0;top:0;z-index:3000;pointer-events:none;border-radius:50%}
+.nt-cur-d{width:8px;height:8px;margin:-4px 0 0 -4px;background:var(--cc)}
+.nt-cur-r{width:36px;height:36px;margin:-18px 0 0 -18px;border:1.5px solid var(--cc);transition:width .25s,height .25s,margin .25s,background-color .25s}
+.nt-cur-dot .nt-cur-d{width:14px;height:14px;margin:-7px 0 0 -7px;transition:scale .25s}
+.nt-cur-dot .nt-cur-r{display:none}
+.nt-cur-dot.nt-hov .nt-cur-d{scale:2.6;opacity:.6}
+.nt-cur-ring.nt-hov .nt-cur-r{width:64px;height:64px;margin:-32px 0 0 -32px;background:color-mix(in srgb,var(--cc) 14%,transparent)}
 /* メディア */
 .nt-media{overflow:hidden}
 .nt-video iframe,.nt-video video{position:absolute;border:0;display:block}
@@ -6251,6 +6334,27 @@ function siteJs(){
     if(matchMedia('(prefers-reduced-motion:reduce)').matches){node.nodeValue=src;return;}
     setTimeout(function(){requestAnimationFrame(step);},delay);
   }
+  /* ローディング画面: 読み込みが終わったら消す(最低0.5秒は見せる。6秒で必ず消す) */
+  var ld=document.querySelector('.nt-loader');
+  if(ld){
+    var t0=Date.now(),ldHide=function(){setTimeout(function(){ld.classList.add('nt-done');},Math.max(0,500-(Date.now()-t0)));};
+    if(document.readyState==='complete')ldHide();else addEventListener('load',ldHide);
+    setTimeout(function(){ld.classList.add('nt-done');},6000);
+  }
+  /* カスタムカーソル: 点(と輪)がマウスについてくる。リンクの上では大きくなる */
+  var cur=document.querySelector('.nt-cur');
+  if(cur&&matchMedia('(hover:hover) and (pointer:fine)').matches){
+    var cd=cur.querySelector('.nt-cur-d'),cr=cur.querySelector('.nt-cur-r'),dotOnly=cur.classList.contains('nt-cur-dot');
+    var mx=-100,my=-100,rx=-100,ry=-100,lag=matchMedia('(prefers-reduced-motion:reduce)').matches?1:(dotOnly?.35:.18);
+    document.documentElement.classList.add('nt-curon');
+    addEventListener('pointermove',function(e){
+      mx=e.clientX;my=e.clientY;
+      if(!dotOnly)cd.style.translate=mx+'px '+my+'px';
+      cur.classList.toggle('nt-hov',!!(e.target.closest&&e.target.closest('a,button,label,.nt-open')));
+    });
+    document.addEventListener('mouseleave',function(){mx=my=-100;});
+    (function curLoop(){rx+=(mx-rx)*lag;ry+=(my-ry)*lag;(dotOnly?cd:cr).style.translate=rx+'px '+ry+'px';requestAnimationFrame(curLoop);})();
+  }
   /* 画像のカルーセル: 矢印・点・自動で切り替え・指でめくる */
   var calm=matchMedia('(prefers-reduced-motion:reduce)').matches;
   document.querySelectorAll('.nt-car').forEach(function(c){
@@ -6449,6 +6553,17 @@ function siteCustomCss(c,files){
   /* CSSの中に </style> があっても途中で閉じないように */
   return'\n<style>\n/* 追加のCSS */\n'+css.replace(/<\/(style)/gi,'<\\/$1')+'\n</style>';
 }
+/* ローディング画面(JavaScriptが無い時は出さない) */
+function siteLoaderHtml(c){
+  const l=c.loader;if(!l||!l.t)return'';
+  return`<div class="nt-loader nt-ld-${l.t}" style="--lb:${cssCol(l.bg||'#FFFFFF')};--lf:${cssCol(l.fg||'#FF2E5E')}" aria-hidden="true"><div class="nt-ld-in"><i></i><i></i><i></i></div>${(l.txt||'').trim()?`<p>${escXml(l.txt.trim())}</p>`:''}</div>
+`;
+}
+/* カスタムカーソル(マウスのある画面だけ) */
+function siteCursorHtml(c){
+  const k=c.cursor;if(!k||!k.t)return'';
+  return`\n<div class="nt-cur nt-cur-${k.t}" style="--cc:${cssCol(k.c||'#FF2E5E')}" aria-hidden="true"><i class="nt-cur-d"></i><i class="nt-cur-r"></i></div>`;
+}
 /* 公開URLの基準(末尾を / にそろえる) */
 function siteBaseUrl(c){
   let u=safeHref(c.url);
@@ -6507,8 +6622,8 @@ ${opt.files?'':siteCss(c)}${pageCss}
 </style>${siteCustomCss(c,opt.files)}
 </head>
 <body>
-${body}
-${menu.html}${newsData?'\n'+newsData:''}
+${siteLoaderHtml(c)}${body}
+${menu.html}${siteCursorHtml(c)}${newsData?'\n'+newsData:''}
 ${opt.files?'<script src="js/main.js"><\/script>':`<script>\n${siteJs()}<\/script>`}
 </body>
 </html>
@@ -12342,6 +12457,12 @@ $('#lnkSec').addEventListener('change',()=>{
   const v=$('#lnkSec').value;
   applyLink(v?'#'+v:'');
 });
+$('#glassRow').addEventListener('click',e=>{
+  const b=e.target.closest('.seg');if(!b)return;
+  const v=+b.dataset.glass;
+  setWebProp(selShapes().filter(x=>!x.locked&&(isRectish(x)||x.type==='ellipse')),x=>{if(v)x.glass=v;else delete x.glass;},
+    v?'書き出したページで、この図形の後ろがぼけて見えます(塗りの濃さを下げると透けて見えます)':'すりガラスをやめました');
+});
 $('#webTag').addEventListener('change',()=>{
   const v=$('#webTag').value;
   setWebProp(webTargets().filter(s=>s.type==='text'),s=>{if(v)s.tag=v;else delete s.tag;});
@@ -13307,6 +13428,13 @@ function updateStyleMenu(){
   }
   /* ぼかし(どの図形でも) */
   $('#blurSec').style.display=ss.length?'block':'none';
+  /* すりガラス: 四角・丸・区画だけ */
+  const glassable=ss.filter(x=>isRectish(x)||x.type==='ellipse');
+  $('#glassPart').style.display=glassable.length?'block':'none';
+  if(glassable.length){
+    const g0=glassable[0].glass||0,sameG=glassable.every(x=>(x.glass||0)===g0);
+    document.querySelectorAll('#glassRow .seg').forEach(b=>{const on=sameG&&+b.dataset.glass===g0;b.classList.toggle('active',on);b.setAttribute('aria-checked',on?'true':'false');});
+  }
   if(ss.length){
     const b0=ss[0].blur||0;
     if(document.activeElement!==$('#blurAmt'))$('#blurAmt').value=b0;
