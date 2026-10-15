@@ -271,8 +271,8 @@ body.wire-mode.rulers #rulerTop,body.wire-mode.rulers #rulerLeft,body.wire-mode.
 .collBody>.menu-label:first-child{display:none;}
 /* 色とスタイルは項目が多いので少し詰める */
 #fillMenu .segRow{padding:5px 12px;}
-#webPin{flex-wrap:wrap;}
-#webPin .seg{flex:1 1 calc(50% - 6px);font-size:11.5px;}
+#webPin,#webVh{flex-wrap:wrap;}
+#webPin .seg,#webVh .seg{flex:1 1 calc(50% - 6px);font-size:11.5px;}
 #fillMenu .radRow{padding:2px 12px;}
 #fillMenu .menu-label{padding-top:3px;}
 /* グラデーションの色バー */
@@ -1379,6 +1379,15 @@ kbd{
         <button class="seg" data-pin="intop" role="radio">区画の中だけ上に固定</button>
       </div>
     </div>
+    <div id="webVhRow">
+      <div class="menu-label">高さを画面いっぱいに(100vh・ページ直下の区画)</div>
+      <div class="segRow" id="webVh" role="radiogroup">
+        <button class="seg" data-vh="" role="radio">しない</button>
+        <button class="seg" data-vh="center" role="radio">する・中身は中央</button>
+        <button class="seg" data-vh="top" role="radio">する・中身は上</button>
+        <button class="seg" data-vh="bottom" role="radio">する・中身は下</button>
+      </div>
+    </div>
     <div id="webHtmlPart">
       <div class="menu-label">HTMLの名前(CSSやページ内リンクで使います)</div>
       <div class="numRow" id="webElRow"><span class="radLbl">要素</span><select id="webEl">
@@ -2196,7 +2205,7 @@ kbd{
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-15.12';
+const APP_VERSION='2026-10-15.13';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -5542,20 +5551,33 @@ function sitePageHtml(f,ranges,top){
      ページ直下へ出す。区画の中にあると、その区画の範囲でしか固定されないため */
   const hoisted=[];
   const pageWide=x=>x.pin==='top'||x.pin==='bottom';
-  /* 区画(中のフレーム) → section など。o=入れ物の左上 */
-  const section=(u,o)=>{
+  /* 区画(中のフレーム) → section など。o=入れ物の左上 / top=ページ直下の区画か */
+  const section=(u,o,top)=>{
     const s=u.m[0],io={x:s.x-s.w/2,y:s.y-s.h/2};
     const st=`left:${cssNum(io.x-o.x)}px;top:${cssNum(io.y-o.y)}px;width:${cssNum(s.w)}px;height:${cssNum(s.h)}px`
       +(s.clip!==false?';overflow:hidden':'');
     const sec=s.name?` data-sec="${escXml(s.name)}"`:'';
     const tg=sectionTag(s);
     const pin=pageWide(s)||s.pin==='intop'?` data-pin="${s.pin}"`:'';
+    if(top&&s.vh&&!pageWide(s)){
+      /* 高さを画面いっぱいに: 区画いっぱいの背景(四角・画像)は伸ばし、ほかの中身は .nt-vhin に入れて、
+         そろえ方(中央・上・下)に合わせて js/main.js がずらす */
+      const kids=sh.filter((k,i)=>!k.hidden&&parentFrameAt(sh,i)===s);
+      const isFill=k=>!isFrame(k)&&k.type!=='text'&&!k.fr&&!k.nw&&!k.gid&&!k.href&&(()=>{const b=cornersBox([k],0);return b.x2-b.x1>=s.w*0.9&&b.y2-b.y1>=s.h*0.8;})();
+      /* 中身の範囲(ページ直下へ出す固定の区画は除く) */
+      const rest=kids.filter(k=>!isFill(k)&&!(isFrame(k)&&pageWide(k)));
+      const cb=rest.length?cornersBox(rest,0):{y1:io.y+s.h/2,y2:io.y+s.h/2};
+      const fillCls=h=>h.replace(/<div class="nt-e"/g,'<div class="nt-e nt-vhfill"');
+      const vh=` data-vh="${s.vh}" data-vh-h="${cssNum(s.h)}" data-vh-ct="${cssNum(Math.max(0,cb.y1-io.y))}" data-vh-cb="${cssNum(Math.min(s.h,cb.y2-io.y))}"`;
+      return siteWrapUnit(u.m,siteAttrs(`<${tg} class="nt-e"${sec}${vh} style="${st}">`,s)
+        +`\n${fillCls(siteFrameBg(s,io))}\n${fillCls(inner(s,io,isFill))}\n<div class="nt-vhin" style="height:${cssNum(s.h)}px">\n${inner(s,io,k=>!isFill(k))}\n</div>\n</${tg}>`,o);
+    }
     return siteWrapUnit(u.m,siteAttrs(`<${tg} class="nt-e"${sec}${pin} style="${st}">`,s)+`\n${siteFrameBg(s,io)}\n${inner(s,io)}\n</${tg}>`,o);
   };
   /* frの直接の中身を、frの左上(o)を原点にして並べる */
-  const inner=(fr,o)=>{
+  const inner=(fr,o,pick)=>{
     const fi=sh.indexOf(fr),kids=[];
-    sh.forEach((s,i)=>{if(i>fi&&!s.hidden&&parentFrameAt(sh,i)===fr)kids.push(s);});
+    sh.forEach((s,i)=>{if(i>fi&&!s.hidden&&parentFrameAt(sh,i)===fr&&(!pick||pick(s)))kids.push(s);});
     /* 重ね順で続いている同じグループはひとまとまりにする */
     const units=[],formUnits={};
     kids.forEach(s=>{
@@ -5586,7 +5608,7 @@ function sitePageHtml(f,ranges,top){
       if(isFrame(u.m[0])){
         /* ページ全体に固定する区画が、ほかの区画の中にある時は、あとでページ直下へ出す */
         if(fr!==f&&pageWide(u.m[0])){hoisted.push(u);return'';}
-        return section(u,o);
+        return section(u,o,fr===f);
       }
       const els=u.m.filter(s=>!(s.type==='text'&&!(s.text||'').trim())).map(s=>siteShapeEl(s,o,tagOf));
       return els.length?siteWrapUnit(u.m,els.join(''),o):'';
@@ -5597,8 +5619,8 @@ function sitePageHtml(f,ranges,top){
   const cls=ranges.map(r=>'nt-r-'+r).join(' ');
   return`<div class="nt-view ${cls}" data-w="${Math.round(f.w)}" data-h="${Math.round(f.h)}"${top?' data-top="1"':''} style="width:${Math.round(f.w)}px;height:${Math.round(f.h)}px;background:${bg}">
 ${siteAttrs(`<div class="nt-page" style="width:${Math.round(f.w)}px;height:${Math.round(f.h)}px${f.clip!==false?';overflow:hidden':''}">`,f)}
-${siteFrameBg(f,o)}
-${inner(f,o)}${hoisted.length?'\n'+hoisted.map(u=>section(u,o)).join('\n'):''}
+${siteFrameBg(f,o).replace('class="nt-e"','class="nt-e nt-pagebg"')}
+${inner(f,o)}${hoisted.length?'\n'+hoisted.map(u=>section(u,o,false)).join('\n'):''}
 </div>
 </div>`;
 }
@@ -5648,6 +5670,9 @@ img{display:block;max-width:none}
 .nt-t{white-space:pre;font-style:normal}
 .nt-l{display:block;position:absolute;left:0;white-space:pre}
 .nt-svg{overflow:visible}
+/* 高さを画面いっぱいにする区画(js/main.js が高さを決める) */
+.nt-vhin{position:absolute;left:0;top:0;width:100%}
+.nt-vhfill img{object-fit:cover}
 /* 画面の幅ごとに、そのページ用のデザインだけを出す */
 ${SITE_RANGES.map(({r,mq})=>`@media ${mq}{.nt-view:not(.nt-r-${r}){display:none}}`).join('\n')}
 /* 動き(スクロールして見えたら .nt-in が付いて表示される) */
@@ -5724,12 +5749,63 @@ function siteJs(){
 (function(){
   /* デザインの幅で組んだページを、画面の幅に合わせて拡大縮小する。
      広い画面では、デザインより大きくはしない(スマホ用のデザインをPCで見た時も等倍で中央に出す) */
+  /* 高さを画面いっぱいにする区画(data-vh)。区画の高さを画面の高さに合わせ、それより下の物をずらす。
+     画面の高さは、スマホのアドレスバーが出ている時の高さ(100svh)を使う(スクロールで高さが変わらないように) */
+  var probe=document.createElement('div');
+  probe.style.cssText='position:fixed;left:0;top:0;width:1px;height:100vh;height:100svh;visibility:hidden;pointer-events:none';
+  document.body.appendChild(probe);
+  function screenH(){return probe.offsetHeight||innerHeight;}
+  function topIn(el,page){var t=0;while(el&&el!==page){t+=el.offsetTop;el=el.offsetParent;}return t;}
+  function vhPrep(v){
+    var page=v.firstElementChild,list=[].slice.call(page.querySelectorAll('[data-vh]'));
+    if(!list.length)return null;
+    /* ずらす前の位置を覚えておく(ページ直下の物ごと) */
+    var items=[];
+    [].forEach.call(page.children,function(c){
+      if(c.classList.contains('nt-pagebg'))return;
+      var e=c.offsetHeight?c:c.querySelector('.nt-e');
+      items.push({el:c,top:e?topIn(e,page):0});
+    });
+    var secs=list.map(function(s){
+      return{el:s,top:topIn(s,page),h:+s.dataset.vhH,ct:+s.dataset.vhCt,cb:+s.dataset.vhCb,al:s.dataset.vh,
+        inn:s.querySelector('.nt-vhin'),
+        fills:[].slice.call(s.querySelectorAll('.nt-vhfill')).map(function(f){return{el:f,top:f.offsetTop,h:f.offsetHeight};})};
+    });
+    return{page:page,secs:secs,items:items,bg:page.querySelector('.nt-pagebg')};
+  }
+  function vhApply(v,k,h){
+    if(v.__vh===undefined)v.__vh=vhPrep(v);
+    var vh=v.__vh;if(!vh)return h;
+    var H=screenH()/k,add=0,m=24;
+    vh.secs.forEach(function(s){
+      /* 中身が切れない高さより低くはしない */
+      var T=Math.max(H,s.cb-s.ct+m*2);
+      if(s.al==='top')T=Math.max(T,s.cb+m);
+      else if(s.al==='bottom')T=Math.max(T,s.h-s.ct+m);
+      else T=Math.max(T,s.h-2*s.ct+2*m,2*s.cb-s.h+2*m);
+      s.d=T-s.h;
+      s.el.style.height=T+'px';
+      if(s.inn)s.inn.style.top=(s.al==='top'?0:s.al==='bottom'?s.d:s.d/2)+'px';
+      s.fills.forEach(function(f){f.el.style.top=(f.top/s.h*T)+'px';f.el.style.height=(f.h/s.h*T)+'px';});
+      add+=s.d;
+    });
+    vh.items.forEach(function(it){
+      var sh=0;
+      vh.secs.forEach(function(s){if(it.top>=s.top+s.h-1)sh+=s.d;});
+      it.el.style.marginTop=sh?sh+'px':'';
+    });
+    h+=add;
+    vh.page.style.height=h+'px';
+    if(vh.bg)vh.bg.style.height=h+'px';
+    return h;
+  }
   function fit(){
     var W=document.documentElement.clientWidth;
     document.querySelectorAll('.nt-view').forEach(function(v){
       if(getComputedStyle(v).display==='none')return;
       var w=+v.dataset.w,h=+v.dataset.h,k=W/w;
       if(k>1&&W>=${SITE_BP}&&(w<${SITE_BP}||v.dataset.top))k=1;
+      h=vhApply(v,k,h);
       v.style.width=w*k+'px';v.style.height=h*k+'px';
       v.firstElementChild.style.transform='scale('+k+')';
     });
@@ -11400,6 +11476,21 @@ function updateWebSec(ss){
   const one=ss.length===1?ss[0]:null;
   const shSec=one&&isFrame(one)&&parentFrameAt(curShapes(),curShapes().indexOf(one));
   $('#webElRow').style.display=shSec?'flex':'none';
+  /* 画面いっぱいの高さ: ページ用フレームの直下の区画だけ */
+  const topSecs=ss.filter(x=>{
+    if(!isFrame(x))return false;
+    const sh2=curShapes(),p=parentFrameAt(sh2,sh2.indexOf(x));
+    return p&&!parentFrameAt(sh2,sh2.indexOf(p));
+  });
+  $('#webVhRow').style.display=topSecs.length&&topSecs.length===ss.length?'block':'none';
+  if(topSecs.length){
+    const v0=topSecs[0].vh||'';
+    const same=topSecs.every(x=>(x.vh||'')===v0);
+    document.querySelectorAll('#webVh .seg').forEach(b=>{
+      const on=same&&b.dataset.vh===v0;
+      b.classList.toggle('active',on);b.setAttribute('aria-checked',on?'true':'false');
+    });
+  }
   /* 固定: 中に置いたフレーム(区画)を選んでいる時 */
   const secs=ss.filter(x=>isFrame(x)&&parentFrameAt(curShapes(),curShapes().indexOf(x)));
   $('#webPinRow').style.display=secs.length&&secs.length===ss.length?'block':'none';
@@ -11484,6 +11575,14 @@ $('#hvType').addEventListener('change',()=>{
 $('#webTag').addEventListener('change',()=>{
   const v=$('#webTag').value;
   setWebProp(webTargets().filter(s=>s.type==='text'),s=>{if(v)s.tag=v;else delete s.tag;});
+});
+$('#webVh').addEventListener('click',e=>{
+  const b=e.target.closest('.seg');if(!b)return;
+  const v=b.dataset.vh,sh=curShapes();
+  const list=webTargets().filter(x=>{if(!isFrame(x))return false;const p=parentFrameAt(sh,sh.indexOf(x));return p&&!parentFrameAt(sh,sh.indexOf(p));});
+  if(v&&list.some(x=>x.pin==='top'||x.pin==='bottom')){toast('ページ全体に固定した区画は、画面いっぱいにできません');return;}
+  setWebProp(list,x=>{if(v)x.vh=v;else delete x.vh;},
+    v?'書き出したページで、この区画の高さを画面の高さに合わせます(編集画面ではデザインどおりの高さです)':'画面いっぱいをやめました');
 });
 $('#webPin').addEventListener('click',e=>{
   const b=e.target.closest('.seg');if(!b)return;
