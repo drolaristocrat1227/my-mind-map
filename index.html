@@ -942,6 +942,36 @@ body.wirebar-off #wireHint{bottom:18px;}
 #brandAddGroup:hover{background:var(--btn-active);}
 #brandDlgClose{background:var(--accent);color:#fff;}
 #brandDlgClose:hover{filter:brightness(1.08);}
+/* お問い合わせフォームの設定 */
+#formDlgWrap{position:fixed;inset:0;z-index:82;display:none;align-items:center;justify-content:center;padding:20px;}
+#formDlgWrap.on{display:flex;}
+#formDlgBack{position:absolute;inset:0;background:rgba(0,0,0,.3);}
+#formDlg{position:relative;width:480px;max-width:100%;max-height:88vh;overflow-y:auto;border-radius:20px;padding:22px 20px 16px;animation:menuIn .16s cubic-bezier(.2,.8,.2,1);}
+#formDlg h2{font-size:16px;font-weight:750;margin-bottom:8px;}
+#formDlg .menu-label{padding:12px 0 4px;}
+#formDlg .segRow{padding:5px 0;}
+.fm-row{display:flex;gap:6px;align-items:center;padding:3px 0;}
+.fm-lbl{width:78px;flex:none;font-size:12px;font-weight:650;color:var(--ink-soft);}
+#formDlg input[type=text],#formDlg textarea,#formDlg select{
+  flex:1;min-width:0;height:30px;padding:0 9px;border:1px solid var(--panel-border);border-radius:8px;
+  background:var(--node-bg);color:var(--ink);font-size:12.5px;font-weight:600;font-family:inherit;}
+#formDlg textarea{height:auto;padding:6px 9px;line-height:1.5;resize:vertical;}
+#formDlg input:focus,#formDlg textarea:focus,#formDlg select:focus{outline:none;border-color:var(--accent);}
+.fm-field{border:1px solid var(--panel-border);border-radius:12px;padding:7px 9px;margin-bottom:8px;}
+.fm-ico{width:28px;height:28px;flex:none;border-radius:7px;color:var(--ink-soft);font-size:14px;font-weight:700;}
+.fm-ico:hover:not(:disabled){background:var(--btn-hover);color:var(--ink);}
+.fm-ico:disabled{opacity:.3;}
+.fm-del:hover:not(:disabled){color:var(--danger);}
+.fm-req{flex:none;padding:6px 12px;}
+.fm-colors{display:grid;grid-template-columns:repeat(3,1fr);gap:6px 10px;}
+.fm-colors label{display:flex;align-items:center;justify-content:space-between;gap:6px;font-size:12px;font-weight:650;color:var(--ink-soft);}
+.fm-colors input[type=color]{width:38px;height:26px;padding:0 2px;border:1px solid var(--panel-border);border-radius:7px;background:var(--node-bg);cursor:pointer;}
+.fm-note{font-size:11.5px;line-height:1.6;color:var(--ink-soft);padding:10px 0 2px;}
+#formDlgFoot{display:flex;gap:10px;margin-top:10px;}
+#formDlgFoot button{flex:1;padding:11px;border-radius:11px;font-size:13px;font-weight:650;transition:all .15s;}
+#fmCancel{background:var(--btn-hover);color:var(--ink-soft);}
+#fmApply{background:var(--accent);color:#fff;}
+#fmApply:hover{filter:brightness(1.08);}
 /* フレームのサイズ一覧(ツールバーのメニュー) */
 #frameMenu{max-height:78vh;overflow-y:auto;min-width:238px;}
 #frameMenu .mi .px,#penMenu .mi .px{margin-left:auto;font-size:10.5px;color:var(--ink-soft);font-weight:600;}
@@ -1274,6 +1304,7 @@ kbd{
   <div id="webSec">
     <hr>
     <div class="menu-label">ホームページ用の設定</div>
+    <div class="segRow" id="webFormRow"><button class="seg" id="webFormBtn">お問い合わせフォームの項目・送信先を編集</button></div>
     <div id="webLinkPart">
       <div class="menu-label">リンク(押した時の動作)</div>
       <div class="numRow"><select id="lnkType">
@@ -2006,6 +2037,38 @@ kbd{
   </div>
 </div>
 
+<!-- お問い合わせフォームの設定 -->
+<div id="formDlgWrap">
+  <div id="formDlgBack"></div>
+  <div id="formDlg" class="glass">
+    <h2>お問い合わせフォームの設定</h2>
+    <div class="menu-label">送信</div>
+    <div class="fm-row"><span class="fm-lbl">届け先</span><input type="text" id="fmTo" placeholder="info@example.com(お問い合わせが届くアドレス)" spellcheck="false" autocomplete="off"></div>
+    <div class="fm-row"><span class="fm-lbl">メール件名</span><input type="text" id="fmSubject" spellcheck="false" autocomplete="off"></div>
+    <div class="fm-row"><span class="fm-lbl">ボタンの文字</span><input type="text" id="fmSubmit" spellcheck="false" autocomplete="off"></div>
+    <div class="fm-row"><span class="fm-lbl">送信後の文</span><textarea id="fmThanks" rows="2"></textarea></div>
+    <div class="segRow"><button class="seg" id="fmAuto">送った人へ自動返信メールを送る</button></div>
+    <div id="fmReplyRow"><div class="fm-row"><span class="fm-lbl">返信の文</span><textarea id="fmReplyBody" rows="3"></textarea></div></div>
+    <div class="menu-label">項目(上から順に並びます)</div>
+    <div id="fmFields"></div>
+    <div class="segRow"><button class="seg" id="fmAdd">＋ 項目を追加</button></div>
+    <div class="menu-label">色</div>
+    <div class="fm-colors">
+      <label>背景<input type="color" id="fmcBg"></label>
+      <label>文字<input type="color" id="fmcText"></label>
+      <label>入力欄<input type="color" id="fmcInput"></label>
+      <label>枠線<input type="color" id="fmcBorder"></label>
+      <label>ボタン<input type="color" id="fmcAccent"></label>
+      <label>ボタンの文字<input type="color" id="fmcBtnText"></label>
+    </div>
+    <div class="fm-note">「反映する」を押すと、フォームを並べ直します(部品を個別に動かした位置や色は、ここで決めた色と並びに戻ります)。送信できるのは、書き出したサイトをPHPが使えるサーバーに置いた時です。</div>
+    <div id="formDlgFoot">
+      <button id="fmCancel">キャンセル</button>
+      <button id="fmApply">反映する</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast" class="glass"></div>
 <input type="file" id="fileInput" accept=".json" hidden>
 
@@ -2017,7 +2080,7 @@ kbd{
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-15.4';
+const APP_VERSION='2026-10-15.5';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -4451,7 +4514,7 @@ function siteTextOk(s){
   return![...(s.text||'')].some((ch,i)=>{const a=charAttr(s,i);return a.rot||a.dx||a.dy||a.it;});
 }
 /* テキスト → h1/h2/p。改行位置はアプリで組んだとおりに固定する(端末で折り返しが変わらないように) */
-function siteText(s,o,tag){
+function siteText(s,o,tag,attrs,cls){
   const L=textLayout(s);
   const fa=alphaOf(s,'fill');
   const base={fs:s.fs||18,fw:s.fw||400,ff:s.ff||'gothic',ls:s.ls||0};
@@ -4482,7 +4545,7 @@ function siteText(s,o,tag){
     }).join('');
     return`<span class="nt-l" style="top:${cssNum(l.top)}px;width:${cssNum(L.along)}px;height:${cssNum(l.lineH)}px;line-height:${cssNum(l.lineH)}px;text-align:${align}">${inner}</span>`;
   }).join('');
-  return`<${tag} class="nt-e nt-t" style="${st.join(';')}">${lines}</${tag}>`;
+  return`<${tag} class="nt-e nt-t${cls?' '+cls:''}"${attrs||''} style="${st.join(';')}">${lines}</${tag}>`;
 }
 /* CSSで再現できない図形は、画面と同じSVGをそのまま置く(はみ出しは見せる) */
 function siteSvg(s,o){
@@ -4502,6 +4565,199 @@ function safeHref(u){
   if(!u||/^(javascript|data|vbscript):/i.test(u))return'';
   return u;
 }
+/* ============================================================
+   お問い合わせフォーム(送信できるフォーム)
+   ふつうの図形のグループとして置く(見た目は自由に変えられる)。背景の四角が設定 s.form を持ち、
+   各部品は s.fr={form:id, role, field, opt} で役割を持つ。HTML書き出しで本物の入力欄に置き換える。
+   role: bg=背景 / label=項目名 / input=入力欄 / ph=入力例 / opt=選択肢の丸・四角 / optlabel=選択肢の文字 /
+         button=送信ボタン / btntext=送信ボタンの文字
+   ============================================================ */
+const FORM_TYPES=[
+  ['text','1行の文字'],['email','メールアドレス'],['tel','電話番号'],['textarea','複数行の文章'],
+  ['radio','1つだけ選ぶ(ラジオボタン)'],['checkbox','複数選べる(チェックボックス)'],['agree','同意のチェック']
+];
+const formHasOpts=t=>t==='radio'||t==='checkbox';
+const formIsBox=t=>t==='text'||t==='email'||t==='tel'||t==='textarea';
+const fieldId=()=>'f'+uid().slice(-6);
+function defaultFormCfg(){
+  return{
+    id:'fm'+uid().slice(-6),
+    to:'',subject:'ホームページからのお問い合わせ',submit:'送信する',
+    thanks:'お問い合わせありがとうございました。\n内容を確認のうえ、折り返しご連絡いたします。',
+    autoReply:true,
+    replyBody:'このたびはお問い合わせいただき、ありがとうございます。\n以下の内容で受け付けました。担当者より折り返しご連絡いたします。',
+    fields:[
+      {id:fieldId(),type:'text',label:'お名前',req:true,ph:'山田 太郎'},
+      {id:fieldId(),type:'email',label:'メールアドレス',req:true,ph:'example@example.com'},
+      {id:fieldId(),type:'tel',label:'電話番号',req:false,ph:'03-1234-5678'},
+      {id:fieldId(),type:'textarea',label:'お問い合わせ内容',req:true,ph:''},
+      {id:fieldId(),type:'agree',label:'個人情報の取り扱いに同意する',req:true}
+    ],
+    style:{bg:'#F6F7FB',text:'#1F2A44',input:'#FFFFFF',border:'#CCD3DE',accent:'#FF2E5E',btnText:'#FFFFFF',r:8}
+  };
+}
+/* 設定からフォームの図形を並べる(左上=x0,y0、幅W)。高さは中身に合わせて決まる */
+function buildFormShapes(cfg,x0,y0,W){
+  const st=cfg.style,P=32,IW=W-P*2,gid='g'+cfg.id;
+  const out=[];
+  const fr=(role,extra)=>({form:cfg.id,role,...(extra||{})});
+  const text=(t,left,cy,o)=>{
+    const s={id:uid(),type:'text',rot:0,text:t,fs:15,fw:400,ff:'gothic',fill:st.text,align:'left',gid,...o};
+    measureWText(s);
+    s.x=left+s.w/2;s.y=cy;
+    out.push(s);return s;
+  };
+  const bg={id:uid(),type:'rect',x:0,y:0,w:W,h:0,rot:0,fill:st.bg,noStroke:true,r:16,gid,fr:fr('bg'),form:cfg};
+  out.push(bg);
+  let y=y0+P;
+  cfg.fields.forEach(f=>{
+    const left=x0+P;
+    if(f.type!=='agree'){
+      text(f.label+(f.req?'(必須)':''),left,y+10,{fw:700,fr:fr('label',{field:f.id})});
+      y+=28;
+    }
+    if(formIsBox(f.type)){
+      const h=f.type==='textarea'?140:48;
+      out.push({id:uid(),type:'rect',x:left+IW/2,y:y+h/2,w:IW,h,rot:0,fill:st.input,sc:st.border,sw:1.5,r:st.r,gid,fr:fr('input',{field:f.id})});
+      if(f.ph)text(f.ph,left+14,f.type==='textarea'?y+24:y+h/2,{fill:st.border,fs:15,fr:fr('ph',{field:f.id})});
+      y+=h;
+    }else{
+      const opts=f.type==='agree'?[f.label]:(f.opts&&f.opts.length?f.opts:['選択肢1']);
+      opts.forEach((o,i)=>{
+        const cy=y+16;
+        out.push({id:uid(),type:f.type==='radio'?'ellipse':'rect',x:left+10,y:cy,w:20,h:20,rot:0,
+          fill:st.input,sc:st.border,sw:1.5,r:f.type==='radio'?0:4,gid,fr:fr('opt',{field:f.id,opt:i})});
+        text(o,left+32,cy,{fr:fr('optlabel',{field:f.id,opt:i})});
+        y+=32;
+      });
+    }
+    y+=22;
+  });
+  y+=8;
+  const bw=Math.min(260,IW),bh=56;
+  out.push({id:uid(),type:'rect',x:x0+W/2,y:y+bh/2,w:bw,h:bh,rot:0,fill:st.accent,noStroke:true,r:bh/2,gid,fr:fr('button')});
+  const bt=text(cfg.submit||'送信する',0,y+bh/2,{fs:17,fw:700,fill:st.btnText,align:'center',fr:fr('btntext')});
+  bt.x=x0+W/2;
+  y+=bh+P;
+  bg.h=y-y0;bg.x=x0+W/2;bg.y=y0+bg.h/2;
+  return out;
+}
+const formIdOf=s=>s&&s.fr?s.fr.form:null;
+function formBgById(id){return(curShapes()||[]).find(s=>s.fr&&s.fr.form===id&&s.fr.role==='bg'&&s.form);}
+/* UIパーツから追加: 画面の中央に置いて、すぐ設定を開く */
+function addContactForm(){
+  const d=curDoc();if(!d.shapes)return;
+  exitPen();exitEraser();exitBrush();
+  pushUndo();
+  const cfg=defaultFormCfg();
+  const W=560;
+  const c=s2w(viewW()/2,viewH()/2);
+  const tmp=buildFormShapes(cfg,0,0,W);
+  const H=tmp[0].h;
+  const shapes=buildFormShapes(cfg,c.x-W/2,c.y-H/2,W);
+  d.shapes.push(...shapes);
+  wireSel=shapes.map(s=>s.id);selAnchor=null;
+  save();renderWire();
+  toast('お問い合わせフォームを追加しました');
+  openFormDlg(cfg.id);
+}
+/* 設定を変えたら並べ直す(位置と幅は今の背景に合わせる。部品の見た目は設定の色に戻る) */
+function rebuildForm(cfg){
+  const sh=curShapes();if(!sh)return;
+  const bg=formBgById(cfg.id);if(!bg)return;
+  const x0=bg.x-bg.w/2,y0=bg.y-bg.h/2,W=bg.w;
+  const at=sh.indexOf(bg);
+  const keep=sh.filter(s=>formIdOf(s)!==cfg.id);
+  const before=sh.slice(0,at).filter(s=>formIdOf(s)!==cfg.id).length;
+  const shapes=buildFormShapes(cfg,x0,y0,W);
+  /* 背景の四角に付けた影・角丸などはそのまま引き継ぐ */
+  ['r','rs','shadows','sh','grad','noStroke','sc','sw','blur','anim','hover'].forEach(k=>{if(bg[k]!==undefined)shapes[0][k]=bg[k];else delete shapes[0][k];});
+  if(!bg.grad)shapes[0].fill=cfg.style.bg;
+  keep.splice(before,0,...shapes);
+  sh.length=0;sh.push(...keep);
+  wireSel=shapes.map(s=>s.id);
+  save();renderWire();
+}
+/* ---------- フォームの設定ダイアログ ---------- */
+let formDraft=null;
+function openFormDlg(id){
+  const bg=formBgById(id);if(!bg){toast('フォームの背景が見つかりません');return;}
+  formDraft=JSON.parse(JSON.stringify(bg.form));
+  renderFormDlg();
+  $('#formDlgWrap').classList.add('on');
+}
+function closeFormDlg(){$('#formDlgWrap').classList.remove('on');formDraft=null;}
+function renderFormDlg(){
+  const c=formDraft,st=c.style;
+  $('#fmTo').value=c.to||'';$('#fmSubject').value=c.subject||'';$('#fmSubmit').value=c.submit||'';
+  $('#fmThanks').value=c.thanks||'';$('#fmReplyBody').value=c.replyBody||'';
+  $('#fmAuto').classList.toggle('active',!!c.autoReply);
+  $('#fmReplyRow').style.display=c.autoReply?'block':'none';
+  [['fmcBg','bg'],['fmcText','text'],['fmcInput','input'],['fmcBorder','border'],['fmcAccent','accent'],['fmcBtnText','btnText']]
+    .forEach(([id,k])=>{$('#'+id).value=/^#[0-9a-f]{6}$/i.test(st[k])?st[k]:'#000000';});
+  $('#fmFields').innerHTML=c.fields.map((f,i)=>`<div class="fm-field" data-i="${i}">
+    <div class="fm-row">
+      <select class="fm-type">${FORM_TYPES.map(([v,n])=>`<option value="${v}"${v===f.type?' selected':''}>${n}</option>`).join('')}</select>
+      <button class="fm-ico" data-act="up" title="上へ"${i?'':' disabled'}>↑</button>
+      <button class="fm-ico" data-act="down" title="下へ"${i<c.fields.length-1?'':' disabled'}>↓</button>
+      <button class="fm-ico fm-del" data-act="del" title="この項目を消す">&times;</button>
+    </div>
+    <div class="fm-row"><input type="text" class="fm-label" value="${escXml(f.label||'')}" placeholder="${f.type==='agree'?'同意の文(例: 個人情報の取り扱いに同意する)':'項目名'}">
+      <button class="seg fm-req${f.req?' active':''}" data-act="req">必須</button></div>
+    ${formIsBox(f.type)?`<div class="fm-row"><input type="text" class="fm-ph" value="${escXml(f.ph||'')}" placeholder="入力例(薄い文字で表示・省略可)"></div>`:''}
+    ${formHasOpts(f.type)?`<div class="fm-row"><textarea class="fm-opts" rows="3" placeholder="選択肢(1行に1つ)">${escXml((f.opts||[]).join('\n'))}</textarea></div>`:''}
+  </div>`).join('');
+}
+$('#fmFields').addEventListener('input',e=>{
+  const box=e.target.closest('.fm-field');if(!box||!formDraft)return;
+  const f=formDraft.fields[+box.dataset.i];
+  if(e.target.classList.contains('fm-label'))f.label=e.target.value;
+  if(e.target.classList.contains('fm-ph'))f.ph=e.target.value;
+  if(e.target.classList.contains('fm-opts'))f.opts=e.target.value.split('\n').map(v=>v.trim()).filter(Boolean);
+});
+$('#fmFields').addEventListener('change',e=>{
+  if(!e.target.classList.contains('fm-type'))return;
+  const f=formDraft.fields[+e.target.closest('.fm-field').dataset.i];
+  f.type=e.target.value;
+  if(formHasOpts(f.type)&&!(f.opts&&f.opts.length))f.opts=['選択肢1','選択肢2','選択肢3'];
+  renderFormDlg();
+});
+$('#fmFields').addEventListener('click',e=>{
+  const b=e.target.closest('[data-act]');if(!b||!formDraft)return;
+  const i=+b.closest('.fm-field').dataset.i,F=formDraft.fields;
+  const act=b.dataset.act;
+  if(act==='req')F[i].req=!F[i].req;
+  else if(act==='del'){if(F.length<=1){toast('項目は1つ以上必要です');return;}F.splice(i,1);}
+  else if(act==='up'&&i>0)[F[i-1],F[i]]=[F[i],F[i-1]];
+  else if(act==='down'&&i<F.length-1)[F[i+1],F[i]]=[F[i],F[i+1]];
+  renderFormDlg();
+});
+$('#fmAdd').onclick=()=>{formDraft.fields.push({id:fieldId(),type:'text',label:'',req:false,ph:''});renderFormDlg();
+  const ls=$('#fmFields').querySelectorAll('.fm-label');ls[ls.length-1].focus();};
+$('#fmAuto').onclick=()=>{formDraft.autoReply=!formDraft.autoReply;renderFormDlg();};
+[['fmTo','to'],['fmSubject','subject'],['fmSubmit','submit'],['fmThanks','thanks'],['fmReplyBody','replyBody']].forEach(([id,k])=>{
+  $('#'+id).addEventListener('input',()=>{if(formDraft)formDraft[k]=$('#'+id).value;});
+});
+[['fmcBg','bg'],['fmcText','text'],['fmcInput','input'],['fmcBorder','border'],['fmcAccent','accent'],['fmcBtnText','btnText']].forEach(([id,k])=>{
+  $('#'+id).addEventListener('input',()=>{if(formDraft)formDraft.style[k]=$('#'+id).value;});
+});
+$('#formDlgWrap').addEventListener('keydown',e=>{
+  e.stopPropagation();
+  if(e.key==='Escape')closeFormDlg();
+});
+$('#formDlgBack').onclick=closeFormDlg;
+$('#fmCancel').onclick=closeFormDlg;
+$('#fmApply').onclick=()=>{
+  const c=formDraft;if(!c)return;
+  c.to=c.to.trim();
+  if(c.to&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c.to)){toast('届け先のメールアドレスを確かめてください');return;}
+  const bad=c.fields.find(f=>!(f.label||'').trim());
+  if(bad){toast('項目名が空の項目があります');return;}
+  pushUndo();
+  rebuildForm(c);
+  closeFormDlg();
+  toast(c.to?'フォームを更新しました':'フォームを更新しました(届け先のメールアドレスを入れると送信できます)');
+};
 /* ---------- サイト全体の設定(デザインごとに保存) ----------
    d.site={url,noindex,ogp,icon,
            pages:[{id,file,title,desc,pc,tab,sp}],
@@ -4623,12 +4879,22 @@ function sitePageHtml(f,ranges,top){
     const fi=sh.indexOf(fr),kids=[];
     sh.forEach((s,i)=>{if(i>fi&&!s.hidden&&parentFrameAt(sh,i)===fr)kids.push(s);});
     /* 重ね順で続いている同じグループはひとまとまりにする */
-    const units=[];
+    const units=[],formUnits={};
     kids.forEach(s=>{
+      const fid=formIdOf(s);
+      if(fid){
+        if(formUnits[fid])formUnits[fid].m.push(s);else units.push(formUnits[fid]={form:fid,m:[s]});
+        return;
+      }
       const u=units[units.length-1];
-      if(s.gid&&!isFrame(s)&&u&&u.gid===s.gid)u.m.push(s);else units.push({gid:isFrame(s)?null:s.gid,m:[s]});
+      if(s.gid&&!isFrame(s)&&u&&!u.form&&u.gid===s.gid)u.m.push(s);else units.push({gid:isFrame(s)?null:s.gid,m:[s]});
     });
     return units.map(u=>{
+      if(u.form){
+        /* フォームのリンクは付けない(動きだけ付けられる) */
+        const m=u.m.map(x=>({...x,href:undefined}));
+        return siteWrapUnit(m,siteFormUnit(u.m,o,tagOf),o);
+      }
       if(isFrame(u.m[0])){
         const s=u.m[0],io={x:s.x-s.w/2,y:s.y-s.h/2};
         const st=`left:${cssNum(io.x-o.x)}px;top:${cssNum(io.y-o.y)}px;width:${cssNum(s.w)}px;height:${cssNum(s.h)}px`
@@ -4725,6 +4991,26 @@ ${SITE_RANGES.map(({r,mq})=>`@media ${mq}{.nt-view:not(.nt-r-${r}){display:none}
 .nt-menu ul{list-style:none}
 .nt-menu li a{display:block;padding:15px 4px;font-size:17px;font-weight:600;border-bottom:1px solid color-mix(in srgb,currentColor 18%,transparent)}
 .nt-menu-close{position:absolute;top:14px;right:14px;width:48px;height:48px;border:0;background:none;color:inherit;font-size:32px;line-height:1;cursor:pointer}
+/* お問い合わせフォーム(見た目はデザインのまま、入力欄などを本物にする) */
+.nt-form .nt-fi{font-family:system-ui,-apple-system,"Hiragino Sans","Yu Gothic UI","Meiryo",sans-serif;font-size:16px;color:var(--tx);padding:0 14px;-webkit-appearance:none;appearance:none}
+.nt-form textarea.nt-fi{padding:12px 14px;resize:none;line-height:1.6}
+.nt-form .nt-fi:focus{outline-color:var(--ac)!important;outline-width:2px!important}
+.nt-form .nt-fi::placeholder{color:color-mix(in srgb,var(--tx) 40%,transparent)}
+.nt-opt{-webkit-appearance:none;appearance:none;margin:0;cursor:pointer}
+.nt-opt[type=radio]:checked{background-image:radial-gradient(circle,var(--ac) 0 34%,transparent 38%)!important}
+.nt-opt[type=checkbox]:checked{background:var(--ac) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5' fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/80% no-repeat!important;outline-color:var(--ac)!important}
+.nt-opt:focus-visible{outline-color:var(--ac)!important;outline-width:2px!important}
+.nt-form label{cursor:pointer}
+.nt-btn{cursor:pointer;border:0;font:inherit}
+.nt-btn:disabled{opacity:.6;cursor:wait}
+.nt-btxt{pointer-events:none}
+.nt-hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+.nt-fmsg{display:none;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:28px;text-align:center;white-space:pre-line;font-family:system-ui,-apple-system,"Hiragino Sans","Yu Gothic UI","Meiryo",sans-serif;font-size:18px;font-weight:700;line-height:1.7;color:var(--tx);z-index:2}
+.nt-sent .nt-fmsg,.nt-ferr-on .nt-fmsg{display:flex}
+.nt-sent>:not(.nt-fbg):not(.nt-fmsg){visibility:hidden}
+.nt-fmsg-x{display:none;font:inherit;font-size:15px;padding:10px 26px;border:0;border-radius:999px;background:var(--ac);color:#fff;cursor:pointer}
+.nt-ferr .nt-fmsg-x{display:block}
+.nt-ferr .nt-fmsg-t{color:#C62828}
 `;
 }
 /* サイト共通のJavaScript(拡大縮小・動き・メニュー・ページ内リンク) */
@@ -4784,6 +5070,38 @@ function siteJs(){
     if(!a)return;
     e.preventDefault();setMenu(false);
     goSec(decodeURIComponent(a.getAttribute('href').slice(1)),true);
+  });
+  /* お問い合わせフォーム: 入力を確かめて send.php へ送る */
+  document.querySelectorAll('form.nt-form').forEach(function(f){
+    var msg=f.querySelector('.nt-fmsg'),txt=msg&&msg.querySelector('.nt-fmsg-t');
+    f.querySelector('input[name="_t"]').value='nt-'+f.dataset.form;
+    function show(t,err){
+      if(!msg){alert(t);return;}
+      txt.textContent=t;msg.classList.toggle('nt-ferr',!!err);
+      f.classList.add(err?'nt-ferr-on':'nt-sent');
+    }
+    if(msg)msg.querySelector('.nt-fmsg-x').onclick=function(){f.classList.remove('nt-ferr-on');};
+    f.addEventListener('change',function(e){
+      if(e.target.type==='checkbox')f.querySelectorAll('input[name="'+e.target.name+'"]').forEach(function(c){c.setCustomValidity('');});
+    });
+    f.addEventListener('submit',function(e){
+      e.preventDefault();
+      /* 複数選べる項目の「必須」は、1つ以上選ばれているかを確かめる */
+      var g={};
+      f.querySelectorAll('input[type=checkbox][data-req]').forEach(function(c){(g[c.name]=g[c.name]||[]).push(c);});
+      Object.keys(g).forEach(function(k){
+        var any=g[k].some(function(c){return c.checked;});
+        g[k][0].setCustomValidity(any?'':'1つ以上選んでください');
+      });
+      if(!f.reportValidity())return;
+      var b=f.querySelector('button[type=submit]');if(b)b.disabled=true;
+      var fd=new FormData(f);fd.append('_ajax','1');
+      fetch(f.getAttribute('action'),{method:'POST',body:fd})
+        .then(function(r){return r.json();})
+        .then(function(j){if(j.ok){show(j.message);f.reset();}else show(j.message||'送信できませんでした。',true);})
+        .catch(function(){show('送信できませんでした。\\nサーバーに置いたページから送信してください(確認用の表示では送れません)。',true);})
+        .then(function(){if(b)b.disabled=false;});
+    });
   });
   /* 別のページから「ページ名.html#区画」で来た時 */
   if(location.hash)addEventListener('load',function(){goSec(decodeURIComponent(location.hash.slice(1)),false);});
@@ -4852,6 +5170,188 @@ ${opt.files?'<script src="js/main.js"><\/script>':`<script>\n${siteJs()}<\/scrip
 </html>
 `;
   }finally{svgInlineImages=prevInline;}
+}
+/* ---------- お問い合わせフォームの書き出し ---------- */
+let siteFormsUsed=null;   /* 書き出し中に出てきたフォームの設定(send.php に入れる) */
+/* 四角の見た目(位置・色・枠・角丸・影)をそのまま入力欄などの style にする */
+function siteBoxStyle(s,o){
+  const el=siteCssBox(s,o);
+  const m=el&&/style="([^"]*)"/.exec(el);
+  return m?m[1]:siteBox(s,o,s.w,s.h);
+}
+const FORM_AUTOCOMPLETE={email:'email',tel:'tel'};
+/* フォームの部品(同じフォームのグループ)→ <form>。見た目はデザインのまま、入力欄などを本物にする */
+function siteFormUnit(members,o,tagOf){
+  const id=members[0].fr.form;
+  const bg=members.find(s=>s.fr.role==='bg'&&s.form)||formBgById(id);
+  const cfg=bg&&bg.form;
+  if(!cfg)return members.map(s=>siteShapeEl(s,o,tagOf)).join('');
+  if(siteFormsUsed)siteFormsUsed.set(cfg.id,cfg);
+  const st=cfg.style||{};
+  const field=fid=>cfg.fields.find(f=>f.id===fid);
+  const inId=(fid,i)=>`${cfg.id}-${fid}${i===undefined?'':'-'+i}`;
+  const parts=[];
+  members.forEach(s=>{
+    if(s.hidden)return;
+    const r=s.fr.role,f=s.fr.field?field(s.fr.field):null;
+    if(r==='bg'){parts.push(siteShapeEl(s,o,tagOf).replace('class="nt-e"','class="nt-e nt-fbg"'));return;}
+    if(r==='ph')return;   /* 入力例は placeholder にする */
+    if(r==='label'){
+      const forId=f&&formIsBox(f.type)?` for="${inId(f.id)}"`:'';
+      parts.push(siteTextOk(s)?siteText(s,o,'label',forId):siteShapeEl(s,o,tagOf));return;
+    }
+    if(r==='optlabel'){
+      parts.push(siteTextOk(s)&&f?siteText(s,o,'label',` for="${inId(f.id,s.fr.opt)}"`):siteShapeEl(s,o,tagOf));return;
+    }
+    if(r==='btntext'){parts.push(siteTextOk(s)?siteText(s,o,'span','','nt-btxt'):siteShapeEl(s,o,tagOf));return;}
+    if(r==='button'){
+      parts.push(`<button class="nt-e nt-btn" type="submit" aria-label="${escXml(cfg.submit||'送信する')}" style="${siteBoxStyle(s,o)}"></button>`);return;
+    }
+    if(r==='input'&&f){
+      const req=f.req?' required':'',ph=f.ph?` placeholder="${escXml(f.ph)}"`:'';
+      const ac=FORM_AUTOCOMPLETE[f.type]?` autocomplete="${FORM_AUTOCOMPLETE[f.type]}"`:'';
+      const common=`class="nt-e nt-fi" id="${inId(f.id)}" name="${f.id}"${req}${ph}${ac} style="${siteBoxStyle(s,o)}"`;
+      parts.push(f.type==='textarea'?`<textarea ${common} maxlength="5000"></textarea>`
+        :`<input type="${f.type}" ${common} maxlength="300">`);
+      return;
+    }
+    if(r==='opt'&&f){
+      const i=s.fr.opt;
+      const type=f.type==='radio'?'radio':'checkbox';
+      const name=f.type==='checkbox'?f.id+'[]':f.id;
+      const val=f.type==='agree'?'1':((f.opts||[])[i]||'');
+      /* ラジオは required で「どれか1つ」、複数選べる項目の必須は送信時に確かめる(data-req) */
+      const req=f.req?(f.type==='checkbox'?' data-req="1"':' required'):'';
+      parts.push(`<input type="${type}" class="nt-e nt-opt" id="${inId(f.id,i)}" name="${name}" value="${escXml(val)}"${req} style="${siteBoxStyle(s,o)}">`);
+      return;
+    }
+    parts.push(siteShapeEl(s,o,tagOf));
+  });
+  /* 送信後・失敗時のお知らせ(背景と同じ場所に重ねる) */
+  const rad=rectRadii(bg||{w:0,h:0});
+  const msg=bg?`<div class="nt-e nt-fmsg" role="status" aria-live="polite" style="${siteBox(bg,o,bg.w,bg.h)}${bg.fill?';background:'+cssCol(bg.fill):''};border-radius:${rad.map(v=>cssNum(v)+'px').join(' ')}"><p class="nt-fmsg-t"></p><button type="button" class="nt-fmsg-x">入力に戻る</button></div>`:'';
+  return`<form class="nt-u nt-form" action="send.php" method="post" data-form="${cfg.id}" novalidate style="--ac:${cssCol(st.accent||'#FF2E5E')};--tx:${cssCol(st.text||'#1F2A44')}">
+<input type="hidden" name="_form" value="${cfg.id}"><input type="hidden" name="_t" value="">
+<div class="nt-hp" aria-hidden="true"><input type="text" name="_hp" tabindex="-1" autocomplete="off"></div>
+${parts.join('\n')}
+${msg}
+</form>`;
+}
+/* PHPの文字列 '...' */
+const phpStr=v=>"'"+String(v==null?'':v).replace(/\\/g,'\\\\').replace(/'/g,"\\'")+"'";
+/* 送信処理(send.php)。届け先などは先頭の $FORMS で変えられる */
+function siteSendPhp(forms,siteName){
+  const conf=[...forms.values()].map(c=>`  ${phpStr(c.id)} => [
+    'to'         => ${phpStr(c.to)},   // 届け先のメールアドレス
+    'subject'    => ${phpStr(c.subject||'ホームページからのお問い合わせ')},
+    'auto_reply' => ${c.autoReply?'true':'false'},   // 送った人へ自動返信するか
+    'thanks'     => ${phpStr(c.thanks||'送信しました。')},
+    'reply_body' => ${phpStr(c.replyBody||'')},
+    'fields'     => [
+${c.fields.map(f=>`      ['name' => ${phpStr(f.id)}, 'label' => ${phpStr(f.label)}, 'type' => ${phpStr(f.type)}, 'req' => ${f.req?'true':'false'}, 'opts' => [${(f.opts||[]).map(phpStr).join(', ')}]],`).join('\n')}
+    ],
+  ],`).join('\n');
+  return`<?php
+/*
+ * お問い合わせフォームの送信処理(NT-D で書き出し)
+ * 届け先のメールアドレスなどは、下の $FORMS の中で変えられます。
+ * PHP 7.0 以上のレンタルサーバーで動きます。
+ */
+mb_language('Japanese');
+mb_internal_encoding('UTF-8');
+date_default_timezone_set('Asia/Tokyo');
+
+$SITE_NAME = ${phpStr(siteName||'ホームページ')};
+$FORMS = [
+${conf}
+];
+
+/* 結果を返す(フォームからはJSON、JavaScriptが無い時は簡単なページ) */
+function nt_respond($ok, $msg) {
+  if (isset($_POST['_ajax']) && $_POST['_ajax'] === '1') {
+    header('Content-Type: application/json; charset=UTF-8');
+    echo json_encode(array('ok' => $ok, 'message' => $msg), JSON_UNESCAPED_UNICODE);
+  } else {
+    header('Content-Type: text/html; charset=UTF-8');
+    $m = nl2br(htmlspecialchars($msg, ENT_QUOTES, 'UTF-8'));
+    echo '<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>お問い合わせ</title></head>'
+      . '<body style="font-family:sans-serif;padding:48px 20px;text-align:center;line-height:1.8"><p>' . $m . '</p><p><a href="./">トップページへ戻る</a></p></body></html>';
+  }
+  exit;
+}
+function nt_post($k) { return isset($_POST[$k]) ? $_POST[$k] : null; }
+
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') nt_respond(false, '送信方法が正しくありません。');
+$id = (string)nt_post('_form');
+if (!isset($FORMS[$id])) nt_respond(false, 'フォームが見つかりません。');
+$F = $FORMS[$id];
+if ($F['to'] === '') nt_respond(false, '届け先のメールアドレスが設定されていません(send.php の to を設定してください)。');
+
+/* 迷惑メール対策: 見えない欄に入力がある・JavaScriptを通っていない・別のサイトから送られた */
+if ((string)nt_post('_hp') !== '') nt_respond(true, $F['thanks']);
+if ((string)nt_post('_t') !== 'nt-' . $id) nt_respond(false, 'ブラウザのJavaScriptを有効にしてから送信してください。');
+$host = strtolower(explode(':', isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : '')[0]);
+$origin = isset($_SERVER['HTTP_ORIGIN']) ? strtolower((string)parse_url($_SERVER['HTTP_ORIGIN'], PHP_URL_HOST)) : '';
+if ($origin !== '' && $origin !== $host) nt_respond(false, '送信元が正しくありません。');
+/* 続けての送信を防ぐ(同じ人から30秒以内) */
+$lock = sys_get_temp_dir() . '/nt_form_' . md5((isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '') . $id);
+if (is_file($lock) && time() - filemtime($lock) < 30) nt_respond(false, '続けて送信されました。少し待ってからもう一度お試しください。');
+
+/* 入力を確かめて、メールの本文を作る */
+$lines = array();
+$reply_to = '';
+foreach ($F['fields'] as $f) {
+  $label = $f['label'];
+  $raw = nt_post($f['name']);
+  if ($f['type'] === 'checkbox') {
+    $vals = array();
+    if (is_array($raw)) foreach ($raw as $v) if (is_string($v) && in_array($v, $f['opts'], true)) $vals[] = $v;
+    if ($f['req'] && !$vals) nt_respond(false, '「' . $label . '」を1つ以上選んでください。');
+    $val = implode('、', $vals);
+  } else {
+    $val = is_string($raw) ? trim($raw) : '';
+    if (mb_strlen($val) > 5000) nt_respond(false, '「' . $label . '」が長すぎます。');
+    if ($f['req'] && $val === '') {
+      nt_respond(false, $f['type'] === 'agree' ? '「' . $label . '」にチェックしてください。'
+        : ($f['type'] === 'radio' ? '「' . $label . '」を選んでください。' : '「' . $label . '」を入力してください。'));
+    }
+    if ($val !== '') {
+      if ($f['type'] === 'email') {
+        if (!filter_var($val, FILTER_VALIDATE_EMAIL)) nt_respond(false, '「' . $label . '」の形が正しくありません。');
+        if ($reply_to === '') $reply_to = $val;
+      } elseif ($f['type'] === 'tel') {
+        $val = mb_convert_kana($val, 'as');
+        if (!preg_match('/^[0-9+\\-() ]{6,20}$/', $val)) nt_respond(false, '「' . $label . '」の形が正しくありません。');
+      } elseif ($f['type'] === 'radio') {
+        if (!in_array($val, $f['opts'], true)) nt_respond(false, '「' . $label . '」の選び方が正しくありません。');
+      } elseif ($f['type'] === 'agree') {
+        $val = '同意する';
+      } else {
+        if (mb_strlen($val) > 300 && $f['type'] !== 'textarea') nt_respond(false, '「' . $label . '」が長すぎます。');
+      }
+    }
+  }
+  $lines[] = '【' . $label . "】\\n" . ($val === '' ? '(未入力)' : $val);
+}
+$content = implode("\\n\\n", $lines);
+$body = $content . "\\n\\n----\\n送信日時: " . date('Y-m-d H:i:s') . "\\nIPアドレス: " . (isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '') . "\\n";
+
+/* 差出人はこのサイトのドメイン(多くのレンタルサーバーで、他のドメインを差出人にすると届かないため) */
+$domain = preg_replace('/[^a-z0-9.\\-]/', '', preg_replace('/^www\\./', '', $host));
+$from = 'no-reply@' . ($domain !== '' ? $domain : 'localhost');
+$from_h = 'From: ' . mb_encode_mimeheader($SITE_NAME) . ' <' . $from . '>';
+$headers = $from_h . ($reply_to !== '' ? "\\r\\nReply-To: " . $reply_to : '');
+if (!mb_send_mail($F['to'], $F['subject'], $body, $headers)) {
+  nt_respond(false, '送信できませんでした。時間をおいてもう一度お試しください。');
+}
+@touch($lock);
+/* 自動返信 */
+if ($F['auto_reply'] && $reply_to !== '') {
+  $rb = $F['reply_body'] . "\\n\\n――――― 送信内容 ―――――\\n\\n" . $content . "\\n\\n――――――――――――――\\n" . $SITE_NAME . "\\n";
+  @mb_send_mail($reply_to, '【自動返信】' . $F['subject'], $rb, $from_h . "\\r\\nReply-To: " . $F['to']);
+}
+nt_respond(true, $F['thanks']);
+`;
 }
 /* ---------- サイト一式(ZIP) ---------- */
 let siteImgSink=null;   /* サイト一式の書き出し中: 画像を images/ のファイルにする(imgHrefが使う) */
@@ -5000,9 +5500,11 @@ async function exportSiteZip(){
   const sink=makeImgSink();
   const files=[];
   siteImgSink=sink;
+  siteFormsUsed=new Map();
   try{
     pages.forEach(p=>files.push({name:p.file,data:sitePageDoc(d,p,{files:true,ogp:!!ogp,icon:!!icons})}));
   }finally{siteImgSink=null;}
+  const forms=siteFormsUsed;siteFormsUsed=null;
   files.push({name:'css/style.css',data:siteCss(c)},{name:'js/main.js',data:siteJs()},...sink.files);
   const extra=[];
   if(ogp){files.push({name:'ogp.png',data:ogp});extra.push('・ogp.png … SNSでシェアされた時の画像');}
@@ -5018,6 +5520,13 @@ ${pages.map(p=>`  <url><loc>${escXml(pageUrl(base,p))}</loc><lastmod>${day}</las
 </urlset>
 `});
     extra.push('・sitemap.xml … 検索エンジン向けのページ一覧');
+  }
+  if(forms.size){
+    files.push({name:'send.php',data:siteSendPhp(forms,d.name)});
+    extra.push('・send.php … お問い合わせフォームの送信処理(PHPが使えるサーバーが必要です)');
+    const noTo=[...forms.values()].filter(f=>!f.to).length;
+    if(noTo)extra.push('  ※ 届け先のメールアドレスが未設定のフォームがあります。send.php の to を書き換えてください。');
+    else extra.push('  届け先: '+[...new Set([...forms.values()].map(f=>f.to))].join(', ')+'(変えるときは send.php の to を書き換えます)');
   }
   files.push({name:'はじめにお読みください.txt',data:siteReadme(d,c,pages,extra)});
   const zip=await makeZip(files);
@@ -7550,6 +8059,16 @@ function setFrameSize(f,w,h){
   f.w=w;f.h=h;f.x+=off.x;f.y+=off.y;
   save();renderWire();updateStyleMenu();
 }
+/* 複製・貼り付けたお問い合わせフォームには新しい番号を振る(元のフォームと混ざらないように) */
+function renewFormIds(copies){
+  const map=new Map();
+  copies.forEach(c=>{
+    if(!c.fr)return;
+    if(!map.has(c.fr.form))map.set(c.fr.form,'fm'+uid().slice(-6));
+    c.fr={...c.fr,form:map.get(c.fr.form)};
+    if(c.form){c.form=JSON.parse(JSON.stringify(c.form));c.form.id=c.fr.form;}
+  });
+}
 function dupSel(){
   let ss=selShapes();if(!ss.length)return;
   pushUndo();
@@ -7572,6 +8091,7 @@ function dupSel(){
     }
     return c;
   });
+  renewFormIds(copies);
   d.shapes.push(...copies);
   wireSel=copies.map(c=>c.id);
   save();renderWire();
@@ -7608,6 +8128,7 @@ function pasteShapes(){
     }
     return c;
   });
+  renewFormIds(copies);
   d.shapes.push(...copies);
   wireSel=copies.map(c=>c.id);selAnchor=null;
   save();renderWire();updateStyleMenu();
@@ -9536,13 +10057,17 @@ $('#iconGrid').addEventListener('click',e=>{
   addIcon(b.dataset.icon);
 });
 /* ---------- UIパーツライブラリ ---------- */
-$('#partsList').innerHTML=UI_PARTS.map(p=>
+$('#partsList').innerHTML=
+  /* 先頭: 送信できるお問い合わせフォーム(HTML書き出しで本物のフォームになる) */
+  `<button class="mi" data-part="contactForm"><span class="pv"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M7 8h10M7 12h10M9 16.5h6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>お問い合わせフォーム(送信できる)</button><hr>`+
+  UI_PARTS.map(p=>
   `<button class="mi" data-part="${p.id}"><span class="pv"><svg viewBox="0 0 24 24"><rect x="2" y="8" width="20" height="8" rx="4" fill="currentColor" opacity=".85"/></svg></span>${escXml(p.n)}</button>`
 ).join('');
 $('#wirePartsBtn').onclick=e=>openBarMenu($('#partsMenu'),e.currentTarget);
 $('#partsList').addEventListener('click',e=>{
   const b=e.target.closest('.mi');if(!b)return;
   hideMenus();
+  if(b.dataset.part==='contactForm'){addContactForm();return;}
   addPart(b.dataset.part);
 });
 /* 空のときの案内から、そのまま最初の一歩を始められるようにする。
@@ -9600,6 +10125,10 @@ $('#posRot').addEventListener('change',()=>applyPosInput('rot'));
 /* ---------- ホームページ用の設定(図形ごと) ----------
    s.href=リンク先 / s.anim={t,d,dur}=登場の動き / s.hover=マウスを乗せた時 / s.tag=文字の種類 / s.alt=画像の説明。
    グループ(ボタン=四角+文字など)は全員に同じ値を入れ、書き出し時に1つのまとまりとして扱う */
+$('#webFormBtn').onclick=()=>{
+  const fm=selShapes().map(formIdOf).find(Boolean);
+  if(fm)openFormDlg(fm);
+};
 $('#anType').innerHTML=ANIMS.map(([v,n])=>`<option value="${v}">${n}</option>`).join('');
 $('#hvType').innerHTML=HOVERS.map(([v,n])=>`<option value="${v}">${n}</option>`).join('');
 const LINK_UI={
@@ -9614,8 +10143,11 @@ function updateWebSec(ss){
   $('#webSec').style.display=ss.length?'block':'none';
   if(!ss.length)return;
   const same=k=>{const v=JSON.stringify(ss[0][k]||null);return ss.every(s=>JSON.stringify(s[k]||null)===v);};
-  /* リンク(フレーム=区画には付けない) */
-  const linkable=ss.filter(s=>!isFrame(s));
+  /* お問い合わせフォームの部品を選んでいる時は、設定を開くボタンを出す(リンクは付けない) */
+  const fm=ss.map(formIdOf).find(Boolean);
+  $('#webFormRow').style.display=fm?'flex':'none';
+  /* リンク(フレーム=区画・フォームの部品には付けない) */
+  const linkable=ss.filter(s=>!isFrame(s)&&!s.fr);
   $('#webLinkPart').style.display=linkable.length?'block':'none';
   if(linkable.length){
     const h0=linkable[0].href||'';
@@ -9673,7 +10205,7 @@ function setWebProp(list,fn,msg){
   if(msg)toast(msg);
 }
 function applyLink(v){
-  const ss=webTargets().filter(s=>!isFrame(s));
+  const ss=webTargets().filter(s=>!isFrame(s)&&!s.fr);
   lnkTypePending=null;
   if(v&&!safeHref(v)){toast('このリンクは使えません');updateStyleMenu();return;}
   setWebProp(ss,s=>{if(v)s.href=v;else delete s.href;},
