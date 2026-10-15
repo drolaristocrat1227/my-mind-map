@@ -2399,7 +2399,7 @@ kbd{
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-16.1';
+const APP_VERSION='2026-10-16.2';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -5465,8 +5465,27 @@ function spLayout(ctx,items,pb,ox,oy,W,opt){
       ctx.movedNav+=nav.length;
     }
   }
+  /* 飾りの図形(ずっと動く・半透明の丸や四角で、中身もリンクも無い物): 縦に積むと大きな丸が並ぶだけになるので、
+     並べる対象から外し、元と同じ割合の位置に後ろへ置く */
+  const decoOf=u=>{
+    if(u.kind!=='shape'||u.m.length!==1||(u.kids&&u.kids.length))return false;
+    const s=u.m[0];
+    /* 区画を横切る長い線(線が描かれる等)も飾りとみなし、幅に合わせて縮める */
+    if(s.type==='path'&&!s.closed&&!s.href&&u.b.w>=pb.w*0.6)return u.line=true;
+    return(s.type==='ellipse'||s.type==='rect')&&!s.imgFill&&!s.href&&!s.media&&!s.anim&&!s.hover&&(!!s.loop||alphaOf(s,'fill')<1);
+  };
+  const decos=tops.filter(decoOf);
+  if(decos.length<tops.length)tops=tops.filter(u=>!decos.includes(u));
+  else decos.length=0;
   const y=spRows(ctx,tops,pb,ox,oy,W,opt);
   const H=Math.max(y-oy,opt.minH||0);
+  decos.forEach(u=>{
+    const s=u.m[0],b=u.b,c=spClone(s);
+    const k=u.line?W/pb.w:Math.min(1,Math.max(0.45,W/pb.w));
+    spScaleShape(c,k);c.rot=s.rot||0;
+    spMove(c,s,ox+((b.x1+b.x2)/2-pb.x1)/pb.w*W,oy+((b.y1+b.y2)/2-pb.y1)/pb.h*H,k);
+    ctx.bgAt.push({c,at:startAt});   /* 背景より先に入れる → 背景の手前・中身の後ろになる */
+  });
   /* 背景を新しい大きさに */
   bgs.forEach(s=>{
     const c=spClone(s);
@@ -5525,7 +5544,8 @@ function spRows(ctx,tops,pb,ox,oy,W,opt){
         /* 縦にも横にも重なっている(文字を図形の上に重ねた等): 分けられないので、重なりを保ったまま置く。
            大きさは文字を含む一番大きい物(本文のカード等)に合わせ、飾りの図形がはみ出す分は区画で切れてよい */
         const hasText=u=>u.m.some(s=>s.type==='text')||(u.kids||[]).some(hasText);
-        const main=r.u.filter(hasText).sort((a,b)=>b.b.w*b.b.h-a.b.w*a.b.h)[0];
+        let main=r.u.filter(hasText).sort((a,b)=>b.b.w*b.b.h-a.b.w*a.b.h)[0];
+        if(main&&main.b.w<span*0.5)main=null;   /* 本文が小さい(横に長い線の上に小さな丸が並ぶ等)時は、全体を縮めて収める */
         const k=main?Math.min(1,inner/main.b.w):Math.min(1,inner/span);
         const left=main?spAnchorX(pb,main.b,ox,W,main.b.w*k)-(main.b.x1-x1)*k:spAnchorX(pb,{x1,x2:x1+span,w:span},ox,W,span*k);
         r.u.forEach(u=>spPlaceUnit(ctx,u,left+(u.b.x1-x1)*k,y+(u.b.y1-r.y1)*k,k));
@@ -5619,7 +5639,7 @@ function spLayoutUnit(ctx,u,pb,ox,y,W){
   const b=u.b;
   const holder=u.m[0];
   /* 大きな箱(幅がスマホの1.15倍を超える入れ物): 箱を幅いっぱいにして、中身を並べ直す */
-  if(u.kind==='shape'&&u.kids&&u.kids.length&&b.w>inner*1.15){
+  if(u.kind==='shape'&&u.kids&&u.kids.length&&b.w>inner*1.15&&b.h>=40){   /* 細い帯(棒グラフ等)は箱として扱わない */
     const full=b.w>=pb.w*0.9;
     const bw=full?W:inner,bxo=full?ox:ox+SPM;
     const c=spClone(holder);c.rot=0;
@@ -5638,7 +5658,12 @@ function spLayoutUnit(ctx,u,pb,ox,y,W){
     spScaleShape(c,1,spFs);
     if(c.wrapW)c.wrapW=Math.min(c.wrapW,inner);
     measureWText(c);
-    if(c.w>inner&&!c.vert&&!(c.scr&&c.scr.t==='scrollx')){c.wrapW=inner;measureWText(c);}   /* 横に流れる帯の文字は折り返さない */
+    if(c.w>inner&&!c.vert&&!(c.scr&&c.scr.t==='scrollx')){   /* 横に流れる帯の文字は折り返さない */
+      /* 少しはみ出すだけなら、文字を小さくして元の改行のまま収める(英単語や「。」だけが次の行へ行かないように) */
+      const k=inner/c.w;
+      if(k>=0.55){spScaleShape(c,k*0.98);measureWText(c);}
+      if(c.w>inner){c.wrapW=inner;measureWText(c);}
+    }
     /* 左揃え・右揃えの文字はその向きに寄せる。中央揃えは元の位置(左・中央・右寄り)から決める */
     const al=c.vert?'center':(c.align||'center');
     const x=al==='left'?ox+SPM:al==='right'?ox+W-SPM-c.w:spAnchorX(pb,b,ox,W,c.w);
@@ -5682,7 +5707,10 @@ function makeSpDraft(f){
   const d=curDoc(),sh=d.shapes;
   if(!f||!isFrame(f))return;
   pushUndo();
-  const ox=f.x+f.w/2+200,oy=f.y-f.h/2;
+  /* 置き場所: ページの右。はみ出した中身(横スクロールの帯など)とも重ならないよう、その右端より右に */
+  const desc=frameDescendants(sh,f).filter(s=>!s.hidden);
+  const right=Math.max(f.x+f.w/2,desc.length?cornersBox(desc,0).x2:-1e9);
+  const ox=right+200,oy=f.y-f.h/2;
   const page={...spClone(f),rot:0};delete page.device;
   page.name=(f.name||'フレーム')+'(スマホ)';
   const firstSecTop=sh.filter((s,i)=>isFrame(s)&&parentFrameAt(sh,i)===f).map(s=>bx(s)).sort((a,b)=>a.y1-b.y1)[0];
