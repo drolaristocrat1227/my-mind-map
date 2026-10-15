@@ -1288,6 +1288,7 @@ kbd{
     <div class="numRow"><span class="radLbl">定型</span><select id="frPreset"></select></div>
     <div class="numRow"><span class="radLbl">外観</span><select id="frDevice"></select></div>
     <div class="segRow"><button class="seg" id="frSwap">縦横を入れ替え</button></div>
+    <div class="segRow" id="frSpRow"><button class="seg" id="frToSp">スマホ版を自動で下書き(右に作ります)</button></div>
     <div class="menu-label">大きさ</div>
     <div class="segRow" id="frLockRow">
       <button class="seg" data-frlock="1">ピクセルを固定</button>
@@ -2132,7 +2133,7 @@ kbd{
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-15.6';
+const APP_VERSION='2026-10-15.7';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -4996,6 +4997,310 @@ $('#nwApply').onclick=()=>{
   closeNewsDlg();
   toast(n.mode==='web'?'お知らせを保存しました(書き出すと更新画面 news/admin.php も入ります)':'お知らせを保存しました');
 };
+/* ============================================================
+   スマホ版の自動下書き
+   PC用のフレームから、幅390pxのスマホ用フレームを作る。
+   ・区画(中のフレーム)や大きな箱は、幅いっぱいにして中身を並べ直す
+   ・横に並んだものは縦に積む(幅に収まる小さな物の並びは横のまま)
+   ・カード(四角の上に文字など)・グループ(ボタンなど)は、ひとまとまりのまま縮める
+   ・お問い合わせフォーム・お知らせ欄はスマホの幅で並べ直す
+   ・見出しの文字は小さく、本文はそのまま。はみ出す文章は折り返す
+   ・ヘッダーのメニュー(横に並んだリンク)はハンバーガーメニューへ移す
+   あくまで下書き。仕上げは手で整える前提。
+   ============================================================ */
+const SPW=390,SPM=20,SP_GAP=20;
+const spFs=fs=>fs<=16?fs:Math.round(16+(fs-16)*0.55);
+const bx=s=>{const b=cornersBox([s],0);return{x1:b.x1,y1:b.y1,x2:b.x2,y2:b.y2,w:b.x2-b.x1,h:b.y2-b.y1};};
+const bxAll=ss=>{const b=cornersBox(ss,0);return{x1:b.x1,y1:b.y1,x2:b.x2,y2:b.y2,w:b.x2-b.x1,h:b.y2-b.y1};};
+const spClamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+/* 図形を k 倍に縮める(中心は別に置く)。文字の大きさ・角丸・パスの点・影なども一緒に */
+function spScaleShape(c,k,fsMap){
+  if(k===1&&!fsMap)return;
+  const sc=v=>v*k;
+  if(c.type==='text'){
+    const f=fsMap||(v=>v*k);
+    c.fs=f(c.fs||18);
+    if(c.cattr)c.cattr=c.cattr.map(a=>a&&a.fs!==undefined?{...a,fs:f(a.fs)}:a);
+    if(c.wrapW)c.wrapW=sc(c.wrapW);
+    if(c.olw)c.olw=sc(c.olw);if(c.ol2w)c.ol2w=sc(c.ol2w);
+  }else{
+    c.w=sc(c.w);c.h=sc(c.h);
+  }
+  if(c.r)c.r=sc(c.r);
+  if(c.rs)c.rs=c.rs.map(sc);
+  if(c.sw&&c.type!=='text')c.sw=Math.max(c.sw>=1?1:c.sw,c.sw*k);
+  const sp=p=>{const q={x:p.x*k,y:p.y*k};if(p.h1)q.h1={x:p.h1.x*k,y:p.h1.y*k};if(p.h2)q.h2={x:p.h2.x*k,y:p.h2.y*k};return q;};
+  if(c.pts)c.pts=c.pts.map(sp);
+  if(c.holes)c.holes=c.holes.map(h=>h.map(sp));
+  if(c.shadows)c.shadows=c.shadows.map(l=>({...l,dist:(l.dist||0)*k,b:(l.b||0)*k}));
+  if(c.sh)c.sh={...c.sh,dist:(c.sh.dist||0)*k,b:(c.sh.b||0)*k};
+  if(c.blur)c.blur*=k;
+}
+/* 中心を (x,y) に動かす(トリミングした画像の窓も一緒に) */
+function spMove(c,s,x,y,k){
+  if(c.imgBox){
+    const ib=s.imgBox;
+    c.imgBox={x:x+(ib.x-s.x)*k,y:y+(ib.y-s.y)*k,w:ib.w*k,h:ib.h*k};
+  }
+  c.x=x;c.y=y;
+}
+function spClone(s){const c=cloneShape(s);c.id=uid();delete c.locked;return c;}
+/* 中身を、幅 W の列に並べ直す。返り値は使った高さ。
+   items=この入れ物の直接の中身(元の図形) / pb=元の入れ物の範囲 / ox,oy=出力の左上 */
+function spLayout(ctx,items,pb,ox,oy,W,opt){
+  opt=opt||{};
+  const sh=ctx.sh;
+  const startAt=ctx.out.length;   /* 背景はこの入れ物の中身より前(背面)に入れる */
+  /* 背景(入れ物いっぱいの四角や画像)は、最後に新しい大きさへ引き伸ばす */
+  const isBg=s=>!isFrame(s)&&s.type!=='text'&&!s.fr&&!s.nw&&!s.gid&&(()=>{const b=bx(s);return b.w>=pb.w*0.9&&b.h>=pb.h*0.8;})();
+  const bgs=items.filter(isBg);
+  let rest=items.filter(s=>!bgs.includes(s));
+  /* まとまり: フォーム・お知らせ欄・グループ・区画(フレーム)・入れ子(四角の中の物) */
+  const units=[];
+  const byKey={};
+  rest.forEach(s=>{
+    const k=s.fr?'f:'+s.fr.form:s.nw?'n:'+s.nw.box:s.gid?'g:'+s.gid:null;
+    if(k){if(byKey[k])byKey[k].m.push(s);else units.push(byKey[k]={kind:s.fr?'form':s.nw?'news':'group',m:[s]});}
+    else units.push({kind:isFrame(s)?'section':'shape',m:[s]});
+  });
+  /* 入れ子: ほかの図形の範囲にすっぽり入る物は、その入れ物の子にする(カードの文字など) */
+  const contain=(o,i)=>i.x1>=o.x1-2&&i.y1>=o.y1-2&&i.x2<=o.x2+2&&i.y2<=o.y2+2;
+  const boxes=new Map(units.map(u=>[u,bxAll(u.m)]));
+  const canHold=u=>(u.kind==='shape'&&['rect','ellipse','image','path'].includes(u.m[0].type))||u.kind==='group';
+  units.forEach(u=>{
+    if(u.kind==='section')return;
+    const b=boxes.get(u);
+    let best=null,ba=1e18;
+    units.forEach(o=>{
+      if(o===u||!canHold(o))return;
+      const ob=boxes.get(o);const a=ob.w*ob.h;
+      if(a>b.w*b.h&&a<ba&&contain(ob,b)){best=o;ba=a;}
+    });
+    u.parent=best;
+  });
+  /* 入れ物が入れ子になっている時は一番外まで上る */
+  units.forEach(u=>{while(u.parent&&u.parent.parent)u.parent=u.parent.parent;});
+  units.forEach(u=>{if(u.parent)(u.parent.kids=u.parent.kids||[]).push(u);});
+  let tops=units.filter(u=>!u.parent);
+  tops.forEach(u=>{u.b=bxAll([...u.m,...(u.kids||[]).flatMap(k=>k.m)]);});
+  /* ヘッダー: ページの一番上の帯に小さな物が3つ以上横に並んでいたら、左端をロゴとして残し、残りをメニューへ */
+  if(opt.header){
+    const row=tops.filter(u=>u.b.y1<pb.y1+Math.min(160,pb.h)&&u.b.y2<=pb.y1+180);
+    if(row.length>=3){
+      row.sort((a,b)=>a.b.x1-b.b.x1);
+      const nav=row.slice(1);
+      nav.forEach(u=>{
+        const all=[...u.m,...(u.kids||[]).flatMap(k=>k.m)];
+        const t=all.find(s=>s.type==='text'&&(s.text||'').trim());
+        const h=all.map(s=>s.href).find(Boolean);
+        if(t)ctx.nav.push({t:t.text.replace(/\n/g,' ').trim(),h:h||'#top'});
+      });
+      tops=tops.filter(u=>!nav.includes(u));
+      ctx.movedNav+=nav.length;
+    }
+  }
+  const y=spRows(ctx,tops,pb,ox,oy,W,opt);
+  const H=Math.max(y-oy,opt.minH||0);
+  /* 背景を新しい大きさに */
+  bgs.forEach(s=>{
+    const c=spClone(s);
+    const b=bx(s);
+    const fullW=b.w>=pb.w*0.98;
+    c.w=fullW?W:W-SPM*2;c.h=H*(b.h/pb.h);c.rot=0;
+    spMove(c,s,ox+W/2,oy+H*((b.y1+b.y2)/2-pb.y1)/pb.h,c.w/s.w);
+    if(c.imgBox){const ib=s.imgBox,k=Math.max(c.w/s.w,c.h/s.h);c.imgBox={w:ib.w*k,h:ib.h*k,x:c.x-ib.w*k/2,y:c.y-ib.h*k/2};}
+    ctx.bgAt.push({c,at:startAt});
+  });
+  return H;
+}
+/* まとまりを行に分けて上から積む。返り値は積み終えた位置(y)。
+   行=縦の範囲が重なるもの(横並び)。横並びは、幅に収まる小さな物ならそのまま横に、
+   そうでなければ「列」に分けて、左の列から順に(列の中も同じ規則で)縦に積む */
+function spRows(ctx,tops,pb,ox,oy,W,opt){
+  tops=tops.slice().sort((a,b)=>a.b.y1-b.b.y1);
+  const rows=[];
+  tops.forEach(u=>{
+    const r=rows[rows.length-1];
+    if(r){
+      const ov=Math.min(r.y2,u.b.y2)-Math.max(r.y1,u.b.y1);
+      if(ov>Math.min(r.y2-r.y1,u.b.h)*0.3){r.u.push(u);r.y2=Math.max(r.y2,u.b.y2);r.y1=Math.min(r.y1,u.b.y1);return;}
+    }
+    rows.push({u:[u],y1:u.b.y1,y2:u.b.y2});
+  });
+  const inner=W-SPM*2;
+  let y=oy,prev=pb.y1;
+  rows.forEach((r,ri)=>{
+    const gap=r.y1-prev;
+    if(ri===0)y+=opt.noPad?0:spClamp(gap*0.6,opt.tight?8:20,64);
+    else y+=spClamp(gap*0.6,12,56);
+    r.u.sort((a,b)=>a.b.x1-b.b.x1);
+    const x1=Math.min(...r.u.map(u=>u.b.x1)),span=Math.max(...r.u.map(u=>u.b.x2))-x1;
+    const small=r.u.every(u=>u.kind!=='section'&&u.b.w<=inner*0.45);
+    if(r.u.length>1&&small&&inner/span>=0.6){
+      /* 小さな物の横並び: そのまま横に(はみ出す時は全体を縮める) */
+      const k=Math.min(1,inner/span);
+      const left=spAnchorX(pb,{x1,x2:x1+span,w:span},ox,W,span*k);
+      r.u.forEach(u=>spPlaceUnit(ctx,u,left+(u.b.x1-x1)*k,y+(u.b.y1-r.y1)*k,k));
+      y+=(r.y2-r.y1)*k;
+    }else if(r.u.length>1){
+      /* 列に分ける(横の範囲が重なるものは同じ列) */
+      const cols=[];
+      r.u.forEach(u=>{
+        const c=cols.find(c=>Math.min(c.x2,u.b.x2)-Math.max(c.x1,u.b.x1)>Math.min(c.x2-c.x1,u.b.w)*0.3);
+        if(c){c.u.push(u);c.x1=Math.min(c.x1,u.b.x1);c.x2=Math.max(c.x2,u.b.x2);}
+        else cols.push({u:[u],x1:u.b.x1,x2:u.b.x2});
+      });
+      cols.sort((a,b)=>a.x1-b.x1);
+      cols.forEach((c,i)=>{
+        if(i)y+=SP_GAP*1.5;
+        if(c.u.length===1)y+=spLayoutUnit(ctx,c.u[0],pb,ox,y,W);
+        else{
+          /* 列の中: その列の範囲を入れ物とみなして、同じ規則で積む */
+          const cb=bxAll(c.u.flatMap(u=>u.m));
+          y=spRows(ctx,c.u,cb,ox,y,W,{noPad:true});
+        }
+      });
+    }else{
+      y+=spLayoutUnit(ctx,r.u[0],pb,ox,y,W);
+    }
+    prev=r.y2;
+  });
+  if(rows.length&&!opt.noPad)y+=spClamp((pb.y2-prev)*0.6,opt.tight?8:20,64);
+  return y;
+}
+/* 横の位置: 元の入れ物の中で左寄り・中央・右寄りのどれだったかを保つ */
+function spAnchorX(pb,b,ox,W,w){
+  const lg=b.x1-pb.x1,rg=pb.x2-b.x2;
+  if(Math.abs(lg-rg)<pb.w*0.12)return ox+(W-w)/2;
+  return lg<rg?ox+SPM:ox+W-SPM-w;
+}
+/* 1つのまとまりを置き、使った高さを返す */
+function spLayoutUnit(ctx,u,pb,ox,y,W){
+  const inner=W-SPM*2;
+  const d=curDoc();
+  if(u.kind==='section'){
+    /* 区画: 幅いっぱいの新しいフレームにして中身を並べ直す */
+    const f=u.m[0];
+    const nf=spClone(f);nf.rot=0;delete nf.device;
+    ctx.out.push(nf);
+    const kidsOf=ctx.sh.filter((s,i)=>!s.hidden&&parentFrameAt(ctx.sh,i)===f);
+    const H=spLayout(ctx,kidsOf,bx(f),ox,y,W,{header:ctx.isTop(f)});
+    nf.w=W;nf.h=H;nf.x=ox+W/2;nf.y=y+H/2;
+    return H;
+  }
+  if(u.kind==='form'){
+    const bg=u.m.find(s=>s.form)||u.m[0];
+    if(bg.form){
+      const cfg=JSON.parse(JSON.stringify(bg.form));cfg.id='fm'+uid().slice(-6);
+      const shapes=buildFormShapes(cfg,ox+SPM,y,inner);
+      ['r','rs','shadows','grad','noStroke','sc','sw'].forEach(k=>{if(bg[k]!==undefined)shapes[0][k]=JSON.parse(JSON.stringify(bg[k]));});
+      ctx.out.push(...shapes);
+      return shapes[0].h;
+    }
+  }
+  if(u.kind==='news'){
+    const box=u.m.find(s=>s.news)||u.m[0];
+    if(box.news){
+      const cfg=JSON.parse(JSON.stringify(box.news));cfg.id='nb'+uid().slice(-6);
+      cfg.style.fs=Math.min(cfg.style.fs,15);
+      const keep={};['fill','grad','r','rs','shadows','noStroke','sc','sw'].forEach(k=>{if(box[k]!==undefined)keep[k]=box[k];});
+      const shapes=buildNewsShapes(d,cfg,ox+SPM,y,inner,keep);
+      ctx.out.push(...shapes);
+      return shapes[0].h;
+    }
+  }
+  const b=u.b;
+  const holder=u.m[0];
+  /* 大きな箱(幅がスマホの1.15倍を超える入れ物): 箱を幅いっぱいにして、中身を並べ直す */
+  if(u.kind==='shape'&&u.kids&&u.kids.length&&b.w>inner*1.15){
+    const full=b.w>=pb.w*0.9;
+    const bw=full?W:inner,bxo=full?ox:ox+SPM;
+    const c=spClone(holder);c.rot=0;
+    ctx.out.push(c);
+    const items=u.kids.flatMap(k=>k.m.concat((k.kids||[]).flatMap(kk=>kk.m)));
+    const H=spLayout(ctx,items,b,bxo,y,bw,{});
+    c.w=bw;c.h=H;
+    spMove(c,holder,bxo+bw/2,y+H/2,bw/holder.w);
+    if(c.imgBox){const ib=holder.imgBox,k=Math.max(c.w/holder.w,c.h/holder.h);c.imgBox={w:ib.w*k,h:ib.h*k,x:c.x-ib.w*k/2,y:c.y-ib.h*k/2};}
+    if(c.r)c.r=Math.min(c.r,16);
+    return H;
+  }
+  /* 文字だけ: 読める大きさにして、はみ出す時は折り返す */
+  if(u.kind==='shape'&&holder.type==='text'&&!(u.kids&&u.kids.length)){
+    const s=holder,c=spClone(s);c.rot=s.rot&&Math.abs(s.rot)<45?0:(s.rot||0);
+    spScaleShape(c,1,spFs);
+    if(c.wrapW)c.wrapW=Math.min(c.wrapW,inner);
+    measureWText(c);
+    if(c.w>inner&&!c.vert){c.wrapW=inner;measureWText(c);}
+    /* 左揃え・右揃えの文字はその向きに寄せる。中央揃えは元の位置(左・中央・右寄り)から決める */
+    const al=c.vert?'center':(c.align||'center');
+    const x=al==='left'?ox+SPM:al==='right'?ox+W-SPM-c.w:spAnchorX(pb,b,ox,W,c.w);
+    spMove(c,s,x+c.w/2,y+c.h/2,1);
+    ctx.out.push(c);
+    return c.h;
+  }
+  /* それ以外(画像・図形・カード・グループ): ひとまとまりのまま、幅に収まるよう縮める */
+  let k=Math.min(1,inner/b.w);
+  /* 大きな画像は幅いっぱいに */
+  if(u.kind==='shape'&&holder.type==='image'&&!(u.kids&&u.kids.length)&&b.w>=inner*0.6)k=inner/b.w;
+  const w=b.w*k;
+  const x=spAnchorX(pb,b,ox,W,w);
+  spPlaceUnit(ctx,u,x,y,k,false);
+  return b.h*k;
+}
+/* まとまりを左上 (x,y) に k 倍で置く(中の物の並びはそのまま) */
+function spPlaceUnit(ctx,u,x,y,k){
+  const b=u.b;
+  const all=[...u.m,...(u.kids||[]).flatMap(kk=>[...kk.m,...(kk.kids||[]).flatMap(q=>q.m)])];
+  all.sort((p,q)=>ctx.sh.indexOf(p)-ctx.sh.indexOf(q));
+  all.forEach(s=>{
+    if(isFrame(s))return;
+    const c=spClone(s);
+    spScaleShape(c,k);
+    if(c.type==='text')measureWText(c);
+    spMove(c,s,x+(s.x-b.x1)*k,y+(s.y-b.y1)*k,k);
+    ctx.out.push(c);
+  });
+}
+/* 選んだPC用フレームから、スマホ用フレームの下書きを作る */
+function makeSpDraft(f){
+  const d=curDoc(),sh=d.shapes;
+  if(!f||!isFrame(f))return;
+  pushUndo();
+  const ox=f.x+f.w/2+200,oy=f.y-f.h/2;
+  const page={...spClone(f),rot:0};delete page.device;
+  page.name=(f.name||'フレーム')+'(スマホ)';
+  const firstSecTop=sh.filter((s,i)=>isFrame(s)&&parentFrameAt(sh,i)===f).map(s=>bx(s)).sort((a,b)=>a.y1-b.y1)[0];
+  const ctx={sh,out:[page],bgAt:[],nav:[],movedNav:0,
+    isTop:sec=>{const b=bx(sec),pb=bx(f);return b.y1<=pb.y1+4&&b.h<=180;}};
+  const kids=sh.filter((s,i)=>!s.hidden&&parentFrameAt(sh,i)===f);
+  /* ページの一番上に区画が無ければ、ページそのものの一番上の帯をヘッダーとみなす */
+  const headerOnPage=!(firstSecTop&&firstSecTop.y1<=bx(f).y1+4);
+  const H=spLayout(ctx,kids,bx(f),ox,oy,SPW,{header:headerOnPage});
+  page.w=SPW;page.h=Math.max(200,Math.round(H));page.x=ox+SPW/2;page.y=oy+page.h/2;
+  page.sizeLock=true;
+  /* 背景は、その入れ物の中身より後ろ(入れ物の直後)に差し込む */
+  ctx.bgAt.sort((a,b)=>b.at-a.at).forEach(({c,at})=>{
+    ctx.out.splice(Math.max(1,at),0,c);
+  });
+  sh.push(...ctx.out);
+  /* サイトの設定: このフレームをPC用に使っているページで、スマホが空いていれば入れる */
+  const c=siteCfg(d);
+  let linked=0;
+  c.pages.forEach(p=>{if((p.pc===f.id||p.tab===f.id)&&!p.sp){p.sp=page.id;linked++;}});
+  /* ヘッダーのメニュー → ハンバーガーメニュー(まだ項目が無い時だけ) */
+  let menuMsg='';
+  if(ctx.nav.length){
+    if(!c.menu.items.length){c.menu.items=ctx.nav;menuMsg=`、ヘッダーのリンク${ctx.nav.length}件をハンバーガーメニューへ移しました`;}
+    else menuMsg=`、ヘッダーのリンク${ctx.nav.length}件は省きました(メニューは今の項目のまま)`;
+    c.menu.on.sp=true;
+  }
+  wireSel=[page.id];selAnchor=null;
+  save();renderWire();
+  focusFrame(page);
+  toast(`スマホ版の下書きを作りました${linked?'(ページのスマホ用に設定)':''}${menuMsg}。文字の大きさや並びを確かめて整えてください`);
+  return page;
+}
 /* ---------- サイト全体の設定(デザインごとに保存) ----------
    d.site={url,noindex,ogp,icon,
            pages:[{id,file,title,desc,pc,tab,sp}],
@@ -10877,6 +11182,10 @@ $('#frPreset').addEventListener('change',()=>{
   setFrameSize(f,w,h);
   focusFrame(f);
 });
+$('#frToSp').onclick=()=>{
+  const f=oneSel();if(!f||!isFrame(f)){toast('PC用のフレームを選んでください');return;}
+  makeSpDraft(f);
+};
 $('#frSwap').onclick=()=>{
   const f=oneSel();if(!f||!isFrame(f)){toast('フレームを選んでください');return;}
   setFrameSize(f,f.h,f.w);
@@ -11833,6 +12142,8 @@ function updateStyleMenu(){
     document.querySelectorAll('#frLockRow .seg').forEach(b=>
       b.classList.toggle('active',(b.dataset.frlock==='1')===!!f.sizeLock));
     $('#frClip').classList.toggle('active',f.clip!==false);
+    /* PC・タブレット用の広いフレームの時だけ、スマホ版の下書きを出す */
+    $('#frSpRow').style.display=f.w>=600?'flex':'none';
     const g=f.grid,gOn=!!(g&&g.on);
     document.querySelectorAll('#gridOnRow .seg').forEach(b=>
       b.classList.toggle('active',(b.dataset.grid==='on')===gOn));
