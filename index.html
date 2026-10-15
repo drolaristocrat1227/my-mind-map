@@ -1368,6 +1368,14 @@ kbd{
         <option value="p">本文(p)</option>
       </select></div>
     </div>
+    <div id="webPinRow">
+      <div class="menu-label">スクロールしても固定(区画)</div>
+      <div class="segRow" id="webPin" role="radiogroup">
+        <button class="seg" data-pin="" role="radio">しない</button>
+        <button class="seg" data-pin="top" role="radio">上に固定</button>
+        <button class="seg" data-pin="bottom" role="radio">下に固定</button>
+      </div>
+    </div>
     <div id="webHtmlPart">
       <div class="menu-label">HTMLの名前(CSSやページ内リンクで使います)</div>
       <div class="numRow" id="webElRow"><span class="radLbl">要素</span><select id="webEl">
@@ -2185,7 +2193,7 @@ kbd{
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-15.10';
+const APP_VERSION='2026-10-15.11';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -5564,7 +5572,8 @@ function sitePageHtml(f,ranges,top){
           +(s.clip!==false?';overflow:hidden':'');
         const sec=s.name?` data-sec="${escXml(s.name)}"`:'';
         const tg=sectionTag(s);
-        return siteWrapUnit(u.m,siteAttrs(`<${tg} class="nt-e"${sec} style="${st}">`,s)+`\n${siteFrameBg(s,io)}\n${inner(s,io)}\n</${tg}>`,o);
+        const pin=s.pin==='top'||s.pin==='bottom'?` data-pin="${s.pin}"`:'';
+        return siteWrapUnit(u.m,siteAttrs(`<${tg} class="nt-e"${sec}${pin} style="${st}">`,s)+`\n${siteFrameBg(s,io)}\n${inner(s,io)}\n</${tg}>`,o);
       }
       const els=u.m.filter(s=>!(s.type==='text'&&!(s.text||'').trim())).map(s=>siteShapeEl(s,o,tagOf));
       return els.length?siteWrapUnit(u.m,els.join(''),o):'';
@@ -5713,6 +5722,52 @@ function siteJs(){
     });
   }
   addEventListener('resize',fit);fit();
+  /* スクロールしても固定する区画(data-pin)。ページ全体を拡大縮小しているので position:fixed は効かない。
+     スクロールに合わせて、その区画をずらして画面内に保つ(入れ物の外へは出さない)。
+     上=画面の上端に来たらそこに止まる / 下=画面の下に出し続け、本来の位置まで来たらそこに収まる */
+  var pins=[].slice.call(document.querySelectorAll('[data-pin]'));
+  function pinBox(el){var p=el.parentElement;while(p&&!p.offsetHeight)p=p.parentElement;return p;}
+  pins.forEach(function(el){
+    /* ほかの物より手前に(ページの直下の祖先に z-index を付ける) */
+    var a=el;while(a.parentElement&&!a.parentElement.classList.contains('nt-page'))a=a.parentElement;
+    a.style.zIndex=el.dataset.pin==='top'?'60':'59';
+  });
+  function pinScale(el){return el.offsetHeight?el.getBoundingClientRect().height/el.offsetHeight:1;}
+  /* 上に固定する区画が複数ある時は、先に止まった区画の下に並べる(上から順に) */
+  function pinNat(el){return el.getBoundingClientRect().top-(el.__dy||0)*pinScale(el);}
+  function pinUpdate(){
+    var acc=0;
+    pins.slice().sort(function(a,b){return pinNat(a)-pinNat(b);}).forEach(function(el){
+      if(!el.getClientRects().length)return;
+      var k=pinScale(el)||1,dy=el.__dy||0,r=el.getBoundingClientRect(),p=pinBox(el),nd;
+      var nt=r.top-dy*k,nb=r.bottom-dy*k;
+      if(el.dataset.pin==='top'){
+        nd=Math.max(0,(acc-nt)/k);
+        if(nt<=acc+0.5)acc+=r.height;   /* 止まっている時だけ、次の区画はその下に */
+        if(p)nd=Math.min(nd,Math.max(0,p.offsetHeight-el.offsetTop-el.offsetHeight));
+      }else{
+        nd=Math.min(0,(innerHeight-nb)/k);
+        if(p)nd=Math.max(nd,-el.offsetTop);
+      }
+      if(Math.abs(nd-dy)>0.01){el.__dy=nd;el.style.translate='0 '+nd+'px';}
+    });
+  }
+  /* ページ内リンクで移動する時、上に固定したヘッダーに隠れないよう、その高さぶんずらす */
+  function pinOffset(target){
+    var off=0,tt=target.getBoundingClientRect().top;
+    pins.forEach(function(el){
+      if(el.dataset.pin!=='top'||el===target||!el.getClientRects().length||el.contains(target))return;
+      var r=el.getBoundingClientRect(),nt=r.top-(el.__dy||0)*pinScale(el);
+      if(nt<tt)off+=r.height;   /* 並んで止まる区画の高さを足す */
+    });
+    return off;
+  }
+  if(pins.length){
+    var pinQ=0,pinReq=function(){if(!pinQ){pinQ=1;requestAnimationFrame(function(){pinQ=0;pinUpdate();});}};
+    addEventListener('scroll',pinReq,{passive:true});
+    addEventListener('resize',pinReq);
+    pinUpdate();
+  }
   /* 動き: 画面に入ったら表示する */
   var an=document.querySelectorAll('.nt-an');
   if('IntersectionObserver' in window){
@@ -5743,7 +5798,11 @@ function siteJs(){
     var t=[].filter.call(document.querySelectorAll('[data-sec],[id]'),function(el){
       return(el.getAttribute('data-sec')===h||el.id===h)&&el.getClientRects().length;
     })[0];
-    if(t)scrollTo({top:t.getBoundingClientRect().top+scrollY,behavior:smooth?'smooth':'auto'});
+    if(t){
+      var top=t.getBoundingClientRect().top+scrollY;
+      if(t.__dy)top-=t.__dy*pinScale(t);   /* 固定でずれている区画は本来の位置へ */
+      scrollTo({top:Math.max(0,top-pinOffset(t)),behavior:smooth?'smooth':'auto'});
+    }
     return!!t;
   }
   document.addEventListener('click',function(e){
@@ -11328,6 +11387,17 @@ function updateWebSec(ss){
   const one=ss.length===1?ss[0]:null;
   const shSec=one&&isFrame(one)&&parentFrameAt(curShapes(),curShapes().indexOf(one));
   $('#webElRow').style.display=shSec?'flex':'none';
+  /* 固定: 中に置いたフレーム(区画)を選んでいる時 */
+  const secs=ss.filter(x=>isFrame(x)&&parentFrameAt(curShapes(),curShapes().indexOf(x)));
+  $('#webPinRow').style.display=secs.length&&secs.length===ss.length?'block':'none';
+  if(secs.length){
+    const p0=secs[0].pin||'';
+    const same=secs.every(x=>(x.pin||'')===p0);
+    document.querySelectorAll('#webPin .seg').forEach(b=>{
+      const on=same&&b.dataset.pin===p0;
+      b.classList.toggle('active',on);b.setAttribute('aria-checked',on?'true':'false');
+    });
+  }
   if(shSec)$('#webEl').value=one.el||'';
   $('#webIdRow').style.display=one?'flex':'none';
   if(one&&document.activeElement!==$('#webId'))$('#webId').value=one.htmlId||'';
@@ -11401,6 +11471,14 @@ $('#hvType').addEventListener('change',()=>{
 $('#webTag').addEventListener('change',()=>{
   const v=$('#webTag').value;
   setWebProp(webTargets().filter(s=>s.type==='text'),s=>{if(v)s.tag=v;else delete s.tag;});
+});
+$('#webPin').addEventListener('click',e=>{
+  const b=e.target.closest('.seg');if(!b)return;
+  const v=b.dataset.pin;
+  const sh=curShapes();
+  setWebProp(webTargets().filter(x=>isFrame(x)&&parentFrameAt(sh,sh.indexOf(x))),x=>{if(v)x.pin=v;else delete x.pin;},
+    v==='top'?'スクロールして画面の上端に来たら、そこに固定します(書き出したページで動きます)'
+    :v==='bottom'?'画面の下に出し続けます(本来の位置まで来たらそこに収まります)':'固定をやめました');
 });
 $('#webEl').addEventListener('change',()=>{
   const v=$('#webEl').value;
