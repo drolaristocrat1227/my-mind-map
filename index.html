@@ -942,6 +942,24 @@ body.wirebar-off #wireHint{bottom:18px;}
 #brandAddGroup:hover{background:var(--btn-active);}
 #brandDlgClose{background:var(--accent);color:#fff;}
 #brandDlgClose:hover{filter:brightness(1.08);}
+/* お知らせの設定(見た目はフォームの設定と共通の部品を使う) */
+#newsDlgWrap{position:fixed;inset:0;z-index:82;display:none;align-items:center;justify-content:center;padding:20px;}
+#newsDlgWrap.on{display:flex;}
+#newsDlgBack{position:absolute;inset:0;background:rgba(0,0,0,.3);}
+#newsDlg{position:relative;width:500px;max-width:100%;max-height:88vh;overflow-y:auto;border-radius:20px;padding:22px 20px 16px;animation:menuIn .16s cubic-bezier(.2,.8,.2,1);}
+#newsDlg h2{font-size:16px;font-weight:750;margin-bottom:8px;}
+#newsDlg .menu-label{padding:12px 0 4px;}
+#newsDlg .segRow{padding:5px 0;}
+#newsDlg input[type=text],#newsDlg input[type=password],#newsDlg input[type=date],#newsDlg input[type=number],#newsDlg textarea{
+  flex:1;min-width:0;height:30px;padding:0 9px;border:1px solid var(--panel-border);border-radius:8px;
+  background:var(--node-bg);color:var(--ink);font-size:12.5px;font-weight:600;font-family:inherit;}
+#newsDlg textarea{height:auto;padding:6px 9px;line-height:1.5;resize:vertical;}
+#newsDlg input:focus,#newsDlg textarea:focus{outline:none;border-color:var(--accent);}
+#newsDlgFoot{display:flex;gap:10px;margin-top:10px;}
+#newsDlgFoot button{flex:1;padding:11px;border-radius:11px;font-size:13px;font-weight:650;transition:all .15s;}
+#nwCancel{background:var(--btn-hover);color:var(--ink-soft);}
+#nwApply{background:var(--accent);color:#fff;}
+#nwApply:hover{filter:brightness(1.08);}
 /* お問い合わせフォームの設定 */
 #formDlgWrap{position:fixed;inset:0;z-index:82;display:none;align-items:center;justify-content:center;padding:20px;}
 #formDlgWrap.on{display:flex;}
@@ -1305,6 +1323,7 @@ kbd{
     <hr>
     <div class="menu-label">ホームページ用の設定</div>
     <div class="segRow" id="webFormRow"><button class="seg" id="webFormBtn">お問い合わせフォームの項目・送信先を編集</button></div>
+    <div class="segRow" id="webNewsRow"><button class="seg" id="webNewsBtn">お知らせの内容・更新のしかたを編集</button></div>
     <div id="webLinkPart">
       <div class="menu-label">リンク(押した時の動作)</div>
       <div class="numRow"><select id="lnkType">
@@ -2037,6 +2056,39 @@ kbd{
   </div>
 </div>
 
+<!-- お知らせの設定 -->
+<div id="newsDlgWrap">
+  <div id="newsDlgBack"></div>
+  <div id="newsDlg" class="glass">
+    <h2>お知らせ</h2>
+    <div class="menu-label">更新のしかた</div>
+    <div class="segRow" id="nwModeRow">
+      <button class="seg" data-mode="nt">NT-Dで更新(パスワードなし)</button>
+      <button class="seg" data-mode="web">ブラウザから更新(パスワード)</button>
+    </div>
+    <div id="nwWebPart">
+      <div class="fm-note">書き出したサイトの news/admin.php をブラウザで開き、パスワードでログインして更新します(WordPressの管理画面と同じしくみ)。PHPが使えるサーバーが必要です。ここに書いたお知らせは、最初の内容として使われます。</div>
+      <div class="fm-row"><span class="fm-lbl">パスワード</span><input type="password" id="nwPw" autocomplete="new-password" placeholder="8文字以上(クライアントに伝えるもの)"><button class="seg" id="nwPwSet" style="flex:none;padding:6px 12px">設定する</button></div>
+      <div class="fm-note" id="nwPwState"></div>
+    </div>
+    <div id="nwBoxPart">
+      <div class="menu-label">このお知らせ欄の表示</div>
+      <div class="fm-row"><span class="fm-lbl">表示する件数</span><input type="number" id="nwCount" min="1" max="20" step="1"><span class="fm-lbl" style="width:auto">文字の大きさ</span><input type="number" id="nwFs" min="10" max="32" step="1"></div>
+      <div class="fm-colors">
+        <label>日付<input type="color" id="nwcDate"></label>
+        <label>タイトル<input type="color" id="nwcText"></label>
+        <label>区切り線<input type="color" id="nwcLine"></label>
+      </div>
+    </div>
+    <div class="menu-label">お知らせ(新しい順に並びます)</div>
+    <div class="segRow"><button class="seg" id="nwAdd">＋ お知らせを追加</button></div>
+    <div id="nwItems"></div>
+    <div id="newsDlgFoot">
+      <button id="nwCancel">キャンセル</button>
+      <button id="nwApply">反映する</button>
+    </div>
+  </div>
+</div>
 <!-- お問い合わせフォームの設定 -->
 <div id="formDlgWrap">
   <div id="formDlgBack"></div>
@@ -2080,7 +2132,7 @@ kbd{
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-15.5';
+const APP_VERSION='2026-10-15.6';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -4758,6 +4810,192 @@ $('#fmApply').onclick=()=>{
   closeFormDlg();
   toast(c.to?'フォームを更新しました':'フォームを更新しました(届け先のメールアドレスを入れると送信できます)');
 };
+/* ============================================================
+   お知らせ
+   中身(日付・タイトル・本文・リンク)はサイトで1つ(d.site.news)。デザインには「お知らせ欄」を置く。
+   お知らせ欄は図形のグループで、箱の四角が s.news={id,count,style} を持ち、部品は s.nw={box:id,role}。
+   role: box=箱 / date=日付 / title=タイトル / line=区切り線(どれも編集画面での見本。書き出しでは本物の一覧にする)
+   更新方法: mode='nt'=NT-Dで書いて書き出し直す / 'web'=ブラウザの更新画面(news/admin.php・パスワード)
+   ============================================================ */
+const NEWS_ROW=56,NEWS_PAD=8;
+function siteNews(d){
+  const c=siteCfg(d);
+  if(!c.news)c.news={mode:'nt',items:[],pw:null};
+  if(!c.news.items)c.news.items=[];
+  return c.news;
+}
+const newsSorted=items=>items.slice().sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+const newsDate=v=>(v||'').replace(/-/g,'.');
+const todayStr=()=>{const t=new Date();return`${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;};
+function defaultNewsBox(){
+  return{id:'nb'+uid().slice(-6),count:5,style:{date:'#8B93A6',text:'#1F2A44',line:'#E3E6EC',fs:16}};
+}
+/* 見本として表示する行(中身が無い時は見本の文) */
+function newsPreviewItems(d,count){
+  const it=newsSorted(siteNews(d).items);
+  if(it.length)return it.slice(0,count);
+  return Array.from({length:Math.min(count,3)},(_,i)=>({date:todayStr(),title:['ホームページを公開しました','年末年始の営業についてのお知らせ','新しいサービスを始めました'][i]}));
+}
+/* 箱の幅に収まるようにタイトルを「…」で切る(編集画面の見本用) */
+function fitText(s,maxW){
+  measureWText(s);
+  if(s.w<=maxW)return;
+  const full=[...s.text];
+  let lo=0,hi=full.length;
+  while(lo<hi){
+    const mid=Math.ceil((lo+hi)/2);
+    s.text=full.slice(0,mid).join('')+'…';measureWText(s);
+    if(s.w<=maxW)lo=mid;else hi=mid-1;
+  }
+  s.text=full.slice(0,lo).join('')+'…';measureWText(s);
+}
+/* 設定から、お知らせ欄の図形を並べる(左上=x0,y0、幅W。箱の見た目は box を引き継ぐ) */
+function buildNewsShapes(d,cfg,x0,y0,W,box){
+  const st=cfg.style,gid='g'+cfg.id,out=[];
+  const nw=role=>({box:cfg.id,role});
+  const H=NEWS_PAD*2+cfg.count*NEWS_ROW;
+  const b={id:uid(),type:'rect',x:x0+W/2,y:y0+H/2,w:W,h:H,rot:0,fill:'#FFFFFF',noStroke:true,r:12,
+    ...(box||{}),gid,nw:nw('box'),news:cfg};
+  b.id=uid();b.x=x0+W/2;b.y=y0+H/2;b.w=W;b.h=H;b.gid=gid;b.nw=nw('box');b.news=cfg;
+  out.push(b);
+  const left=x0+24,dateW=st.fs*6.2;
+  newsPreviewItems(d,cfg.count).forEach((it,i)=>{
+    const top=y0+NEWS_PAD+i*NEWS_ROW,cy=top+NEWS_ROW/2;
+    const dt={id:uid(),type:'text',rot:0,text:newsDate(it.date),fs:Math.round(st.fs*0.85),fw:500,ff:'gothic',fill:st.date,align:'left',gid,nw:nw('date')};
+    measureWText(dt);dt.x=left+dt.w/2;dt.y=cy;out.push(dt);
+    const tt={id:uid(),type:'text',rot:0,text:it.title||'',fs:st.fs,fw:500,ff:'gothic',fill:st.text,align:'left',gid,nw:nw('title')};
+    fitText(tt,W-48-dateW);tt.x=left+dateW+tt.w/2;tt.y=cy;out.push(tt);
+    out.push({id:uid(),type:'rect',x:x0+W/2,y:top+NEWS_ROW-0.5,w:W-48,h:1,rot:0,fill:st.line,noStroke:true,gid,nw:nw('line')});
+  });
+  return out;
+}
+const newsIdOf=s=>s&&s.nw?s.nw.box:null;
+function newsBoxById(id){return(curShapes()||[]).find(s=>s.nw&&s.nw.box===id&&s.nw.role==='box'&&s.news);}
+function addNewsBox(){
+  const d=curDoc();if(!d.shapes)return;
+  exitPen();exitEraser();exitBrush();
+  pushUndo();
+  const cfg=defaultNewsBox(),W=720;
+  const c=s2w(viewW()/2,viewH()/2);
+  const H=NEWS_PAD*2+cfg.count*NEWS_ROW;
+  const shapes=buildNewsShapes(d,cfg,c.x-W/2,c.y-H/2,W);
+  d.shapes.push(...shapes);
+  wireSel=shapes.map(s=>s.id);selAnchor=null;
+  save();renderWire();
+  toast('お知らせ欄を追加しました');
+  openNewsDlg(cfg.id);
+}
+/* お知らせ欄を並べ直す(中身・件数・色を変えた時)。位置・幅・箱の見た目はそのまま */
+function rebuildNewsBox(cfg){
+  const d=curDoc(),sh=curShapes();if(!sh)return[];
+  const b=newsBoxById(cfg.id);if(!b)return[];
+  const keepBox={};
+  ['fill','grad','r','rs','shadows','sh','noStroke','sc','sw','sgrad','blur','anim','hover','alpha'].forEach(k=>{if(b[k]!==undefined)keepBox[k]=b[k];});
+  const at=sh.indexOf(b);
+  const before=sh.slice(0,at).filter(s=>newsIdOf(s)!==cfg.id).length;
+  const rest=sh.filter(s=>newsIdOf(s)!==cfg.id);
+  const shapes=buildNewsShapes(d,cfg,b.x-b.w/2,b.y-b.h/2,b.w,keepBox);
+  rest.splice(before,0,...shapes);
+  sh.length=0;sh.push(...rest);
+  return shapes;
+}
+/* 中身が変わったら、このデザインのお知らせ欄をすべて並べ直す */
+function rebuildAllNewsBoxes(){
+  (curShapes()||[]).filter(s=>s.nw&&s.nw.role==='box'&&s.news).map(s=>s.news).forEach(rebuildNewsBox);
+}
+/* ---------- パスワード(元に戻せない形=PBKDF2で保存。PHPの hash_pbkdf2 で同じ計算をして照合する) ---------- */
+async function newsHashPw(pw){
+  const salt=[...crypto.getRandomValues(new Uint8Array(16))].map(b=>b.toString(16).padStart(2,'0')).join('');
+  const iter=100000;
+  const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(pw),'PBKDF2',false,['deriveBits']);
+  const bits=await crypto.subtle.deriveBits({name:'PBKDF2',hash:'SHA-256',salt:new TextEncoder().encode(salt),iterations:iter},key,256);
+  const hash=[...new Uint8Array(bits)].map(b=>b.toString(16).padStart(2,'0')).join('');
+  return{salt,iter,hash,at:Date.now()};
+}
+/* ---------- お知らせのダイアログ ---------- */
+let newsDraft=null,newsBoxDraft=null;
+function openNewsDlg(boxId){
+  const n=siteNews();
+  newsDraft=JSON.parse(JSON.stringify(n));
+  const b=boxId?newsBoxById(boxId):null;
+  newsBoxDraft=b?JSON.parse(JSON.stringify(b.news)):null;
+  $('#nwPw').value='';
+  renderNewsDlg();
+  $('#newsDlgWrap').classList.add('on');
+}
+function closeNewsDlg(){$('#newsDlgWrap').classList.remove('on');newsDraft=newsBoxDraft=null;}
+function renderNewsDlg(){
+  const n=newsDraft;
+  document.querySelectorAll('#nwModeRow .seg').forEach(b=>b.classList.toggle('active',b.dataset.mode===n.mode));
+  $('#nwWebPart').style.display=n.mode==='web'?'block':'none';
+  $('#nwPwState').textContent=n.pw?`設定済み(${new Date(n.pw.at).toLocaleString('ja-JP')})。変える時は新しいパスワードを入れて「設定する」`:'まだ設定していません(8文字以上)';
+  $('#nwBoxPart').style.display=newsBoxDraft?'block':'none';
+  if(newsBoxDraft){
+    const st=newsBoxDraft.style;
+    $('#nwCount').value=newsBoxDraft.count;$('#nwFs').value=st.fs;
+    [['nwcDate','date'],['nwcText','text'],['nwcLine','line']].forEach(([id,k])=>{$('#'+id).value=/^#[0-9a-f]{6}$/i.test(st[k])?st[k]:'#000000';});
+  }
+  $('#nwItems').innerHTML=n.items.map((it,i)=>`<div class="fm-field" data-i="${i}">
+    <div class="fm-row"><input type="date" class="nw-date" value="${escXml(it.date||'')}"><button class="fm-ico fm-del" data-act="del" title="このお知らせを消す">&times;</button></div>
+    <div class="fm-row"><input type="text" class="nw-title" value="${escXml(it.title||'')}" placeholder="タイトル"></div>
+    <div class="fm-row"><textarea class="nw-body" rows="2" placeholder="本文(押すと小窓で開きます・省略可)">${escXml(it.body||'')}</textarea></div>
+    <div class="fm-row"><input type="text" class="nw-link" value="${escXml(it.link||'')}" placeholder="リンク https://…(省略可)"></div>
+  </div>`).join('')||'<div class="fm-note">お知らせはまだありません。「＋ お知らせを追加」で書けます。</div>';
+}
+document.querySelectorAll('#nwModeRow .seg').forEach(b=>b.addEventListener('click',()=>{if(newsDraft){newsDraft.mode=b.dataset.mode;renderNewsDlg();}}));
+$('#nwPwSet').onclick=async()=>{
+  const pw=$('#nwPw').value;
+  if(pw.length<8){toast('パスワードは8文字以上にしてください');return;}
+  newsDraft.pw=await newsHashPw(pw);
+  $('#nwPw').value='';
+  renderNewsDlg();
+  toast('パスワードを設定しました(「反映する」で保存されます)。クライアントに伝えてください');
+};
+$('#nwAdd').onclick=()=>{
+  newsDraft.items.unshift({id:'n'+uid().slice(-8),date:todayStr(),title:'',body:'',link:''});
+  renderNewsDlg();
+  $('#nwItems').querySelector('.nw-title').focus();
+};
+$('#nwItems').addEventListener('input',e=>{
+  const box=e.target.closest('.fm-field');if(!box||!newsDraft)return;
+  const it=newsDraft.items[+box.dataset.i];
+  [['nw-date','date'],['nw-title','title'],['nw-body','body'],['nw-link','link']].forEach(([c,k])=>{if(e.target.classList.contains(c))it[k]=e.target.value;});
+});
+$('#nwItems').addEventListener('click',e=>{
+  const b=e.target.closest('[data-act="del"]');if(!b||!newsDraft)return;
+  newsDraft.items.splice(+b.closest('.fm-field').dataset.i,1);
+  renderNewsDlg();
+});
+$('#nwCount').addEventListener('input',()=>{if(newsBoxDraft)newsBoxDraft.count=clamp(Math.round(+$('#nwCount').value||5),1,20);});
+$('#nwFs').addEventListener('input',()=>{if(newsBoxDraft)newsBoxDraft.style.fs=clamp(Math.round(+$('#nwFs').value||16),10,32);});
+[['nwcDate','date'],['nwcText','text'],['nwcLine','line']].forEach(([id,k])=>{
+  $('#'+id).addEventListener('input',()=>{if(newsBoxDraft)newsBoxDraft.style[k]=$('#'+id).value;});
+});
+$('#newsDlgWrap').addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Escape')closeNewsDlg();});
+$('#newsDlgBack').onclick=closeNewsDlg;
+$('#nwCancel').onclick=closeNewsDlg;
+$('#nwApply').onclick=()=>{
+  const n=newsDraft;if(!n)return;
+  for(const it of n.items){
+    if(!(it.title||'').trim()){toast('タイトルが空のお知らせがあります');return;}
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(it.date||'')){toast('日付が正しくないお知らせがあります');return;}
+    it.link=(it.link||'').trim();
+    if(it.link&&!/^https?:\/\//i.test(it.link)&&!/^[a-z0-9_-]+\.html(#.*)?$/i.test(it.link)){toast('リンクは https:// から始めてください');return;}
+  }
+  if(n.mode==='web'&&!n.pw){toast('ブラウザから更新する時は、パスワードを設定してください');return;}
+  pushUndo();
+  const c=siteCfg();
+  n.items=newsSorted(n.items);
+  c.news=n;
+  if(newsBoxDraft){
+    const b=newsBoxById(newsBoxDraft.id);
+    if(b)b.news=newsBoxDraft;
+  }
+  rebuildAllNewsBoxes();
+  save();renderWire();
+  closeNewsDlg();
+  toast(n.mode==='web'?'お知らせを保存しました(書き出すと更新画面 news/admin.php も入ります)':'お知らせを保存しました');
+};
 /* ---------- サイト全体の設定(デザインごとに保存) ----------
    d.site={url,noindex,ogp,icon,
            pages:[{id,file,title,desc,pc,tab,sp}],
@@ -4886,10 +5124,20 @@ function sitePageHtml(f,ranges,top){
         if(formUnits[fid])formUnits[fid].m.push(s);else units.push(formUnits[fid]={form:fid,m:[s]});
         return;
       }
+      const nid=newsIdOf(s);
+      if(nid){
+        const k='news:'+nid;
+        if(formUnits[k])formUnits[k].m.push(s);else units.push(formUnits[k]={news:nid,m:[s]});
+        return;
+      }
       const u=units[units.length-1];
       if(s.gid&&!isFrame(s)&&u&&!u.form&&u.gid===s.gid)u.m.push(s);else units.push({gid:isFrame(s)?null:s.gid,m:[s]});
     });
     return units.map(u=>{
+      if(u.news){
+        const m=u.m.map(x=>({...x,href:undefined}));
+        return siteWrapUnit(m,siteNewsUnit(u.m,o),o);
+      }
       if(u.form){
         /* フォームのリンクは付けない(動きだけ付けられる) */
         const m=u.m.map(x=>({...x,href:undefined}));
@@ -5011,6 +5259,25 @@ ${SITE_RANGES.map(({r,mq})=>`@media ${mq}{.nt-view:not(.nt-r-${r}){display:none}
 .nt-fmsg-x{display:none;font:inherit;font-size:15px;padding:10px 26px;border:0;border-radius:999px;background:var(--ac);color:#fff;cursor:pointer}
 .nt-ferr .nt-fmsg-x{display:block}
 .nt-ferr .nt-fmsg-t{color:#C62828}
+/* お知らせ */
+.nt-news{padding:${NEWS_PAD}px 24px;overflow:hidden;font-family:system-ui,-apple-system,"Hiragino Sans","Yu Gothic UI","Meiryo",sans-serif}
+.nt-news ul{list-style:none}
+.nt-news li{height:var(--nrh);border-bottom:1px solid var(--nl)}
+.nt-news-i{display:flex;align-items:center;gap:0;width:100%;height:100%;padding:0;border:0;background:none;font:inherit;color:var(--nt);text-align:left}
+button.nt-news-i,a.nt-news-i{cursor:pointer}
+.nt-news-i time{flex:none;width:calc(var(--nfs) * 6.2);font-size:calc(var(--nfs) * .85);font-weight:500;color:var(--nd)}
+.nt-news-i span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--nfs);font-weight:500}
+button.nt-news-i:hover span,a.nt-news-i:hover span{text-decoration:underline}
+.nt-news-none{display:flex;align-items:center;color:var(--nd);font-size:var(--nfs)}
+.nt-nmodal{position:fixed;inset:0;z-index:1001;display:none;align-items:center;justify-content:center;padding:20px}
+.nt-nmodal.on{display:flex}
+.nt-nm-bg{position:absolute;inset:0;background:rgba(0,0,0,.45)}
+.nt-nm-panel{position:relative;width:min(640px,100%);max-height:85vh;overflow-y:auto;padding:40px 28px 28px;border-radius:16px;background:#fff;color:#1F2A44;font-family:system-ui,-apple-system,"Hiragino Sans","Yu Gothic UI","Meiryo",sans-serif;box-shadow:0 10px 40px rgba(0,0,0,.25)}
+.nt-nm-x{position:absolute;top:8px;right:8px;width:44px;height:44px;border:0;background:none;font-size:28px;line-height:1;color:inherit;cursor:pointer}
+.nt-nm-date{display:block;font-size:14px;color:#8B93A6}
+.nt-nm-title{font-size:20px;line-height:1.5;margin:4px 0 16px}
+.nt-nm-body{font-size:16px;line-height:1.9;white-space:pre-line}
+.nt-nm-link{display:inline-block;margin-top:20px;padding:10px 22px;border-radius:999px;background:#1F2A44;color:#fff;font-size:15px;font-weight:700}
 `;
 }
 /* サイト共通のJavaScript(拡大縮小・動き・メニュー・ページ内リンク) */
@@ -5103,6 +5370,57 @@ function siteJs(){
         .then(function(){if(b)b.disabled=false;});
     });
   });
+  /* お知らせ: ブラウザから更新する設定なら、最新(news/news.json)を読んで一覧を描き直す */
+  var nd=document.getElementById('nt-news-data'),news=[];
+  try{news=JSON.parse(nd.textContent).items||[];}catch(e){}
+  var nm=document.getElementById('nt-nmodal');
+  function newsRender(){
+    document.querySelectorAll('.nt-news').forEach(function(box){
+      var ul=box.querySelector('ul');ul.textContent='';
+      var list=news.slice(0,+box.dataset.count||5);
+      if(!list.length){var e=document.createElement('li');e.className='nt-news-none';e.textContent='お知らせはまだありません';ul.appendChild(e);}
+      list.forEach(function(it){
+        var li=document.createElement('li'),el;
+        if(it.body){el=document.createElement('button');el.type='button';el.dataset.id=it.id;}
+        else if(/^https?:/i.test(it.link||'')){el=document.createElement('a');el.href=it.link;el.target='_blank';el.rel='noopener';}
+        else el=document.createElement('div');
+        el.className='nt-news-i';
+        var t=document.createElement('time');t.dateTime=it.date;t.textContent=(it.date||'').replace(/-/g,'.');
+        var s=document.createElement('span');s.textContent=it.title||'';
+        el.appendChild(t);el.appendChild(s);li.appendChild(el);ul.appendChild(li);
+      });
+    });
+  }
+  function newsOpen(it){
+    if(!nm)return;
+    nm.querySelector('.nt-nm-date').textContent=(it.date||'').replace(/-/g,'.');
+    nm.querySelector('.nt-nm-title').textContent=it.title||'';
+    nm.querySelector('.nt-nm-body').textContent=it.body||'';
+    var l=nm.querySelector('.nt-nm-link');
+    if(/^https?:|^[a-z0-9_-]+\\.html/i.test(it.link||'')){l.href=it.link;l.style.display='';}else l.style.display='none';
+    nm.classList.add('on');nm.setAttribute('aria-hidden','false');
+    document.documentElement.style.overflow='hidden';
+    nm.querySelector('.nt-nm-x').focus();
+  }
+  function newsClose(){if(!nm)return;nm.classList.remove('on');nm.setAttribute('aria-hidden','true');document.documentElement.style.overflow='';}
+  if(nm){
+    nm.querySelector('.nt-nm-bg').onclick=newsClose;
+    nm.querySelector('.nt-nm-x').onclick=newsClose;
+    addEventListener('keydown',function(e){if(e.key==='Escape')newsClose();});
+    document.addEventListener('click',function(e){
+      var b=e.target.closest('button.nt-news-i');if(!b)return;
+      var it=news.filter(function(x){return x.id===b.dataset.id;})[0];
+      if(it)newsOpen(it);
+    });
+  }
+  if(nd&&nd.dataset.live&&window.fetch){
+    var sortNews=function(a){return(a||[]).slice().sort(function(x,y){return(y.date||'')<(x.date||'')?-1:(y.date||'')>(x.date||'')?1:0;});};
+    fetch('news/news.json?'+Date.now(),{cache:'no-store'})
+      .then(function(r){if(!r.ok)throw 0;return r.json();})
+      .catch(function(){return fetch('news/initial.json',{cache:'no-store'}).then(function(r){if(!r.ok)throw 0;return r.json();});})
+      .then(function(j){news=sortNews(j.items);newsRender();})
+      .catch(function(){});
+  }
   /* 別のページから「ページ名.html#区画」で来た時 */
   if(location.hash)addEventListener('load',function(){goSec(decodeURIComponent(location.hash.slice(1)),false);});
 })();
@@ -5126,7 +5444,10 @@ function sitePageDoc(d,page,opt){
   if(!opt.files)svgInlineImages=true;
   try{
     const topV=siteTopView(views);
+    siteNewsUsed=false;
     const body=views.map(v=>sitePageHtml(v.f,v.ranges,v===topV)).join('\n');
+    const newsData=siteNewsUsed?siteNewsData():'';
+    if(siteNewsUsed&&opt.newsSeen)opt.newsSeen.v=true;
     const pf=topV.f;
     const bg=(!pf.grad&&pf.fill)?cssCol(pf.fill,alphaOf(pf,'fill')):'#FFFFFF';
     const t=escXml(page.title||d.name||'ホームページ'),ds=escXml(page.desc||'');
@@ -5164,7 +5485,7 @@ ${opt.files?'':siteCss(c)}${pageCss}
 </head>
 <body>
 ${body}
-${menu.html}
+${menu.html}${newsData?'\n'+newsData:''}
 ${opt.files?'<script src="js/main.js"><\/script>':`<script>\n${siteJs()}<\/script>`}
 </body>
 </html>
@@ -5353,6 +5674,247 @@ if ($F['auto_reply'] && $reply_to !== '') {
 nt_respond(true, $F['thanks']);
 `;
 }
+/* ---------- お知らせの書き出し ---------- */
+let siteNewsUsed=false;   /* 書き出したページにお知らせ欄があったか */
+/* 一覧の1行(ページを開いた時の表示。js/main.js が同じ形で描き直す) */
+function siteNewsLi(it){
+  const inner=`<time datetime="${escXml(it.date)}">${escXml(newsDate(it.date))}</time><span>${escXml(it.title)}</span>`;
+  if(it.body)return`<li><button type="button" class="nt-news-i" data-id="${escXml(it.id)}">${inner}</button></li>`;
+  const h=safeHref(it.link);
+  if(h){const ext=/^https?:/i.test(h)?' target="_blank" rel="noopener"':'';return`<li><a class="nt-news-i" href="${escXml(h)}"${ext}>${inner}</a></li>`;}
+  return`<li><div class="nt-news-i">${inner}</div></li>`;
+}
+/* お知らせ欄(グループ)→ 箱＋本物の一覧 */
+function siteNewsUnit(members,o){
+  const box=members.find(s=>s.nw.role==='box'&&s.news)||newsBoxById(members[0].nw.box);
+  if(!box)return'';
+  siteNewsUsed=true;
+  const cfg=box.news,st=cfg.style;
+  const n=siteNews();
+  const items=newsSorted(n.items).slice(0,cfg.count);
+  const bgEl=siteShapeEl(box,o,()=>'p');
+  const vars=`--nd:${cssCol(st.date)};--nt:${cssCol(st.text)};--nl:${cssCol(st.line)};--nfs:${st.fs}px;--nrh:${NEWS_ROW}px`;
+  return`${bgEl}
+<div class="nt-e nt-news" data-count="${cfg.count}" style="${siteBox(box,o,box.w,box.h)};${vars}">
+<ul>${items.length?items.map(siteNewsLi).join(''):'<li class="nt-news-none">お知らせはまだありません</li>'}</ul>
+</div>`;
+}
+/* ページに入れるお知らせのデータ(本文の小窓に使う)と小窓 */
+function siteNewsData(){
+  const n=siteNews();
+  const items=newsSorted(n.items).map(it=>({id:it.id,date:it.date,title:it.title,body:it.body||'',link:it.link||''}));
+  /* データの中の「<」でscriptタグが途中で閉じられないよう、< を <(JSONの書き方)にする */
+  const json=JSON.stringify({items}).replace(/</g,'\\u003c');
+  return`<script type="application/json" id="nt-news-data"${n.mode==='web'?' data-live="1"':''}>${json}<\/script>
+<div class="nt-nmodal" id="nt-nmodal" aria-hidden="true">
+<div class="nt-nm-bg"></div>
+<div class="nt-nm-panel" role="dialog" aria-modal="true" aria-labelledby="nt-nm-title">
+<button type="button" class="nt-nm-x" aria-label="閉じる">&times;</button>
+<time class="nt-nm-date"></time>
+<h2 class="nt-nm-title" id="nt-nm-title"></h2>
+<div class="nt-nm-body"></div>
+<a class="nt-nm-link" target="_blank" rel="noopener">詳しく見る</a>
+</div>
+</div>`;
+}
+/* ---------- お知らせの更新画面(news/admin.php)など ---------- */
+function newsConfigPhp(pw){
+  return`<?php
+/* お知らせ更新画面のパスワード(元に戻せない形で保存しています)。NT-D で設定し直して書き出すと変わります */
+$NT_PW = array('salt' => ${phpStr(pw.salt)}, 'iter' => ${pw.iter|0}, 'hash' => ${phpStr(pw.hash)});
+`;
+}
+function newsInitialJson(){
+  const n=siteNews();
+  return JSON.stringify({updated:new Date().toISOString(),items:newsSorted(n.items).map(it=>({id:it.id,date:it.date,title:it.title,body:it.body||'',link:it.link||''}))},null,2);
+}
+function newsAdminPhp(siteName){
+  return`<?php
+/*
+ * お知らせの更新画面(NT-D で書き出し)
+ * https://(サイト)/news/admin.php を開き、パスワードでログインして使います。
+ * お知らせは news.json に保存されます(サイトを上げ直しても消えません)。
+ */
+date_default_timezone_set('Asia/Tokyo');
+require __DIR__ . '/config.php';
+$SITE_NAME = ${phpStr(siteName||'ホームページ')};
+$DATA = __DIR__ . '/news.json';
+$INIT = __DIR__ . '/initial.json';
+
+$secure = !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
+session_name('ntnews');
+session_set_cookie_params(0, rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\\\') . '/', '', $secure, true);
+session_start();
+header('X-Frame-Options: DENY');
+header('X-Robots-Tag: noindex, nofollow');
+header('Cache-Control: no-store');
+
+function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
+function load_items() {
+  global $DATA, $INIT;
+  $f = is_file($DATA) ? $DATA : $INIT;
+  $j = is_file($f) ? json_decode((string)file_get_contents($f), true) : null;
+  return (is_array($j) && isset($j['items']) && is_array($j['items'])) ? $j['items'] : array();
+}
+function save_items($items) {
+  global $DATA;
+  usort($items, function ($a, $b) { return strcmp($b['date'], $a['date']); });
+  $json = json_encode(array('updated' => date('c'), 'items' => array_values($items)), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
+  return file_put_contents($DATA, $json, LOCK_EX) !== false;
+}
+function go($q) { header('Location: admin.php' . ($q !== '' ? '?' . $q : '')); exit; }
+
+/* ログインの失敗が続いたら、しばらく受け付けない(5回で15分) */
+$lockf = sys_get_temp_dir() . '/ntnews_' . md5(__DIR__ . '|' . (isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : ''));
+function fails_get() { global $lockf; $j = is_file($lockf) ? json_decode((string)file_get_contents($lockf), true) : null; return is_array($j) ? $j : array('n' => 0, 't' => 0); }
+function fails_set($v) { global $lockf; @file_put_contents($lockf, json_encode($v), LOCK_EX); }
+
+if (empty($_SESSION['csrf'])) $_SESSION['csrf'] = bin2hex(random_bytes(16));
+$err = '';
+$msg = isset($_GET['m']) ? (string)$_GET['m'] : '';
+$act = isset($_POST['act']) ? (string)$_POST['act'] : '';
+if ($act !== '' && !hash_equals($_SESSION['csrf'], isset($_POST['csrf']) ? (string)$_POST['csrf'] : '')) {
+  $err = '画面が古くなっていました。もう一度お試しください。';
+  $act = '';
+}
+$logged = !empty($_SESSION['ok']);
+
+if ($act === 'login') {
+  $f = fails_get();
+  if ($f['n'] >= 5 && time() - $f['t'] < 900) {
+    $err = 'パスワードを続けて間違えたため、15分ほどログインできません。';
+  } else {
+    if ($f['n'] >= 5) $f = array('n' => 0, 't' => 0);
+    $pw = isset($_POST['pw']) ? (string)$_POST['pw'] : '';
+    $calc = hash_pbkdf2('sha256', $pw, $NT_PW['salt'], (int)$NT_PW['iter']);
+    if (hash_equals($NT_PW['hash'], $calc)) {
+      session_regenerate_id(true);
+      $_SESSION['ok'] = 1;
+      fails_set(array('n' => 0, 't' => 0));
+      go('');
+    }
+    fails_set(array('n' => $f['n'] + 1, 't' => time()));
+    $err = 'パスワードが違います。';
+  }
+} elseif ($act === 'logout') {
+  $_SESSION = array();
+  session_destroy();
+  go('m=logout');
+} elseif ($logged && $act === 'save') {
+  $id = isset($_POST['id']) ? preg_replace('/[^a-z0-9]/i', '', (string)$_POST['id']) : '';
+  $date = isset($_POST['date']) ? (string)$_POST['date'] : '';
+  $title = trim(isset($_POST['title']) ? (string)$_POST['title'] : '');
+  $body = trim(str_replace("\\r\\n", "\\n", isset($_POST['body']) ? (string)$_POST['body'] : ''));
+  $link = trim(isset($_POST['link']) ? (string)$_POST['link'] : '');
+  if (!preg_match('/^\\d{4}-\\d{2}-\\d{2}$/', $date)) $err = '日付を正しく入れてください。';
+  elseif ($title === '' || mb_strlen($title, 'UTF-8') > 200) $err = 'タイトルを入れてください(200文字まで)。';
+  elseif (mb_strlen($body, 'UTF-8') > 10000) $err = '本文が長すぎます(10000文字まで)。';
+  elseif ($link !== '' && !preg_match('#^https?://#i', $link)) $err = 'リンクは https:// から始めてください。';
+  else {
+    $items = load_items();
+    $item = array('id' => $id !== '' ? $id : 'n' . bin2hex(random_bytes(4)), 'date' => $date, 'title' => $title, 'body' => $body, 'link' => $link);
+    $found = false;
+    foreach ($items as $i => $it) if (isset($it['id']) && $it['id'] === $item['id']) { $items[$i] = $item; $found = true; }
+    if (!$found) $items[] = $item;
+    if (!save_items($items)) $err = '保存できませんでした(news フォルダに書き込めるか確かめてください)。';
+    else go('m=saved');
+  }
+} elseif ($logged && $act === 'delete') {
+  $id = isset($_POST['id']) ? (string)$_POST['id'] : '';
+  $items = array_values(array_filter(load_items(), function ($it) use ($id) { return !isset($it['id']) || $it['id'] !== $id; }));
+  if (!save_items($items)) $err = '保存できませんでした。';
+  else go('m=deleted');
+}
+
+$items = $logged ? load_items() : array();
+usort($items, function ($a, $b) { return strcmp($b['date'], $a['date']); });
+$edit = null;
+if ($logged && isset($_GET['edit'])) foreach ($items as $it) if ($it['id'] === $_GET['edit']) $edit = $it;
+$form = $edit ? $edit : array('id' => '', 'date' => date('Y-m-d'), 'title' => '', 'body' => '', 'link' => '');
+if ($err !== '' && $act === 'save') $form = array('id' => isset($_POST['id']) ? (string)$_POST['id'] : '', 'date' => (string)$_POST['date'], 'title' => (string)$_POST['title'], 'body' => (string)$_POST['body'], 'link' => (string)$_POST['link']);
+$notes = array('saved' => '保存しました。', 'deleted' => '消しました。', 'logout' => 'ログアウトしました。');
+$csrf = h($_SESSION['csrf']);
+?><!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>お知らせの更新 | <?= h($SITE_NAME) ?></title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#F3F4F7;color:#1F2A44;font-family:system-ui,-apple-system,"Hiragino Sans","Yu Gothic UI","Meiryo",sans-serif;line-height:1.6}
+.wrap{max-width:720px;margin:0 auto;padding:24px 16px 48px}
+h1{font-size:20px;margin:0 0 4px}
+.sub{color:#6B7385;font-size:13px;margin:0 0 20px}
+.card{background:#fff;border-radius:14px;padding:20px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.card h2{font-size:16px;margin:0 0 12px}
+label{display:block;font-size:13px;font-weight:700;margin:12px 0 4px}
+input[type=text],input[type=date],input[type=password],input[type=url],textarea{width:100%;font:inherit;font-size:16px;padding:10px 12px;border:1px solid #CCD3DE;border-radius:8px;background:#fff;color:inherit}
+textarea{min-height:140px;resize:vertical}
+.btn{display:inline-block;font:inherit;font-size:15px;font-weight:700;padding:10px 22px;border:0;border-radius:999px;background:#FF2E5E;color:#fff;cursor:pointer;text-decoration:none}
+.btn.sub2{background:#E7E9EE;color:#1F2A44}
+.btn.del{background:none;color:#C62828;padding:6px 8px;font-size:13px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:16px}
+.msg{padding:10px 14px;border-radius:10px;margin-bottom:14px;font-size:14px}
+.ok{background:#E6F6EC;color:#1B6B3A}.ng{background:#FDECEC;color:#B3261E}
+ul{list-style:none;margin:0;padding:0}
+li{display:flex;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid #EEF0F4}
+li time{color:#6B7385;font-size:13px;flex:none}
+li .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+li a.e{font-size:13px;color:#2A5BD7;flex:none}
+li form{margin:0;flex:none}
+.top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<?php if (!$logged): ?>
+  <h1>お知らせの更新</h1>
+  <p class="sub"><?= h($SITE_NAME) ?></p>
+  <?php if ($err !== ''): ?><div class="msg ng"><?= h($err) ?></div><?php endif; ?>
+  <?php if (isset($notes[$msg])): ?><div class="msg ok"><?= h($notes[$msg]) ?></div><?php endif; ?>
+  <form class="card" method="post" action="admin.php">
+    <input type="hidden" name="act" value="login"><input type="hidden" name="csrf" value="<?= $csrf ?>">
+    <label for="pw">パスワード</label>
+    <input type="password" id="pw" name="pw" autocomplete="current-password" required autofocus>
+    <div class="row"><button class="btn" type="submit">ログイン</button></div>
+  </form>
+<?php else: ?>
+  <div class="top">
+    <div><h1>お知らせの更新</h1><p class="sub"><?= h($SITE_NAME) ?> ・ <a href="../" target="_blank" rel="noopener">サイトを見る</a></p></div>
+    <form method="post" action="admin.php"><input type="hidden" name="act" value="logout"><input type="hidden" name="csrf" value="<?= $csrf ?>"><button class="btn sub2" type="submit">ログアウト</button></form>
+  </div>
+  <?php if ($err !== ''): ?><div class="msg ng"><?= h($err) ?></div><?php endif; ?>
+  <?php if (isset($notes[$msg])): ?><div class="msg ok"><?= h($notes[$msg]) ?></div><?php endif; ?>
+  <form class="card" method="post" action="admin.php">
+    <h2><?= $edit ? 'お知らせを直す' : '新しいお知らせ' ?></h2>
+    <input type="hidden" name="act" value="save"><input type="hidden" name="csrf" value="<?= $csrf ?>">
+    <input type="hidden" name="id" value="<?= h($form['id']) ?>">
+    <label for="date">日付</label><input type="date" id="date" name="date" value="<?= h($form['date']) ?>" required>
+    <label for="title">タイトル</label><input type="text" id="title" name="title" value="<?= h($form['title']) ?>" maxlength="200" required>
+    <label for="body">本文(省略できます。お知らせを押すと小窓で開きます)</label><textarea id="body" name="body"><?= h($form['body']) ?></textarea>
+    <label for="link">リンク(本文が無い時、押すと開くページ。省略可)</label><input type="url" id="link" name="link" value="<?= h($form['link']) ?>" placeholder="https://">
+    <div class="row"><button class="btn" type="submit"><?= $edit ? '保存する' : '公開する' ?></button><?php if ($edit): ?><a class="btn sub2" href="admin.php">やめる</a><?php endif; ?></div>
+  </form>
+  <div class="card">
+    <h2>公開中のお知らせ(<?= count($items) ?>件)</h2>
+    <?php if (!$items): ?><p class="sub">まだありません。</p><?php endif; ?>
+    <ul>
+    <?php foreach ($items as $it): ?>
+      <li><time><?= h(str_replace('-', '.', $it['date'])) ?></time><span class="t"><?= h($it['title']) ?></span>
+        <a class="e" href="admin.php?edit=<?= h(rawurlencode($it['id'])) ?>">直す</a>
+        <form method="post" action="admin.php" onsubmit="return confirm('このお知らせを消しますか？')"><input type="hidden" name="act" value="delete"><input type="hidden" name="csrf" value="<?= $csrf ?>"><input type="hidden" name="id" value="<?= h($it['id']) ?>"><button class="btn del" type="submit">消す</button></form>
+      </li>
+    <?php endforeach; ?>
+    </ul>
+  </div>
+<?php endif; ?>
+</div>
+</body>
+</html>
+`;
+}
 /* ---------- サイト一式(ZIP) ---------- */
 let siteImgSink=null;   /* サイト一式の書き出し中: 画像を images/ のファイルにする(imgHrefが使う) */
 function dataURLtoBytes(u){
@@ -5501,8 +6063,9 @@ async function exportSiteZip(){
   const files=[];
   siteImgSink=sink;
   siteFormsUsed=new Map();
+  const newsSeen={v:false};
   try{
-    pages.forEach(p=>files.push({name:p.file,data:sitePageDoc(d,p,{files:true,ogp:!!ogp,icon:!!icons})}));
+    pages.forEach(p=>files.push({name:p.file,data:sitePageDoc(d,p,{files:true,ogp:!!ogp,icon:!!icons,newsSeen})}));
   }finally{siteImgSink=null;}
   const forms=siteFormsUsed;siteFormsUsed=null;
   files.push({name:'css/style.css',data:siteCss(c)},{name:'js/main.js',data:siteJs()},...sink.files);
@@ -5520,6 +6083,18 @@ ${pages.map(p=>`  <url><loc>${escXml(pageUrl(base,p))}</loc><lastmod>${day}</las
 </urlset>
 `});
     extra.push('・sitemap.xml … 検索エンジン向けのページ一覧');
+  }
+  const nws=siteNews(d);
+  if(newsSeen.v&&nws.mode==='web'){
+    if(!nws.pw){toast('お知らせをブラウザから更新する設定です。お知らせの設定でパスワードを決めてください');return false;}
+    files.push({name:'news/admin.php',data:newsAdminPhp(d.name)},{name:'news/config.php',data:newsConfigPhp(nws.pw)},
+      {name:'news/initial.json',data:newsInitialJson()},
+      {name:'news/index.html',data:'<!DOCTYPE html><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=../"><title>移動します</title>\n'});
+    extra.push('・news/ … お知らせ(更新画面 news/admin.php・PHPが使えるサーバーが必要です)',
+      `  更新画面: ${base?base+'news/admin.php':'https://(ドメイン)/news/admin.php'} を開き、パスワードでログインします。`,
+      '  更新したお知らせは news/news.json に保存されます。このZIPには入っていないので、',
+      '  サイトを直してアップロードし直しても、更新したお知らせは消えません。',
+      '  news フォルダにPHPが書き込めない設定のサーバーでは、フォルダの権限を 755(または 705)にしてください。');
   }
   if(forms.size){
     files.push({name:'send.php',data:siteSendPhp(forms,d.name)});
@@ -8068,6 +8643,13 @@ function renewFormIds(copies){
     c.fr={...c.fr,form:map.get(c.fr.form)};
     if(c.form){c.form=JSON.parse(JSON.stringify(c.form));c.form.id=c.fr.form;}
   });
+  copies.forEach(c=>{
+    if(!c.nw)return;
+    if(!map.has('n:'+c.nw.box))map.set('n:'+c.nw.box,'nb'+uid().slice(-6));
+    const id=map.get('n:'+c.nw.box);
+    c.nw={...c.nw,box:id};c.gid='g'+id;
+    if(c.news){c.news=JSON.parse(JSON.stringify(c.news));c.news.id=id;}
+  });
 }
 function dupSel(){
   let ss=selShapes();if(!ss.length)return;
@@ -10059,7 +10641,8 @@ $('#iconGrid').addEventListener('click',e=>{
 /* ---------- UIパーツライブラリ ---------- */
 $('#partsList').innerHTML=
   /* 先頭: 送信できるお問い合わせフォーム(HTML書き出しで本物のフォームになる) */
-  `<button class="mi" data-part="contactForm"><span class="pv"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M7 8h10M7 12h10M9 16.5h6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>お問い合わせフォーム(送信できる)</button><hr>`+
+  `<button class="mi" data-part="contactForm"><span class="pv"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M7 8h10M7 12h10M9 16.5h6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>お問い合わせフォーム(送信できる)</button>`+
+  `<button class="mi" data-part="newsBox"><span class="pv"><svg viewBox="0 0 24 24"><path d="M4 6.5h16M4 12h16M4 17.5h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/></svg></span>お知らせ欄</button><hr>`+
   UI_PARTS.map(p=>
   `<button class="mi" data-part="${p.id}"><span class="pv"><svg viewBox="0 0 24 24"><rect x="2" y="8" width="20" height="8" rx="4" fill="currentColor" opacity=".85"/></svg></span>${escXml(p.n)}</button>`
 ).join('');
@@ -10068,6 +10651,7 @@ $('#partsList').addEventListener('click',e=>{
   const b=e.target.closest('.mi');if(!b)return;
   hideMenus();
   if(b.dataset.part==='contactForm'){addContactForm();return;}
+  if(b.dataset.part==='newsBox'){addNewsBox();return;}
   addPart(b.dataset.part);
 });
 /* 空のときの案内から、そのまま最初の一歩を始められるようにする。
@@ -10125,6 +10709,10 @@ $('#posRot').addEventListener('change',()=>applyPosInput('rot'));
 /* ---------- ホームページ用の設定(図形ごと) ----------
    s.href=リンク先 / s.anim={t,d,dur}=登場の動き / s.hover=マウスを乗せた時 / s.tag=文字の種類 / s.alt=画像の説明。
    グループ(ボタン=四角+文字など)は全員に同じ値を入れ、書き出し時に1つのまとまりとして扱う */
+$('#webNewsBtn').onclick=()=>{
+  const nb=selShapes().map(newsIdOf).find(Boolean);
+  if(nb)openNewsDlg(nb);
+};
 $('#webFormBtn').onclick=()=>{
   const fm=selShapes().map(formIdOf).find(Boolean);
   if(fm)openFormDlg(fm);
@@ -10146,8 +10734,10 @@ function updateWebSec(ss){
   /* お問い合わせフォームの部品を選んでいる時は、設定を開くボタンを出す(リンクは付けない) */
   const fm=ss.map(formIdOf).find(Boolean);
   $('#webFormRow').style.display=fm?'flex':'none';
+  const nb=ss.map(newsIdOf).find(Boolean);
+  $('#webNewsRow').style.display=nb?'flex':'none';
   /* リンク(フレーム=区画・フォームの部品には付けない) */
-  const linkable=ss.filter(s=>!isFrame(s)&&!s.fr);
+  const linkable=ss.filter(s=>!isFrame(s)&&!s.fr&&!s.nw);
   $('#webLinkPart').style.display=linkable.length?'block':'none';
   if(linkable.length){
     const h0=linkable[0].href||'';
@@ -10205,7 +10795,7 @@ function setWebProp(list,fn,msg){
   if(msg)toast(msg);
 }
 function applyLink(v){
-  const ss=webTargets().filter(s=>!isFrame(s)&&!s.fr);
+  const ss=webTargets().filter(s=>!isFrame(s)&&!s.fr&&!s.nw);
   lnkTypePending=null;
   if(v&&!safeHref(v)){toast('このリンクは使えません');updateStyleMenu();return;}
   setWebProp(ss,s=>{if(v)s.href=v;else delete s.href;},
