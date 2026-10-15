@@ -1948,7 +1948,7 @@ kbd{
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-07-26.1';
+const APP_VERSION='2026-10-15.1';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -3596,7 +3596,8 @@ async function fetchLatestVersion(){
 async function applyUpdate(){
   try{
     const keys=await caches.keys();
-    await Promise.all(keys.map(k=>caches.delete(k)));
+    /* 同じ github.io にある他のアプリのキャッシュは消さない */
+    await Promise.all(keys.filter(k=>k.startsWith('ntd-')).map(k=>caches.delete(k)));
   }catch(e){}
   try{
     const reg=navigator.serviceWorker&&await navigator.serviceWorker.getRegistration();
