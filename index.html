@@ -2399,7 +2399,7 @@ kbd{
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-15.17';
+const APP_VERSION='2026-10-16.1';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -5418,7 +5418,7 @@ function spLayout(ctx,items,pb,ox,oy,W,opt){
   const sh=ctx.sh;
   const startAt=ctx.out.length;   /* 背景はこの入れ物の中身より前(背面)に入れる */
   /* 背景(入れ物いっぱいの四角や画像)は、最後に新しい大きさへ引き伸ばす */
-  const isBg=s=>!isFrame(s)&&s.type!=='text'&&!s.fr&&!s.nw&&!s.gid&&(()=>{const b=bx(s);return b.w>=pb.w*0.9&&b.h>=pb.h*0.8;})();
+  const isBg=s=>!isFrame(s)&&s.type!=='text'&&!s.fr&&!s.nw&&!s.gid&&!(s.media&&!(s.media.kind==='video'&&s.media.bg))&&(()=>{const b=bx(s);return b.w>=pb.w*0.9&&b.h>=pb.h*0.8;})();
   const bgs=items.filter(isBg);
   let rest=items.filter(s=>!bgs.includes(s));
   /* まとまり: フォーム・お知らせ欄・グループ・区画(フレーム)・入れ子(四角の中の物) */
@@ -5495,9 +5495,13 @@ function spRows(ctx,tops,pb,ox,oy,W,opt){
   });
   const inner=W-SPM*2;
   let y=oy,prev=pb.y1;
+  /* 区画どうし(区画と入れ物の端)が元からくっついている所は、すき間を空けない */
+  const secRow=r=>r&&r.u.every(u=>u.kind==='section');
   rows.forEach((r,ri)=>{
     const gap=r.y1-prev;
-    if(ri===0)y+=opt.noPad?0:spClamp(gap*0.6,opt.tight?8:20,64);
+    const flush=gap<=1&&secRow(r)&&(ri===0||secRow(rows[ri-1]));
+    if(flush){}
+    else if(ri===0)y+=opt.noPad?0:spClamp(gap*0.6,opt.tight?8:20,64);
     else y+=spClamp(gap*0.6,12,56);
     r.u.sort((a,b)=>a.b.x1-b.b.x1);
     const x1=Math.min(...r.u.map(u=>u.b.x1)),span=Math.max(...r.u.map(u=>u.b.x2))-x1;
@@ -5517,9 +5521,27 @@ function spRows(ctx,tops,pb,ox,oy,W,opt){
         else cols.push({u:[u],x1:u.b.x1,x2:u.b.x2});
       });
       cols.sort((a,b)=>a.x1-b.x1);
+      if(cols.length===1){
+        /* 縦にも横にも重なっている(文字を図形の上に重ねた等): 分けられないので、重なりを保ったまま置く。
+           大きさは文字を含む一番大きい物(本文のカード等)に合わせ、飾りの図形がはみ出す分は区画で切れてよい */
+        const hasText=u=>u.m.some(s=>s.type==='text')||(u.kids||[]).some(hasText);
+        const main=r.u.filter(hasText).sort((a,b)=>b.b.w*b.b.h-a.b.w*a.b.h)[0];
+        const k=main?Math.min(1,inner/main.b.w):Math.min(1,inner/span);
+        const left=main?spAnchorX(pb,main.b,ox,W,main.b.w*k)-(main.b.x1-x1)*k:spAnchorX(pb,{x1,x2:x1+span,w:span},ox,W,span*k);
+        r.u.forEach(u=>spPlaceUnit(ctx,u,left+(u.b.x1-x1)*k,y+(u.b.y1-r.y1)*k,k));
+        y+=(r.y2-r.y1)*k;
+        prev=r.y2;return;
+      }
+      /* 縦に積む時は、横並び全体の寄せ方(左・中央・右)にそろえる(1つずつの位置で決めると斜めに並ぶため) */
+      const lg=x1-pb.x1,rg=pb.x2-(x1+span);
+      const mode=Math.abs(lg-rg)<pb.w*0.12?'c':lg<rg?'l':'r';
+      const alignPb=b=>{
+        const x0=mode==='c'?(b.x1+b.x2)/2-pb.w/2:mode==='l'?b.x1:b.x2-pb.w;
+        return{...pb,x1:x0,x2:x0+pb.w};
+      };
       cols.forEach((c,i)=>{
         if(i)y+=SP_GAP*1.5;
-        if(c.u.length===1)y+=spLayoutUnit(ctx,c.u[0],pb,ox,y,W);
+        if(c.u.length===1)y+=spLayoutUnit(ctx,c.u[0],alignPb(c.u[0].b),ox,y,W);
         else{
           /* 列の中: その列の範囲を入れ物とみなして、同じ規則で積む */
           const cb=bxAll(c.u.flatMap(u=>u.m));
@@ -5531,7 +5553,7 @@ function spRows(ctx,tops,pb,ox,oy,W,opt){
     }
     prev=r.y2;
   });
-  if(rows.length&&!opt.noPad)y+=spClamp((pb.y2-prev)*0.6,opt.tight?8:20,64);
+  if(rows.length&&!opt.noPad&&!(pb.y2-prev<=1&&secRow(rows[rows.length-1])))y+=spClamp((pb.y2-prev)*0.6,opt.tight?8:20,64);
   return y;
 }
 /* 横の位置: 元の入れ物の中で左寄り・中央・右寄りのどれだったかを保つ */
@@ -5549,6 +5571,25 @@ function spLayoutUnit(ctx,u,pb,ox,y,W){
     const f=u.m[0];
     const nf=spClone(f);nf.rot=0;delete nf.device;
     ctx.out.push(nf);
+    if(f.scene==='hscroll'){
+      /* 横スクロール: 縦に並べ直すと意味が無いので、横並びのまま縮める(画像がスマホ幅の半分強になる程度) */
+      const fb=bx(f),all=frameDescendants(ctx.sh,f).filter(s=>!s.hidden);
+      const k=Math.min(1,W/(f.w*0.55));
+      all.forEach(s=>{
+        const c=spClone(s);
+        spScaleShape(c,k);
+        if(c.type==='text')measureWText(c);
+        spMove(c,s,ox+(s.x-fb.x1)*k,y+(s.y-fb.y1)*k,k);
+        /* 中の横長の帯: 中心が区画の外に出ると区画の中身でなくなるので、右端はそのままで左へ伸ばす(左側は画面の外) */
+        if(isFrame(c)&&c.x>ox+W){const x2=c.x+c.w/2,cx=ox+W/2;c.w=2*(x2-cx);c.x=cx;}
+        ctx.out.push(c);
+      });
+      const vis=all.filter(s=>!isFrame(s)),cb=vis.length?bxAll(vis):fb;
+      const ch=(cb.y2-fb.y1)*k+40,cw=Math.max(W,(cb.x2-fb.x1)*k);
+      const H=Math.round(Math.max(ch,200)+(cw-W)+200);
+      nf.w=W;nf.h=H;nf.x=ox+W/2;nf.y=y+H/2;
+      return H;
+    }
     const kidsOf=ctx.sh.filter((s,i)=>!s.hidden&&parentFrameAt(ctx.sh,i)===f);
     const H=spLayout(ctx,kidsOf,bx(f),ox,y,W,{header:ctx.isTop(f)});
     nf.w=W;nf.h=H;nf.x=ox+W/2;nf.y=y+H/2;
@@ -5597,11 +5638,19 @@ function spLayoutUnit(ctx,u,pb,ox,y,W){
     spScaleShape(c,1,spFs);
     if(c.wrapW)c.wrapW=Math.min(c.wrapW,inner);
     measureWText(c);
-    if(c.w>inner&&!c.vert){c.wrapW=inner;measureWText(c);}
+    if(c.w>inner&&!c.vert&&!(c.scr&&c.scr.t==='scrollx')){c.wrapW=inner;measureWText(c);}   /* 横に流れる帯の文字は折り返さない */
     /* 左揃え・右揃えの文字はその向きに寄せる。中央揃えは元の位置(左・中央・右寄り)から決める */
     const al=c.vert?'center':(c.align||'center');
     const x=al==='left'?ox+SPM:al==='right'?ox+W-SPM-c.w:spAnchorX(pb,b,ox,W,c.w);
     spMove(c,s,x+c.w/2,y+c.h/2,1);
+    ctx.out.push(c);
+    return c.h;
+  }
+  /* スクロールで進むメディア(切り替え・波・1点透視): 幅だけ合わせ、高さ(=スクロールする長さ)は大きく縮めない */
+  if(u.kind==='shape'&&holder.media&&['swap','wave','tunnel'].includes(holder.media.kind)&&!(u.kids&&u.kids.length)){
+    const full=b.w>=pb.w*0.9,w=full?W:inner,x=full?ox:ox+SPM;
+    const c=spClone(holder);c.w=w;c.h=Math.round(holder.h*0.75);
+    spMove(c,holder,x+w/2,y+c.h/2,w/holder.w);
     ctx.out.push(c);
     return c.h;
   }
@@ -7479,6 +7528,12 @@ function siteImageUses(d,pages){
       return;
     }
     if(s.imgFill&&s.imgFill.src){const r=imgFillRect(s);need(s.imgFill.src,r.w,r.h);}
+    /* 画像が広がる: 広がった後の大きさで荒れないように(画面の高さは約900とみる) */
+    if(isFrame(s)&&s.scene==='zoom'){
+      const sh=d.shapes;
+      const big=sh.filter((k,j)=>!k.hidden&&parentFrameAt(sh,j)===s&&k.type==='image'&&k.src).sort((a,b)=>b.w*b.h-a.w*a.h)[0];
+      if(big){const k=Math.max(s.w/big.w,900/big.h)*1.02;need(big.src,big.w*k,big.h*k);}
+    }
   }));
   return uses;
 }
