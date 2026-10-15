@@ -271,6 +271,8 @@ body.wire-mode.rulers #rulerTop,body.wire-mode.rulers #rulerLeft,body.wire-mode.
 .collBody>.menu-label:first-child{display:none;}
 /* 色とスタイルは項目が多いので少し詰める */
 #fillMenu .segRow{padding:5px 12px;}
+#webPin{flex-wrap:wrap;}
+#webPin .seg{flex:1 1 calc(50% - 6px);font-size:11.5px;}
 #fillMenu .radRow{padding:2px 12px;}
 #fillMenu .menu-label{padding-top:3px;}
 /* グラデーションの色バー */
@@ -1372,8 +1374,9 @@ kbd{
       <div class="menu-label">スクロールしても固定(区画)</div>
       <div class="segRow" id="webPin" role="radiogroup">
         <button class="seg" data-pin="" role="radio">しない</button>
-        <button class="seg" data-pin="top" role="radio">上に固定</button>
-        <button class="seg" data-pin="bottom" role="radio">下に固定</button>
+        <button class="seg" data-pin="top" role="radio">上に固定(ページ全体)</button>
+        <button class="seg" data-pin="bottom" role="radio">下に固定(ページ全体)</button>
+        <button class="seg" data-pin="intop" role="radio">区画の中だけ上に固定</button>
       </div>
     </div>
     <div id="webHtmlPart">
@@ -2193,7 +2196,7 @@ kbd{
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-15.11';
+const APP_VERSION='2026-10-15.12';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -5535,6 +5538,20 @@ function sitePageHtml(f,ranges,top){
     h1=autoT.find(s=>fsOf(s)===maxFs);
   }
   const tagOf=s=>s.tag||(s===h1?'h1':fsOf(s)>=28?'h2':'p');
+  /* ページ全体に固定する区画(上/下に固定)は、ほかの区画の中に置いてあっても(ヒーローに重ねたヘッダーなど)
+     ページ直下へ出す。区画の中にあると、その区画の範囲でしか固定されないため */
+  const hoisted=[];
+  const pageWide=x=>x.pin==='top'||x.pin==='bottom';
+  /* 区画(中のフレーム) → section など。o=入れ物の左上 */
+  const section=(u,o)=>{
+    const s=u.m[0],io={x:s.x-s.w/2,y:s.y-s.h/2};
+    const st=`left:${cssNum(io.x-o.x)}px;top:${cssNum(io.y-o.y)}px;width:${cssNum(s.w)}px;height:${cssNum(s.h)}px`
+      +(s.clip!==false?';overflow:hidden':'');
+    const sec=s.name?` data-sec="${escXml(s.name)}"`:'';
+    const tg=sectionTag(s);
+    const pin=pageWide(s)||s.pin==='intop'?` data-pin="${s.pin}"`:'';
+    return siteWrapUnit(u.m,siteAttrs(`<${tg} class="nt-e"${sec}${pin} style="${st}">`,s)+`\n${siteFrameBg(s,io)}\n${inner(s,io)}\n</${tg}>`,o);
+  };
   /* frの直接の中身を、frの左上(o)を原点にして並べる */
   const inner=(fr,o)=>{
     const fi=sh.indexOf(fr),kids=[];
@@ -5567,13 +5584,9 @@ function sitePageHtml(f,ranges,top){
         return siteWrapUnit(m,siteFormUnit(u.m,o,tagOf),o);
       }
       if(isFrame(u.m[0])){
-        const s=u.m[0],io={x:s.x-s.w/2,y:s.y-s.h/2};
-        const st=`left:${cssNum(io.x-o.x)}px;top:${cssNum(io.y-o.y)}px;width:${cssNum(s.w)}px;height:${cssNum(s.h)}px`
-          +(s.clip!==false?';overflow:hidden':'');
-        const sec=s.name?` data-sec="${escXml(s.name)}"`:'';
-        const tg=sectionTag(s);
-        const pin=s.pin==='top'||s.pin==='bottom'?` data-pin="${s.pin}"`:'';
-        return siteWrapUnit(u.m,siteAttrs(`<${tg} class="nt-e"${sec}${pin} style="${st}">`,s)+`\n${siteFrameBg(s,io)}\n${inner(s,io)}\n</${tg}>`,o);
+        /* ページ全体に固定する区画が、ほかの区画の中にある時は、あとでページ直下へ出す */
+        if(fr!==f&&pageWide(u.m[0])){hoisted.push(u);return'';}
+        return section(u,o);
       }
       const els=u.m.filter(s=>!(s.type==='text'&&!(s.text||'').trim())).map(s=>siteShapeEl(s,o,tagOf));
       return els.length?siteWrapUnit(u.m,els.join(''),o):'';
@@ -5585,7 +5598,7 @@ function sitePageHtml(f,ranges,top){
   return`<div class="nt-view ${cls}" data-w="${Math.round(f.w)}" data-h="${Math.round(f.h)}"${top?' data-top="1"':''} style="width:${Math.round(f.w)}px;height:${Math.round(f.h)}px;background:${bg}">
 ${siteAttrs(`<div class="nt-page" style="width:${Math.round(f.w)}px;height:${Math.round(f.h)}px${f.clip!==false?';overflow:hidden':''}">`,f)}
 ${siteFrameBg(f,o)}
-${inner(f,o)}
+${inner(f,o)}${hoisted.length?'\n'+hoisted.map(u=>section(u,o)).join('\n'):''}
 </div>
 </div>`;
 }
@@ -5730,7 +5743,7 @@ function siteJs(){
   pins.forEach(function(el){
     /* ほかの物より手前に(ページの直下の祖先に z-index を付ける) */
     var a=el;while(a.parentElement&&!a.parentElement.classList.contains('nt-page'))a=a.parentElement;
-    a.style.zIndex=el.dataset.pin==='top'?'60':'59';
+    a.style.zIndex=el.dataset.pin==='top'?'60':el.dataset.pin==='bottom'?'59':(a.style.zIndex||'58');
   });
   function pinScale(el){return el.offsetHeight?el.getBoundingClientRect().height/el.offsetHeight:1;}
   /* 上に固定する区画が複数ある時は、先に止まった区画の下に並べる(上から順に) */
@@ -5741,7 +5754,7 @@ function siteJs(){
       if(!el.getClientRects().length)return;
       var k=pinScale(el)||1,dy=el.__dy||0,r=el.getBoundingClientRect(),p=pinBox(el),nd;
       var nt=r.top-dy*k,nb=r.bottom-dy*k;
-      if(el.dataset.pin==='top'){
+      if(el.dataset.pin!=='bottom'){   /* top(ページ全体)・intop(区画の中だけ) */
         nd=Math.max(0,(acc-nt)/k);
         if(nt<=acc+0.5)acc+=r.height;   /* 止まっている時だけ、次の区画はその下に */
         if(p)nd=Math.min(nd,Math.max(0,p.offsetHeight-el.offsetTop-el.offsetHeight));
@@ -5756,7 +5769,7 @@ function siteJs(){
   function pinOffset(target){
     var off=0,tt=target.getBoundingClientRect().top;
     pins.forEach(function(el){
-      if(el.dataset.pin!=='top'||el===target||!el.getClientRects().length||el.contains(target))return;
+      if(el.dataset.pin==='bottom'||el===target||!el.getClientRects().length||el.contains(target))return;
       var r=el.getBoundingClientRect(),nt=r.top-(el.__dy||0)*pinScale(el);
       if(nt<tt)off+=r.height;   /* 並んで止まる区画の高さを足す */
     });
@@ -11477,8 +11490,9 @@ $('#webPin').addEventListener('click',e=>{
   const v=b.dataset.pin;
   const sh=curShapes();
   setWebProp(webTargets().filter(x=>isFrame(x)&&parentFrameAt(sh,sh.indexOf(x))),x=>{if(v)x.pin=v;else delete x.pin;},
-    v==='top'?'スクロールして画面の上端に来たら、そこに固定します(書き出したページで動きます)'
-    :v==='bottom'?'画面の下に出し続けます(本来の位置まで来たらそこに収まります)':'固定をやめました');
+    v==='top'?'ページ全体で、画面の上端に来たらそこに固定します(ほかの区画に重ねて置いても有効・書き出したページで動きます)'
+    :v==='bottom'?'ページ全体で、画面の下に出し続けます(本来の位置まで来たらそこに収まります)'
+    :v==='intop'?'入れ物の区画の中だけで、上端に来たら止まります(区画を過ぎると一緒に流れます)':'固定をやめました');
 });
 $('#webEl').addEventListener('change',()=>{
   const v=$('#webEl').value;
