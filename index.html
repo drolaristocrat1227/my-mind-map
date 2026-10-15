@@ -342,6 +342,7 @@ body.wire-mode.rulers #rulerTop,body.wire-mode.rulers #rulerLeft,body.wire-mode.
 #expHtmlSec .numRow{padding:3px 2px;}
 #expHtmlSec .segRow{padding:5px 2px;}
 #expHtmlSec .menu-label{padding:8px 2px 0;}
+#expHtmlSec .expMini{flex:none;padding:6px 10px;font-size:12px;}
 #expHtmlSec .expHl{width:64px;flex:none;font-size:12px;font-weight:650;color:var(--ink-soft);}
 #expHtmlSec input[type=color]{width:40px;height:28px;flex:none;padding:0 2px;border:1px solid var(--panel-border);border-radius:7px;background:var(--node-bg);cursor:pointer;}
 #expMenuItems .numRow input[type=text]{height:30px;}
@@ -1278,12 +1279,14 @@ kbd{
       <div class="numRow"><select id="lnkType">
         <option value="url">URL(別のページ・サイトを開く)</option>
         <option value="sec">ページ内の区画へ移動</option>
+        <option value="page">サイト内の別ページ</option>
         <option value="tel">電話をかける</option>
         <option value="mail">メールを送る</option>
         <option value="menu">メニューを開く(ハンバーガー)</option>
       </select></div>
       <div class="numRow" id="lnkUrlRow"><span class="radLbl" id="lnkLbl">URL</span><input type="text" id="lnkUrl" spellcheck="false" autocomplete="off"></div>
       <div class="numRow" id="lnkSecRow"><span class="radLbl">区画</span><select id="lnkSec"></select></div>
+      <div class="numRow" id="lnkPageRow"><span class="radLbl">ページ</span><select id="lnkPage"></select></div>
     </div>
     <div class="menu-label">登場の動き(スクロールで見えた時)</div>
     <div class="numRow"><select id="anType"></select></div>
@@ -1898,14 +1901,25 @@ kbd{
     </div>
     <!-- ホームページ(HTML): フレーム1枚=1ページ。画面の幅ごとに使うフレームを選ぶ。設定はデザインごとに保存 -->
     <div id="expHtmlSec" style="display:none">
-      <div class="menu-label">画面の幅ごとに使うフレーム</div>
+      <div class="menu-label">書き出し方</div>
+      <div class="segRow" id="expSiteModeRow">
+        <button class="seg" data-mode="zip">サイト一式(ZIP)</button>
+        <button class="seg" data-mode="one">このページだけ(HTML1つ)</button>
+      </div>
+      <div class="menu-label">ページ</div>
+      <div class="numRow"><select id="expPageSel"></select><button class="seg expMini" id="expPageAdd">＋ 追加</button><button class="seg expMini" id="expPageDel">削除</button></div>
+      <div class="numRow"><span class="radLbl expHl">ファイル名</span><input type="text" id="expPageFile" spellcheck="false" autocomplete="off" placeholder="index.html"></div>
+      <div class="menu-label">このページで画面の幅ごとに使うフレーム</div>
       <div class="numRow"><span class="radLbl expHl">PC</span><select id="expPcSel"></select></div>
       <div class="numRow"><span class="radLbl expHl">タブレット</span><select id="expTabSel"></select></div>
       <div class="numRow"><span class="radLbl expHl">スマホ</span><select id="expSpSel"></select></div>
-      <div class="menu-label">検索・SNS向けの情報</div>
+      <div class="menu-label">このページの検索・SNS向けの情報</div>
       <div class="numRow"><span class="radLbl expHl">タイトル</span><input type="text" id="expSiteTitle" spellcheck="false" autocomplete="off"></div>
       <div class="numRow"><span class="radLbl expHl">説明文</span><input type="text" id="expSiteDesc" spellcheck="false" autocomplete="off" placeholder="検索結果に出る紹介文(120字前後)"></div>
+      <div class="menu-label">サイト全体</div>
       <div class="numRow"><span class="radLbl expHl">公開URL</span><input type="text" id="expSiteUrl" spellcheck="false" autocomplete="off" placeholder="https://example.com/ (決まっていれば)"></div>
+      <div class="numRow"><span class="radLbl expHl">SNS用画像</span><select id="expOgpSel"></select></div>
+      <div class="numRow"><span class="radLbl expHl">アイコン</span><select id="expIconSel"></select></div>
       <div class="segRow"><button class="seg" id="expNoindex">検索結果に出さない(テスト公開用)</button></div>
       <div class="menu-label">ハンバーガーメニュー(表示する画面)</div>
       <div class="segRow" id="expMenuOnRow">
@@ -1915,10 +1929,10 @@ kbd{
       </div>
       <div id="expMenuEdit">
         <div class="numRow"><span class="radLbl expHl">背景色</span><input type="color" id="expMenuBg"><span class="radLbl">文字色</span><input type="color" id="expMenuFg"></div>
-        <div class="menu-label">メニューの項目(リンク先は「#区画の名前」・URL・tel:・mailto:)</div>
+        <div class="menu-label">メニューの項目(リンク先はページのファイル名・#区画の名前・URL・tel:・mailto:)</div>
         <div id="expMenuItems"></div>
         <datalist id="expSecList"></datalist>
-        <div class="segRow"><button class="seg" id="expMenuAdd">＋ 項目を追加</button><button class="seg" id="expMenuFromSec">区画から作る</button></div>
+        <div class="segRow"><button class="seg" id="expMenuAdd">＋ 項目を追加</button><button class="seg" id="expMenuFromSec">ページ・区画から作る</button></div>
       </div>
       <div id="expHtmlNote" style="font-size:11.5px;line-height:1.55;color:var(--ink-soft);padding:6px 2px 2px"></div>
     </div>
@@ -2003,7 +2017,7 @@ kbd{
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-15.3';
+const APP_VERSION='2026-10-15.4';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -2125,6 +2139,7 @@ function objUrlOf(id){
 }
 let svgInlineImages=false; /* SVGファイル書き出し中はblob:ではなくdataURLを埋め込む */
 function imgHref(src){
+  if(siteImgSink)return siteImgSink(src);
   if(!isImgRef(src))return src||'';
   const id=src.slice(4);
   return svgInlineImages?(imgData.get(id)||''):objUrlOf(id);
@@ -4097,50 +4112,70 @@ $('#expFmtRow').addEventListener('click',e=>{
 });
 /* ---------- ホームページ(HTML)の設定欄 ----------
    設定は d.site に保存するので、次に開いた時もそのまま使える */
+let expSitePage=0;          /* 設定欄で編集中のページ(d.site.pages の番号) */
+let expSiteMode='zip';      /* 'zip'=サイト一式 / 'one'=このページだけHTML1つ */
+const curSitePage=()=>{const p=siteCfg().pages;expSitePage=clamp(expSitePage,0,p.length-1);return p[expSitePage];};
 function initSiteCfg(){
   const d=curDoc(),c=siteCfg(d);
   const frames=d.shapes.filter(isFrame);
-  ['pc','tab','sp'].forEach(k=>{if(c[k]&&!frames.some(f=>f.id===c[k]))c[k]=null;});
-  /* まだ何も選んでいなければ、選択中(無ければ先頭)のフレームをPC用にする */
-  if(!c.pc&&!c.tab&&!c.sp)c.pc=(frames.find(f=>f.id===expFrameId)||frames[0]||{}).id||null;
-  if(!c.title)c.title=d.name||'';
+  c.pages.forEach(p=>['pc','tab','sp'].forEach(k=>{if(p[k]&&!frames.some(f=>f.id===p[k]))p[k]=null;}));
+  if(c.ogp&&c.ogp!=='auto'&&!frames.some(f=>f.id===c.ogp))c.ogp='auto';
+  if(c.icon&&!frames.some(f=>f.id===c.icon))c.icon='';
+  /* まだ何も選んでいなければ、選択中(無ければ先頭)のフレームをトップページのPC用にする */
+  const p0=c.pages[0];
+  if(c.pages.length===1&&!p0.pc&&!p0.tab&&!p0.sp)p0.pc=(frames.find(f=>f.id===expFrameId)||frames[0]||{}).id||null;
+  if(!p0.title)p0.title=d.name||'';
   siteSyncPreview();
 }
-/* プレビューには一番広い画面で出すページを使う */
+/* プレビューには、編集中のページを一番広い画面で出した時のフレームを使う */
 function siteSyncPreview(){
-  const v=siteViews(curDoc());
-  const top=v.find(x=>x.ranges.includes('pc'))||v[v.length-1];
-  if(top)expFrameId=top.f.id;
+  const v=siteViews(curDoc(),curSitePage());
+  if(v.length)expFrameId=siteTopView(v).f.id;
 }
 function updateSiteDlg(){
-  const d=curDoc(),c=siteCfg(d);
+  const d=curDoc(),c=siteCfg(d),page=curSitePage();
   const frames=d.shapes.filter(isFrame);
   const opt=f=>`<option value="${f.id}">${escXml(f.name||'フレーム')} (${Math.round(f.w)}×${Math.round(f.h)})</option>`;
+  document.querySelectorAll('#expSiteModeRow .seg').forEach(b=>b.classList.toggle('active',b.dataset.mode===expSiteMode));
+  $('#expPageSel').innerHTML=c.pages.map((p,i)=>`<option value="${i}">${escXml(p.file)}${p.title?' ― '+escXml(p.title):''}</option>`).join('');
+  $('#expPageSel').value=String(expSitePage);
+  $('#expPageDel').disabled=c.pages.length<=1;
   [['pc','#expPcSel','なし'],['tab','#expTabSel','なし(PCかスマホで代用)'],['sp','#expSpSel','なし(PCかタブレットで代用)']].forEach(([k,q,none])=>{
     $(q).innerHTML=`<option value="">${none}</option>`+frames.map(opt).join('');
-    $(q).value=c[k]||'';
+    $(q).value=page[k]||'';
   });
   const setVal=(q,v)=>{if(document.activeElement!==$(q))$(q).value=v||'';};
-  setVal('#expSiteTitle',c.title);setVal('#expSiteDesc',c.desc);setVal('#expSiteUrl',c.url);
+  setVal('#expPageFile',page.file);
+  setVal('#expSiteTitle',page.title);setVal('#expSiteDesc',page.desc);setVal('#expSiteUrl',c.url);
   $('#expNoindex').classList.toggle('active',!!c.noindex);
+  $('#expOgpSel').innerHTML='<option value="auto">自動(トップページの上の部分)</option><option value="">なし</option>'+frames.map(opt).join('');
+  $('#expOgpSel').value=c.ogp||'';
+  $('#expIconSel').innerHTML='<option value="">なし</option>'+frames.map(opt).join('');
+  $('#expIconSel').value=c.icon||'';
   document.querySelectorAll('#expMenuOnRow .seg').forEach(b=>b.classList.toggle('active',!!c.menu.on[b.dataset.r]));
   $('#expMenuBg').value=/^#[0-9a-f]{6}$/i.test(c.menu.bg)?c.menu.bg:'#ffffff';
   $('#expMenuFg').value=/^#[0-9a-f]{6}$/i.test(c.menu.fg)?c.menu.fg:'#1f2a44';
   renderSiteMenuItems();
-  $('#expSecList').innerHTML=['top',...siteSectionNames(d)].map(n=>`<option value="#${escXml(n)}">`).join('');
+  $('#expSecList').innerHTML=[...c.pages.map(p=>p.file),'#top',...siteSectionNames(d).map(n=>'#'+n)]
+    .map(v=>`<option value="${escXml(v)}">`).join('');
   ['#expPaperRow','#expScaleSec','#expPosSec','#expSplitSec','#expBgSec','#expWirePagerRow'].forEach(q=>$(q).style.display='none');
   $('#expPaperRow').previousElementSibling.style.display='none';
-  /* どの幅でどのページが出るかの要約 */
-  const views=siteViews(d);
+  /* どの幅でどのフレームが出るかの要約 */
+  const views=siteViews(d,page);
   const rn={sp:'スマホ',tab:'タブレット',pc:'PC'};
   $('#expSizeLabel').classList.remove('over');
   $('#expSizeLabel').textContent=views.length
-    ?views.map(v=>`${v.ranges.map(r=>rn[r]).join('・')}:「${v.f.name||'フレーム'}」`).join(' / ')
-    :'フレームを1つ以上選んでください';
-  $('#expHtmlNote').innerHTML='・フレームの中にある図形だけがページになります。中に置いたフレームは「区画」になり、その名前でページ内リンク(#名前)できます<br>'
-    +'・リンク・動き・見出しの種類は「色とスタイル」の「ホームページ用の設定」で図形ごとに決められます<br>'
-    +'・画像はファイルの中に埋め込むので、HTMLファイル1つで表示できます';
-  $('#expSave').disabled=!views.length;$('#expPrint').disabled=!views.length;
+    ?`${page.file}: `+views.map(v=>`${v.ranges.map(r=>rn[r]).join('・')}「${v.f.name||'フレーム'}」`).join(' / ')
+    :'このページのフレームを1つ以上選んでください';
+  $('#expHtmlNote').innerHTML=expSiteMode==='zip'
+    ?'・ページのHTML・css・js・画像・sitemap.xml・robots.txt・手順書をZIPにまとめます。中身をサーバーの公開フォルダへアップロードすれば表示できます<br>'
+      +'・フレームの中に置いたフレームは「区画」になり、「#名前」でページ内リンクできます<br>'
+      +'・リンク・動き・見出しの種類は「色とスタイル」の「ホームページ用の設定」で図形ごとに決められます'
+    :'・このページだけを、画像も埋め込んだHTMLファイル1つにします(確認用・メール添付向け)<br>'
+      +'・別のページへのリンクは、このファイル単体では開けません';
+  $('#expSave').textContent=expSiteMode==='zip'?'ZIPで保存':'保存する';
+  const ok=expSiteMode==='zip'?c.pages.some(p=>siteViews(d,p).length):views.length>0;
+  $('#expSave').disabled=!ok;$('#expPrint').disabled=!views.length;
   $('#expPrev').src=expContent?finalCanvas().toDataURL('image/png'):'';
 }
 function renderSiteMenuItems(){
@@ -4149,36 +4184,81 @@ function renderSiteMenuItems(){
   if(box.contains(document.activeElement)&&box.children.length===c.menu.items.length)return;
   box.innerHTML=c.menu.items.map((it,i)=>`<div class="numRow" data-i="${i}">
     <input type="text" class="mi-t" value="${escXml(it.t||'')}" placeholder="表示名" spellcheck="false" autocomplete="off">
-    <input type="text" class="mi-h" value="${escXml(it.h||'')}" placeholder="#区画 / URL" list="expSecList" spellcheck="false" autocomplete="off">
+    <input type="text" class="mi-h" value="${escXml(it.h||'')}" placeholder="ページ / #区画 / URL" list="expSecList" spellcheck="false" autocomplete="off">
     <button class="mi-del" title="この項目を消す">&times;</button></div>`).join('')
     ||'<div class="menu-label" style="font-weight:600">項目がありません(メニューは表示されません)</div>';
 }
-/* メニュー項目を区画から作る(トップ＋区画の名前) */
+/* メニュー項目を作る: ページが複数ならページ一覧、1ページなら区画(トップ＋区画の名前) */
 function siteMenuFromSections(){
+  const c=siteCfg();
+  if(c.pages.length>1){
+    /* 表示名はページ(PC用)のフレームの名前。無ければタイトル */
+    c.menu.items=c.pages.map(p=>{
+      const v=siteViews(curDoc(),p);
+      return{t:(v.length&&siteTopView(v).f.name)||p.title||p.file.replace(/\.html$/,''),h:p.file};
+    });
+    return true;
+  }
   const names=siteSectionNames(curDoc());
-  siteCfg().menu.items=[{t:'トップ',h:'#top'},...names.map(n=>({t:n,h:'#'+n}))];
+  if(!names.length)return false;
+  c.menu.items=[{t:'トップ',h:'#top'},...names.map(n=>({t:n,h:'#'+n}))];
+  return true;
 }
+document.querySelectorAll('#expSiteModeRow .seg').forEach(b=>b.addEventListener('click',()=>{expSiteMode=b.dataset.mode;updateExportDlg();}));
+$('#expPageSel').addEventListener('change',()=>{expSitePage=+$('#expPageSel').value;changeExp(siteSyncPreview);});
+$('#expPageAdd').onclick=()=>{
+  const c=siteCfg();
+  let n=c.pages.length+1,file;
+  do{file=`page${n++}.html`;}while(c.pages.some(p=>p.file===file));
+  c.pages.push({id:uid(),file,title:'',desc:'',pc:null,tab:null,sp:null});
+  expSitePage=c.pages.length-1;
+  save();updateExportDlg();
+  toast('ページを追加しました。ファイル名とフレームを選んでください');
+};
+$('#expPageDel').onclick=()=>{
+  const c=siteCfg();if(c.pages.length<=1)return;
+  const p=curSitePage();
+  askConfirm(`ページ「${p.file}」を消しますか？`,'デザイン(フレーム)はそのまま残ります。ページの設定だけを消します。',()=>{
+    c.pages.splice(expSitePage,1);expSitePage=0;
+    save();changeExp(siteSyncPreview);
+  },'消す');
+};
+$('#expPageFile').addEventListener('change',()=>{
+  const c=siteCfg(),p=curSitePage();
+  const f=pageFileName($('#expPageFile').value,'page');
+  if(c.pages.some(x=>x!==p&&x.file===f)){toast(`「${f}」は別のページで使っています`);$('#expPageFile').value=p.file;return;}
+  /* メニュー・図形のリンクで使っていた古いファイル名も新しい名前にそろえる */
+  const old=p.file;p.file=f;
+  if(old!==f){
+    c.menu.items.forEach(it=>{if(it.h===old||(it.h||'').startsWith(old+'#'))it.h=f+it.h.slice(old.length);});
+    (curDoc().shapes||[]).forEach(s=>{if(s.href===old||(s.href||'').startsWith(old+'#'))s.href=f+s.href.slice(old.length);});
+  }
+  $('#expPageFile').value=f;
+  save();updateExportDlg();
+});
 $('#expPcSel').addEventListener('change',()=>siteSetFrame('pc','#expPcSel'));
 $('#expTabSel').addEventListener('change',()=>siteSetFrame('tab','#expTabSel'));
 $('#expSpSel').addEventListener('change',()=>siteSetFrame('sp','#expSpSel'));
 function siteSetFrame(k,q){
-  siteCfg()[k]=$(q).value||null;
+  curSitePage()[k]=$(q).value||null;
   save();
   changeExp(siteSyncPreview);
 }
-[['expSiteTitle','title'],['expSiteDesc','desc'],['expSiteUrl','url']].forEach(([id,k])=>{
-  $('#'+id).addEventListener('input',()=>{siteCfg()[k]=$('#'+id).value.trim();save();});
-});
-['expSiteTitle','expSiteDesc','expSiteUrl'].forEach(id=>{
+$('#expSiteTitle').addEventListener('input',()=>{curSitePage().title=$('#expSiteTitle').value.trim();save();});
+$('#expSiteDesc').addEventListener('input',()=>{curSitePage().desc=$('#expSiteDesc').value.trim();save();});
+$('#expSiteUrl').addEventListener('input',()=>{siteCfg().url=$('#expSiteUrl').value.trim();save();});
+['expSiteTitle','expSiteDesc','expSiteUrl','expPageFile'].forEach(id=>{
   $('#'+id).addEventListener('pointerdown',e=>e.stopPropagation());
   $('#'+id).addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter')e.target.blur();});
 });
 $('#expNoindex').onclick=()=>{const c=siteCfg();c.noindex=!c.noindex;save();updateExportDlg();};
+$('#expOgpSel').addEventListener('change',()=>{siteCfg().ogp=$('#expOgpSel').value;save();});
+$('#expIconSel').addEventListener('change',()=>{siteCfg().icon=$('#expIconSel').value;save();});
 $('#expMenuOnRow').addEventListener('click',e=>{
   const b=e.target.closest('.seg');if(!b)return;
   const c=siteCfg(),r=b.dataset.r;
   c.menu.on[r]=!c.menu.on[r];
-  /* 初めて使う時は、区画の名前から項目を作っておく */
+  /* 初めて使う時は、ページ・区画の名前から項目を作っておく */
   if(c.menu.on[r]&&!c.menu.items.length)siteMenuFromSections();
   save();updateExportDlg();
 });
@@ -4187,8 +4267,9 @@ $('#expMenuFg').addEventListener('input',()=>{siteCfg().menu.fg=$('#expMenuFg').
 $('#expMenuAdd').onclick=()=>{siteCfg().menu.items.push({t:'',h:''});save();renderSiteMenuItems();
   const rows=$('#expMenuItems').querySelectorAll('.mi-t');if(rows.length)rows[rows.length-1].focus();};
 $('#expMenuFromSec').onclick=()=>{
-  if(!siteSectionNames(curDoc()).length){toast('区画がありません(フレームの中にフレームを置き、名前を付けると区画になります)');return;}
-  siteMenuFromSections();save();renderSiteMenuItems();toast('区画の名前からメニューを作りました');
+  if(!siteMenuFromSections()){toast('区画がありません(フレームの中にフレームを置き、名前を付けると区画になります)');return;}
+  save();renderSiteMenuItems();
+  toast(siteCfg().pages.length>1?'ページの一覧からメニューを作りました':'区画の名前からメニューを作りました');
 };
 $('#expMenuItems').addEventListener('input',e=>{
   const row=e.target.closest('[data-i]');if(!row)return;
@@ -4422,15 +4503,29 @@ function safeHref(u){
   return u;
 }
 /* ---------- サイト全体の設定(デザインごとに保存) ----------
-   d.site={pc,tab,sp:フレームid, title,desc,url,noindex,
-           menu:{on:{sp,tab,pc}, bg,fg, items:[{t:表示名,h:リンク先}]}} */
+   d.site={url,noindex,ogp,icon,
+           pages:[{id,file,title,desc,pc,tab,sp}],
+           menu:{on:{sp,tab,pc}, bg,fg, items:[{t:表示名,h:リンク先}]}}
+   pages の pc/tab/sp はそのページで使うフレームのid。
+   ogp=SNS用画像にするフレーム('auto'=トップページのPC用フレームの上部 / ''=なし) / icon=ファビコンにするフレーム */
 function siteCfg(d){
   d=d||curDoc();
   const s=d.site||(d.site={});
   if(!s.menu)s.menu={on:{sp:false,tab:false,pc:false},bg:'#FFFFFF',fg:'#1F2A44',items:[]};
   if(!s.menu.on)s.menu.on={sp:false,tab:false,pc:false};
   if(!s.menu.items)s.menu.items=[];
+  /* 1ページだけだった頃の設定(pc/tab/sp/title/desc)を1ページ目へ移す */
+  if(!s.pages||!s.pages.length){
+    s.pages=[{id:uid(),file:'index.html',title:s.title||'',desc:s.desc||'',pc:s.pc||null,tab:s.tab||null,sp:s.sp||null}];
+    ['pc','tab','sp','title','desc'].forEach(k=>delete s[k]);
+  }
+  if(s.ogp===undefined)s.ogp='auto';
   return s;
+}
+/* ファイル名に使える形へ(英小文字・数字・-・_ のみ。拡張子 .html) */
+function pageFileName(v,fallback){
+  const b=String(v||'').trim().replace(/\.html?$/i,'').toLowerCase().replace(/[^a-z0-9_-]+/g,'-').replace(/^-+|-+$/g,'');
+  return(b||fallback||'page')+'.html';
 }
 /* 画面の幅の区切り: スマホ 〜767px / タブレット 768〜1023px / PC 1024px〜 */
 const SITE_RANGES=[
@@ -4438,11 +4533,11 @@ const SITE_RANGES=[
   {r:'tab',n:'タブレット', mq:`(min-width:${SITE_BP}px) and (max-width:${SITE_PC-0.02}px)`},
   {r:'pc', n:'PC',         mq:`(min-width:${SITE_PC}px)`}
 ];
-/* それぞれの幅でどのフレームを出すか。選んでいない幅は近いフレームで代用する */
-function siteViews(d){
-  const c=siteCfg(d),frames=d.shapes.filter(isFrame);
+/* そのページで、それぞれの幅にどのフレームを出すか。選んでいない幅は近いフレームで代用する */
+function siteViews(d,page){
+  const frames=d.shapes.filter(isFrame);
   const get=id=>id?frames.find(f=>f.id===id):null;
-  const pick={sp:get(c.sp),tab:get(c.tab),pc:get(c.pc)};
+  const pick={sp:get(page.sp),tab:get(page.tab),pc:get(page.pc)};
   const order={sp:['sp','tab','pc'],tab:['tab','pc','sp'],pc:['pc','tab','sp']};
   const views=[];
   SITE_RANGES.forEach(({r})=>{
@@ -4454,6 +4549,8 @@ function siteViews(d){
   });
   return views;
 }
+/* 一番広い幅を受け持つページ(そのページの色を全体の背景にし、プレビューにも使う) */
+const siteTopView=views=>views.find(v=>v.ranges.includes('pc'))||views[views.length-1];
 /* ページ内の区画(フレームの中に置いたフレーム)の名前一覧。リンク先「#名前」に使う */
 function siteSectionNames(d){
   const sh=(d||curDoc()).shapes||[];
@@ -4468,6 +4565,7 @@ function linkKind(h){
   if(/^tel:/i.test(h))return'tel';
   if(/^mailto:/i.test(h))return'mail';
   if(h[0]==='#')return'sec';
+  if(/^[a-z0-9_-]+.html(#.*)?$/i.test(h))return'page';
   return'url';
 }
 const ANIMS=[['','なし'],['fade','ふわっと表示'],['up','下から'],['down','上から'],['left','左から'],['right','右から'],['zoom','拡大しながら'],['blur','ぼかしから']];
@@ -4583,50 +4681,24 @@ function siteMenuHtml(c,views){
 </div>`;
   return{html,css};
 }
-/* ホームページ1枚ぶんのHTMLファイル(画像も埋め込んだ1ファイル) */
-function makeSiteHtml(d){
-  d=d||curDoc();
-  const c=siteCfg(d);
-  const views=siteViews(d);
-  if(!views.length)return null;
-  svgInlineImages=true;
-  try{
-    /* 一番広い幅を受け持つページを「基準」にする(そのページの色を全体の背景にする) */
-    const topV=views.find(v=>v.ranges.includes('pc'))||views[views.length-1];
-    const body=views.map(v=>sitePageHtml(v.f,v.ranges,v===topV)).join('\n');
-    const pf=topV.f;
-    const bg=(!pf.grad&&pf.fill)?cssCol(pf.fill,alphaOf(pf,'fill')):'#FFFFFF';
-    const t=escXml(c.title||d.name||'ホームページ'),ds=escXml(c.desc||'');
-    const url=safeHref(c.url);
-    const menu=siteMenuHtml(c,views);
-    const hide=views.length>1?SITE_RANGES.map(({r,mq})=>`@media ${mq}{.nt-view:not(.nt-r-${r}){display:none}}`).join('\n')+'\n':'';
-    const mBg=cssCol(c.menu.bg||'#FFFFFF'),mFg=cssCol(c.menu.fg||'#1F2A44');
-    return`<!DOCTYPE html>
-<html lang="ja">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${t}</title>
-${ds?`<meta name="description" content="${ds}">\n`:''}${c.noindex?'<meta name="robots" content="noindex, nofollow">\n':''}${url?`<link rel="canonical" href="${escXml(url)}">\n`:''}<meta property="og:type" content="website">
-<meta property="og:title" content="${t}">
-${ds?`<meta property="og:description" content="${ds}">\n`:''}${url?`<meta property="og:url" content="${escXml(url)}">\n`:''}<meta property="og:locale" content="ja_JP">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="theme-color" content="${bg}">
-<meta name="generator" content="NT-D">
-<script>document.documentElement.classList.add('nt-js');<\/script>
-<style>
+/* サイト共通のCSS(1ファイルの時は<style>に、サイト一式の時は css/style.css に入れる) */
+function siteCss(c){
+  const mBg=cssCol(c.menu.bg||'#FFFFFF'),mFg=cssCol(c.menu.fg||'#1F2A44');
+  return`/* NT-D で書き出したホームページの共通スタイル */
 *{margin:0;padding:0;box-sizing:border-box}
-html,body{background:${bg}}
 body{overflow-x:hidden;-webkit-text-size-adjust:100%;text-size-adjust:100%}
 a{color:inherit;text-decoration:none}
 img{display:block;max-width:none}
+/* デザインの幅で組んだページ(.nt-page)を、画面の幅に合わせて拡大縮小する(js/main.js) */
 .nt-view{position:relative;margin:0 auto;overflow:hidden}
 .nt-page{position:absolute;left:0;top:0;transform-origin:0 0}
 .nt-e{position:absolute}
 .nt-t{white-space:pre;font-style:normal}
 .nt-l{display:block;position:absolute;left:0;white-space:pre}
 .nt-svg{overflow:visible}
-${hide}/* 動き(スクロールして見えたら .nt-in が付いて表示される) */
+/* 画面の幅ごとに、そのページ用のデザインだけを出す */
+${SITE_RANGES.map(({r,mq})=>`@media ${mq}{.nt-view:not(.nt-r-${r}){display:none}}`).join('\n')}
+/* 動き(スクロールして見えたら .nt-in が付いて表示される) */
 .nt-u{position:absolute;left:0;top:0;width:0;height:0}
 .nt-js .nt-an{opacity:0;transition:opacity var(--t) ease var(--d),translate var(--t) cubic-bezier(.2,.7,.2,1) var(--d),scale var(--t) cubic-bezier(.2,.7,.2,1) var(--d),filter var(--t) ease var(--d)}
 .nt-js .nt-an-up{translate:0 48px}
@@ -4653,13 +4725,11 @@ ${hide}/* 動き(スクロールして見えたら .nt-in が付いて表示さ�
 .nt-menu ul{list-style:none}
 .nt-menu li a{display:block;padding:15px 4px;font-size:17px;font-weight:600;border-bottom:1px solid color-mix(in srgb,currentColor 18%,transparent)}
 .nt-menu-close{position:absolute;top:14px;right:14px;width:48px;height:48px;border:0;background:none;color:inherit;font-size:32px;line-height:1;cursor:pointer}
-${menu.css}
-</style>
-</head>
-<body>
-${body}
-${menu.html}
-<script>
+`;
+}
+/* サイト共通のJavaScript(拡大縮小・動き・メニュー・ページ内リンク) */
+function siteJs(){
+  return`/* NT-D で書き出したホームページの動き */
 (function(){
   /* デザインの幅で組んだページを、画面の幅に合わせて拡大縮小する。
      広い画面では、デザインより大きくはしない(スマホ用のデザインをPCで見た時も等倍で中央に出す) */
@@ -4698,29 +4768,266 @@ ${menu.html}
     menu.querySelector('.nt-menu-close').onclick=function(){setMenu(false);};
     addEventListener('keydown',function(e){if(e.key==='Escape')setMenu(false);});
   }
-  /* ページ内リンク(#区画名)は、いま表示中のページの区画へなめらかに移動する */
+  /* 区画(#名前)へ移動する。表示中のページの区画を探す */
+  function goSec(h,smooth){
+    if(!h||h==='top'){scrollTo({top:0,behavior:smooth?'smooth':'auto'});return true;}
+    var t=[].filter.call(document.querySelectorAll('[data-sec]'),function(el){
+      return el.getAttribute('data-sec')===h&&el.getClientRects().length;
+    })[0];
+    if(t)scrollTo({top:t.getBoundingClientRect().top+scrollY,behavior:smooth?'smooth':'auto'});
+    return!!t;
+  }
   document.addEventListener('click',function(e){
     var a=e.target.closest('a.nt-open,button.nt-open');
     if(a){e.preventDefault();setMenu(!(menu&&menu.classList.contains('on')));return;}
     a=e.target.closest('a[href^="#"]');
     if(!a)return;
-    var h=decodeURIComponent(a.getAttribute('href').slice(1));
     e.preventDefault();setMenu(false);
-    if(!h||h==='top'){scrollTo({top:0,behavior:'smooth'});return;}
-    var t=[].filter.call(document.querySelectorAll('[data-sec]'),function(el){
-      return el.getAttribute('data-sec')===h&&el.getClientRects().length;
-    })[0];
-    if(t)scrollTo({top:t.getBoundingClientRect().top+scrollY,behavior:'smooth'});
+    goSec(decodeURIComponent(a.getAttribute('href').slice(1)),true);
   });
+  /* 別のページから「ページ名.html#区画」で来た時 */
+  if(location.hash)addEventListener('load',function(){goSec(decodeURIComponent(location.hash.slice(1)),false);});
 })();
-<\/script>
+`;
+}
+/* 公開URLの基準(末尾を / にそろえる) */
+function siteBaseUrl(c){
+  let u=safeHref(c.url);
+  if(!/^https?:\/\//i.test(u))return'';
+  if(/\.html?$/i.test(u))u=u.replace(/[^\/]*$/,'');
+  return u.endsWith('/')?u:u+'/';
+}
+const pageUrl=(base,p)=>base?base+(p.file==='index.html'?'':p.file):'';
+/* 1ページぶんのHTML。opt.files=サイト一式(css/js/画像を別ファイルにする) / opt.ogp・opt.icon=画像があるか */
+function sitePageDoc(d,page,opt){
+  opt=opt||{};
+  const c=siteCfg(d);
+  const views=siteViews(d,page);
+  if(!views.length)return null;
+  const prevInline=svgInlineImages;
+  if(!opt.files)svgInlineImages=true;
+  try{
+    const topV=siteTopView(views);
+    const body=views.map(v=>sitePageHtml(v.f,v.ranges,v===topV)).join('\n');
+    const pf=topV.f;
+    const bg=(!pf.grad&&pf.fill)?cssCol(pf.fill,alphaOf(pf,'fill')):'#FFFFFF';
+    const t=escXml(page.title||d.name||'ホームページ'),ds=escXml(page.desc||'');
+    const base=siteBaseUrl(c),url=pageUrl(base,page);
+    const menu=siteMenuHtml(c,views);
+    const og=opt.ogp?(base?base+'ogp.png':'ogp.png'):'';
+    const head=[
+      `<title>${t}</title>`,
+      ds&&`<meta name="description" content="${ds}">`,
+      c.noindex&&'<meta name="robots" content="noindex, nofollow">',
+      url&&`<link rel="canonical" href="${escXml(url)}">`,
+      `<meta property="og:type" content="${page.file==='index.html'?'website':'article'}">`,
+      `<meta property="og:title" content="${t}">`,
+      ds&&`<meta property="og:description" content="${ds}">`,
+      url&&`<meta property="og:url" content="${escXml(url)}">`,
+      og&&`<meta property="og:image" content="${escXml(og)}">`,
+      '<meta property="og:locale" content="ja_JP">',
+      `<meta name="twitter:card" content="${og?'summary_large_image':'summary'}">`,
+      opt.icon&&'<link rel="icon" href="favicon.png" type="image/png">',
+      opt.icon&&'<link rel="apple-touch-icon" href="apple-touch-icon.png">',
+      `<meta name="theme-color" content="${bg}">`,
+      '<meta name="generator" content="NT-D">'
+    ].filter(Boolean).join('\n');
+    const pageCss=`html,body{background:${bg}}`+(menu.css?'\n'+menu.css:'');
+    return`<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+${head}
+<script>document.documentElement.classList.add('nt-js');<\/script>
+${opt.files?'<link rel="stylesheet" href="css/style.css">\n':''}<style>
+${opt.files?'':siteCss(c)}${pageCss}
+</style>
+</head>
+<body>
+${body}
+${menu.html}
+${opt.files?'<script src="js/main.js"><\/script>':`<script>\n${siteJs()}<\/script>`}
 </body>
 </html>
 `;
-  }finally{svgInlineImages=false;}
+  }finally{svgInlineImages=prevInline;}
 }
-/* 書き出しダイアログで選んでいる設定からHTMLを作る */
-function curSiteHtml(){return makeSiteHtml(curDoc());}
+/* ---------- サイト一式(ZIP) ---------- */
+let siteImgSink=null;   /* サイト一式の書き出し中: 画像を images/ のファイルにする(imgHrefが使う) */
+function dataURLtoBytes(u){
+  const i=u.indexOf(',');
+  const meta=u.slice(5,i),body=u.slice(i+1);
+  if(/;base64$/i.test(meta)){
+    const bin=atob(body),a=new Uint8Array(bin.length);
+    for(let j=0;j<bin.length;j++)a[j]=bin.charCodeAt(j);
+    return a;
+  }
+  return new TextEncoder().encode(decodeURIComponent(body));
+}
+/* 同じ画像は1つのファイルにまとめる */
+function makeImgSink(){
+  const map=new Map(),files=[];
+  const EXT={'image/jpeg':'jpg','image/png':'png','image/webp':'webp','image/gif':'gif','image/svg+xml':'svg','image/avif':'avif'};
+  const fn=src=>{
+    if(!src)return'';
+    const data=isImgRef(src)?(imgData.get(src.slice(4))||''):src;
+    if(!data.startsWith('data:'))return src;   /* 外部のURLはそのまま */
+    if(map.has(data))return map.get(data);
+    const mime=data.slice(5,data.indexOf(',')).split(';')[0];
+    const name=`images/img${String(files.length+1).padStart(2,'0')}.${EXT[mime]||'png'}`;
+    map.set(data,name);files.push({name,data:dataURLtoBytes(data)});
+    return name;
+  };
+  fn.files=files;
+  return fn;
+}
+const CRC_T=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0;}return t;})();
+function crc32(u8){let c=0xFFFFFFFF;for(let i=0;i<u8.length;i++)c=CRC_T[(c^u8[i])&255]^(c>>>8);return(c^0xFFFFFFFF)>>>0;}
+async function deflateRaw(u8){
+  if(typeof CompressionStream==='undefined')return null;
+  try{
+    const s=new Blob([u8]).stream().pipeThrough(new CompressionStream('deflate-raw'));
+    return new Uint8Array(await new Response(s).arrayBuffer());
+  }catch(e){return null;}
+}
+/* ZIPファイルを作る(files=[{name,data:文字列かUint8Array}])。ファイル名はUTF-8 */
+async function makeZip(files){
+  const enc=new TextEncoder(),parts=[],central=[];
+  const now=new Date();
+  const dosT=(now.getHours()<<11)|(now.getMinutes()<<5)|(now.getSeconds()>>1);
+  const dosD=((now.getFullYear()-1980)<<9)|((now.getMonth()+1)<<5)|now.getDate();
+  let off=0;
+  for(const f of files){
+    const data=typeof f.data==='string'?enc.encode(f.data):f.data;
+    const name=enc.encode(f.name);
+    const crc=crc32(data);
+    /* 画像は圧縮済みなのでそのまま入れる。文字のファイルは縮む時だけ圧縮する */
+    let comp=/\.(png|jpe?g|webp|gif|avif)$/i.test(f.name)?null:await deflateRaw(data);
+    const method=comp&&comp.length<data.length?8:0;
+    if(!method)comp=data;
+    const lh=new DataView(new ArrayBuffer(30));
+    lh.setUint32(0,0x04034b50,true);lh.setUint16(4,20,true);lh.setUint16(6,0x0800,true);lh.setUint16(8,method,true);
+    lh.setUint16(10,dosT,true);lh.setUint16(12,dosD,true);lh.setUint32(14,crc,true);
+    lh.setUint32(18,comp.length,true);lh.setUint32(22,data.length,true);lh.setUint16(26,name.length,true);
+    parts.push(new Uint8Array(lh.buffer),name,comp);
+    const ch=new DataView(new ArrayBuffer(46));
+    ch.setUint32(0,0x02014b50,true);ch.setUint16(4,20,true);ch.setUint16(6,20,true);ch.setUint16(8,0x0800,true);ch.setUint16(10,method,true);
+    ch.setUint16(12,dosT,true);ch.setUint16(14,dosD,true);ch.setUint32(16,crc,true);
+    ch.setUint32(20,comp.length,true);ch.setUint32(24,data.length,true);ch.setUint16(28,name.length,true);
+    ch.setUint32(42,off,true);
+    central.push(new Uint8Array(ch.buffer),name);
+    off+=30+name.length+comp.length;
+  }
+  const cdSize=central.reduce((a,b)=>a+b.length,0);
+  const end=new DataView(new ArrayBuffer(22));
+  end.setUint32(0,0x06054b50,true);end.setUint16(8,files.length,true);end.setUint16(10,files.length,true);
+  end.setUint32(12,cdSize,true);end.setUint32(16,off,true);
+  return new Blob([...parts,...central,new Uint8Array(end.buffer)],{type:'application/zip'});
+}
+/* フレームを画像にする(SNS用画像・ファビコン用) */
+async function frameCanvas(f,scale){
+  const d=curDoc();
+  return makeWireCanvas(d,{shapes:[f,...frameDescendants(d.shapes,f)],box:cornersBox([f],0),pad:0,scale});
+}
+const canvasBytes=cv=>new Promise(res=>cv.toBlob(b=>b.arrayBuffer().then(a=>res(new Uint8Array(a))),'image/png'));
+/* SNS用画像(1200×630)。フレームの幅を1200pxに合わせ、上から切り出す */
+async function makeOgpImage(d,c){
+  let f=null;
+  if(c.ogp==='auto'){
+    const p=c.pages.find(p=>p.file==='index.html')||c.pages[0];
+    const v=p&&siteViews(d,p);
+    if(v&&v.length)f=siteTopView(v).f;
+  }else if(c.ogp)f=d.shapes.find(s=>s.id===c.ogp&&isFrame(s));
+  if(!f)return null;
+  const src=await frameCanvas(f,1200/f.w);
+  const cv=document.createElement('canvas');cv.width=1200;cv.height=630;
+  const ctx=cv.getContext('2d');
+  ctx.fillStyle='#FFFFFF';ctx.fillRect(0,0,1200,630);
+  ctx.drawImage(src,0,0);
+  return canvasBytes(cv);
+}
+/* ファビコン(48px)とスマホのホーム画面用アイコン(180px) */
+async function makeIcons(d,c){
+  const f=c.icon&&d.shapes.find(s=>s.id===c.icon&&isFrame(s));
+  if(!f)return null;
+  const src=await frameCanvas(f,512/Math.max(f.w,f.h));
+  const out=async n=>{
+    const cv=document.createElement('canvas');cv.width=cv.height=n;
+    const ctx=cv.getContext('2d');ctx.imageSmoothingQuality='high';
+    const k=n/Math.max(src.width,src.height);
+    ctx.drawImage(src,(n-src.width*k)/2,(n-src.height*k)/2,src.width*k,src.height*k);
+    return canvasBytes(cv);
+  };
+  return{fav:await out(48),apple:await out(180)};
+}
+/* 納品・アップロード用の説明書き(Windowsのメモ帳で読めるよう改行はCRLF) */
+function siteReadme(d,c,pages,extra){
+  const base=siteBaseUrl(c);
+  const lines=[
+    `${d.name||'ホームページ'} … ホームページ一式`,
+    '',
+    '■ 公開のしかた(レンタルサーバー)',
+    '1. サーバーのファイルマネージャーかFTPソフトで、公開用のフォルダ(例: public_html)を開きます。',
+    '2. このフォルダの「中身」をすべてアップロードします(フォルダごとではありません)。',
+    '   すでに同じ名前のファイルがある時は、上書きしてください。',
+    `3. ブラウザで ${base||'https://(ドメイン)/'} を開いて表示を確かめます。`,
+    '',
+    '■ ページ',
+    ...pages.map(p=>`・${p.file} … ${p.title||'(タイトルなし)'}${base?'  '+pageUrl(base,p):''}`),
+    '',
+    '■ その他のファイル',
+    '・css/style.css … 見た目',
+    '・js/main.js … 画面幅への合わせ込み・動き・メニュー',
+    '・images/ … 画像',
+    ...extra,
+    '',
+    `書き出し: ${new Date().toLocaleString('ja-JP')}(NT-D)`
+  ];
+  return lines.join('\r\n')+'\r\n';
+}
+/* サイト一式をZIPにまとめて保存する */
+async function exportSiteZip(){
+  const d=curDoc(),c=siteCfg(d);
+  const pages=c.pages.filter(p=>siteViews(d,p).length);
+  if(!pages.length){toast('ページにフレームを選んでください');return false;}
+  const dup=pages.map(p=>p.file).find((f,i,a)=>a.indexOf(f)!==i);
+  if(dup){toast(`ファイル名「${dup}」が重なっています`);return false;}
+  toast('書き出しています…');
+  /* SNS用画像・ファビコンは先に描く(画像は表示用の読み込みを使うため、images/への置き換え前に) */
+  const ogp=await makeOgpImage(d,c);
+  const icons=await makeIcons(d,c);
+  const sink=makeImgSink();
+  const files=[];
+  siteImgSink=sink;
+  try{
+    pages.forEach(p=>files.push({name:p.file,data:sitePageDoc(d,p,{files:true,ogp:!!ogp,icon:!!icons})}));
+  }finally{siteImgSink=null;}
+  files.push({name:'css/style.css',data:siteCss(c)},{name:'js/main.js',data:siteJs()},...sink.files);
+  const extra=[];
+  if(ogp){files.push({name:'ogp.png',data:ogp});extra.push('・ogp.png … SNSでシェアされた時の画像');}
+  if(icons){files.push({name:'favicon.png',data:icons.fav},{name:'apple-touch-icon.png',data:icons.apple});extra.push('・favicon.png / apple-touch-icon.png … ブラウザのタブ・ホーム画面のアイコン');}
+  const base=siteBaseUrl(c);
+  files.push({name:'robots.txt',data:c.noindex?'User-agent: *\nDisallow: /\n':`User-agent: *\nAllow: /\n${base?`Sitemap: ${base}sitemap.xml\n`:''}`});
+  extra.push('・robots.txt … 検索エンジンへの案内');
+  if(base&&!c.noindex){
+    const day=new Date().toISOString().slice(0,10);
+    files.push({name:'sitemap.xml',data:`<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${pages.map(p=>`  <url><loc>${escXml(pageUrl(base,p))}</loc><lastmod>${day}</lastmod></url>`).join('\n')}
+</urlset>
+`});
+    extra.push('・sitemap.xml … 検索エンジン向けのページ一覧');
+  }
+  files.push({name:'はじめにお読みください.txt',data:siteReadme(d,c,pages,extra)});
+  const zip=await makeZip(files);
+  const name=(d.name||'site').replace(/[\\\/:*?"<>|]+/g,'_');
+  download(name+'.zip',URL.createObjectURL(zip));
+  toast(`サイト一式をZIPで保存しました(${pages.length}ページ・画像${sink.files.length}枚)`);
+  return true;
+}
+/* 書き出しダイアログで編集中のページを、画像も埋め込んだHTML1つにする(確認用) */
+function curSiteHtml(){return sitePageDoc(curDoc(),curSitePage(),{files:false});}
 /* 保存するファイル名(どの範囲を出したか分かるように) */
 function expName(){
   const base=curDoc().name;
@@ -4736,9 +5043,15 @@ $('#expSave').onclick=()=>{
   }
   const name=expName();
   if(expFmt==='html'){
+    if(expSiteMode==='zip'){
+      $('#expSave').disabled=true;
+      exportSiteZip().then(ok=>{if(ok)closeExportDlg();else $('#expSave').disabled=false;})
+        .catch(e=>{toast('書き出せませんでした: '+e.message);$('#expSave').disabled=false;});
+      return;
+    }
     const html=curSiteHtml();if(!html)return;
-    download(name+'.html',URL.createObjectURL(new Blob([html],{type:'text/html'})));
-    toast('ホームページ(HTML)を保存しました');
+    download(curSitePage().file,URL.createObjectURL(new Blob([html],{type:'text/html'})));
+    toast('このページをHTMLで保存しました');
     closeExportDlg();
     return;
   }
@@ -9311,6 +9624,14 @@ function updateWebSec(ss){
     $('#lnkType').value=kind;
     $('#lnkUrlRow').style.display=(kind==='url'||kind==='tel'||kind==='mail')?'flex':'none';
     $('#lnkSecRow').style.display=kind==='sec'?'flex':'none';
+    $('#lnkPageRow').style.display=kind==='page'?'flex':'none';
+    if(kind==='page'){
+      /* ページはHTML書き出しの設定(d.site.pages)から */
+      const pages=siteCfg().pages;
+      $('#lnkPage').innerHTML='<option value="">選んでください</option>'
+        +pages.map(p=>`<option value="${escXml(p.file)}">${escXml(p.file)}${p.title?' ― '+escXml(p.title):''}</option>`).join('');
+      $('#lnkPage').value=linkKind(h0)==='page'?h0.split('#')[0]:'';
+    }
     if(LINK_UI[kind]){
       $('#lnkLbl').textContent=LINK_UI[kind].lbl;
       if(document.activeElement!==$('#lnkUrl')){
@@ -9377,6 +9698,10 @@ $('#lnkUrl').addEventListener('change',()=>{
   }
   applyLink(v);
 });
+$('#lnkPage').addEventListener('change',()=>{
+  const v=$('#lnkPage').value;
+  applyLink(v);
+});
 $('#lnkSec').addEventListener('change',()=>{
   const v=$('#lnkSec').value;
   applyLink(v?'#'+v:'');
@@ -9405,7 +9730,7 @@ $('#webAlt').addEventListener('change',()=>{
   const v=$('#webAlt').value.trim();
   setWebProp(webTargets().filter(s=>s.type==='image'),s=>{if(v)s.alt=v;else delete s.alt;});
 });
-['lnkUrl','anDelay','anDur','webAlt','lnkType','lnkSec','anType','hvType','webTag'].forEach(id=>{
+['lnkUrl','anDelay','anDur','webAlt','lnkType','lnkSec','lnkPage','anType','hvType','webTag'].forEach(id=>{
   $('#'+id).addEventListener('pointerdown',e=>e.stopPropagation());
   $('#'+id).addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter'&&e.target.tagName==='INPUT')e.target.blur();});
 });
