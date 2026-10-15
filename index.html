@@ -1972,6 +1972,11 @@ kbd{
       <div class="numRow"><span class="radLbl expHl">SNS用画像</span><select id="expOgpSel"></select></div>
       <div class="numRow"><span class="radLbl expHl">アイコン</span><select id="expIconSel"></select></div>
       <div class="segRow"><button class="seg" id="expNoindex">検索結果に出さない(テスト公開用)</button></div>
+      <div class="menu-label">画像を軽くする(表示に十分な大きさに縮め、写真は圧縮します)</div>
+      <div class="segRow" id="expImgOptRow" role="radiogroup">
+        <button class="seg" data-v="1" role="radio">する(おすすめ)</button>
+        <button class="seg" data-v="0" role="radio">しない(元の画像のまま)</button>
+      </div>
       <div class="menu-label">ハンバーガーメニュー(表示する画面)</div>
       <div class="segRow" id="expMenuOnRow">
         <button class="seg" data-r="sp">スマホ</button>
@@ -2133,7 +2138,7 @@ kbd{
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-15.7';
+const APP_VERSION='2026-10-15.8';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -2256,9 +2261,12 @@ function objUrlOf(id){
 let svgInlineImages=false; /* SVGファイル書き出し中はblob:ではなくdataURLを埋め込む */
 function imgHref(src){
   if(siteImgSink)return siteImgSink(src);
-  if(!isImgRef(src))return src||'';
+  if(!isImgRef(src))return(svgInlineImages&&siteImgOpt&&siteImgOpt.has(src))?siteImgOpt.get(src):(src||'');
   const id=src.slice(4);
-  return svgInlineImages?(imgData.get(id)||''):objUrlOf(id);
+  if(!svgInlineImages)return objUrlOf(id);
+  const u=imgData.get(id)||'';
+  /* ホームページ書き出し中は、軽くした画像があればそちらを埋め込む */
+  return siteImgOpt&&siteImgOpt.has(u)?siteImgOpt.get(u):u;
 }
 async function storeImage(dataURL){
   const id=uid();
@@ -4264,6 +4272,10 @@ function updateSiteDlg(){
   setVal('#expPageFile',page.file);
   setVal('#expSiteTitle',page.title);setVal('#expSiteDesc',page.desc);setVal('#expSiteUrl',c.url);
   $('#expNoindex').classList.toggle('active',!!c.noindex);
+  document.querySelectorAll('#expImgOptRow .seg').forEach(b=>{
+    const on=(b.dataset.v==='1')===siteImgOptOn(c);
+    b.classList.toggle('active',on);b.setAttribute('aria-checked',on?'true':'false');
+  });
   $('#expOgpSel').innerHTML='<option value="auto">自動(トップページの上の部分)</option><option value="">なし</option>'+frames.map(opt).join('');
   $('#expOgpSel').value=c.ogp||'';
   $('#expIconSel').innerHTML='<option value="">なし</option>'+frames.map(opt).join('');
@@ -4366,6 +4378,12 @@ $('#expSiteUrl').addEventListener('input',()=>{siteCfg().url=$('#expSiteUrl').va
 ['expSiteTitle','expSiteDesc','expSiteUrl','expPageFile'].forEach(id=>{
   $('#'+id).addEventListener('pointerdown',e=>e.stopPropagation());
   $('#'+id).addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter')e.target.blur();});
+});
+$('#expImgOptRow').addEventListener('click',e=>{
+  const b=e.target.closest('.seg');if(!b)return;
+  const c=siteCfg();
+  if(b.dataset.v==='1')delete c.imgOpt;else c.imgOpt=false;
+  save();updateExportDlg();
 });
 $('#expNoindex').onclick=()=>{const c=siteCfg();c.noindex=!c.noindex;save();updateExportDlg();};
 $('#expOgpSel').addEventListener('change',()=>{siteCfg().ogp=$('#expOgpSel').value;save();});
@@ -6220,6 +6238,87 @@ li form{margin:0;flex:none}
 </html>
 `;
 }
+/* ---------- 画像を軽くする(書き出し時) ----------
+   表示される大きさの2.2倍(高精細な画面でも粗く見えない大きさ)より大きい画像は縮め、
+   写真は WebP(品質82%)にする。透明部分のある画像・色数の少ない画像(ロゴ・図・文字の画像)は
+   劣化しない PNG のまま(大きすぎる時に縮めるだけ)。元より軽くならない時は元の画像を使う。
+   d.site.imgOpt===false の時だけ「しない」(既定は する) */
+let siteImgOpt=null;   /* 元の画像(dataURL) → 軽くした画像(dataURL)。書き出し中だけ使う */
+const IMG_OPT_K=2.2;
+const siteImgOptOn=c=>c.imgOpt!==false;
+const srcData=src=>isImgRef(src)?(imgData.get(src.slice(4))||''):(src||'');
+/* 書き出すページで、それぞれの画像がいちばん大きく表示される大きさ */
+function siteImageUses(d,pages){
+  const uses=new Map();
+  const need=(src,w,h)=>{
+    const data=srcData(src);if(!data.startsWith('data:'))return;
+    const u=uses.get(data)||{w:0,h:0};
+    uses.set(data,{w:Math.max(u.w,w),h:Math.max(u.h,h)});
+  };
+  const frames=new Set();
+  pages.forEach(p=>siteViews(d,p).forEach(v=>frames.add(v.f)));
+  frames.forEach(f=>[f,...frameDescendants(d.shapes,f)].forEach(s=>{
+    if(s.hidden)return;
+    if(s.type==='image'&&s.src)need(s.src,s.imgBox?s.imgBox.w:s.w,s.imgBox?s.imgBox.h:s.h);
+    if(s.imgFill&&s.imgFill.src){const r=imgFillRect(s);need(s.imgFill.src,r.w,r.h);}
+  }));
+  return uses;
+}
+const loadData=data=>new Promise((res,rej)=>{const im=new Image();im.onload=()=>res(im);im.onerror=rej;im.src=data;});
+const blobOf=(cv,type,q)=>new Promise(res=>cv.toBlob(res,type,q));
+const blobToDataURL=b=>new Promise(res=>{const r=new FileReader();r.onload=()=>res(r.result);r.readAsDataURL(b);});
+/* 1枚を軽くする。軽くできなければ null */
+async function optimizeImage(data,need){
+  const mime=data.slice(5,data.indexOf(',')).split(';')[0];
+  if(!/^image\/(jpeg|png|webp)$/.test(mime))return null;   /* GIF(動く画像)・SVG はそのまま */
+  const bytes=Math.floor((data.length-data.indexOf(',')-1)*3/4);
+  let im;try{im=await loadData(data);}catch(e){return null;}
+  const nw=im.naturalWidth,nh=im.naturalHeight;if(!nw||!nh)return null;
+  const k=Math.min(1,Math.max(need.w*IMG_OPT_K/nw,need.h*IMG_OPT_K/nh));
+  const W=Math.max(1,Math.round(nw*k)),H=Math.max(1,Math.round(nh*k));
+  const cv=document.createElement('canvas');cv.width=W;cv.height=H;
+  const ctx=cv.getContext('2d');
+  ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
+  ctx.drawImage(im,0,0,W,H);
+  /* PNG: 透明部分がある・色が少ない(ロゴ・図・文字)なら劣化しないPNGのまま */
+  let keepPng=false;
+  if(mime==='image/png'){
+    const px=ctx.getImageData(0,0,W,H).data;
+    const step=Math.max(1,Math.floor(px.length/4/20000))*4;
+    const colors=new Set();
+    for(let i=0;i<px.length;i+=step){
+      if(px[i+3]<250){keepPng=true;break;}
+      if(colors.size<=256)colors.add((px[i]>>3)<<10|(px[i+1]>>3)<<5|(px[i+2]>>3));
+    }
+    if(colors.size<=256)keepPng=true;
+  }
+  let blob;
+  if(keepPng){
+    if(k>=0.999)return null;
+    blob=await blobOf(cv,'image/png');
+  }else{
+    blob=await blobOf(cv,'image/webp',0.82);
+    if(!blob||blob.type!=='image/webp')blob=await blobOf(cv,'image/jpeg',0.85);   /* WebPを作れない環境 */
+  }
+  if(!blob||blob.size>=bytes*0.95)return null;
+  return{data:await blobToDataURL(blob),before:bytes,after:blob.size};
+}
+/* 書き出すページの画像をまとめて軽くする。結果は siteImgOpt に入れて、imgHref が使う */
+async function prepareSiteImages(d,pages){
+  siteImgOpt=null;
+  const c=siteCfg(d);
+  if(!siteImgOptOn(c))return null;
+  const map=new Map();let before=0,after=0,n=0;
+  for(const[data,need]of siteImageUses(d,pages)){
+    const r=await optimizeImage(data,need);
+    const b0=Math.floor((data.length-data.indexOf(',')-1)*3/4);
+    before+=b0;
+    if(r){map.set(data,r.data);after+=r.after;n++;}else after+=b0;
+  }
+  siteImgOpt=map;
+  return{n,before,after};
+}
+const fmtBytes=b=>b>=1048576?(b/1048576).toFixed(1)+'MB':Math.max(1,Math.round(b/1024))+'KB';
 /* ---------- サイト一式(ZIP) ---------- */
 let siteImgSink=null;   /* サイト一式の書き出し中: 画像を images/ のファイルにする(imgHrefが使う) */
 function dataURLtoBytes(u){
@@ -6238,7 +6337,8 @@ function makeImgSink(){
   const EXT={'image/jpeg':'jpg','image/png':'png','image/webp':'webp','image/gif':'gif','image/svg+xml':'svg','image/avif':'avif'};
   const fn=src=>{
     if(!src)return'';
-    const data=isImgRef(src)?(imgData.get(src.slice(4))||''):src;
+    let data=isImgRef(src)?(imgData.get(src.slice(4))||''):src;
+    if(siteImgOpt&&siteImgOpt.has(data))data=siteImgOpt.get(data);   /* 軽くした画像 */
     if(!data.startsWith('data:'))return src;   /* 外部のURLはそのまま */
     if(map.has(data))return map.get(data);
     const mime=data.slice(5,data.indexOf(',')).split(';')[0];
@@ -6363,6 +6463,7 @@ async function exportSiteZip(){
   toast('書き出しています…');
   /* SNS用画像・ファビコンは先に描く(画像は表示用の読み込みを使うため、images/への置き換え前に) */
   const ogp=await makeOgpImage(d,c);
+  const opt=await prepareSiteImages(d,pages);
   const icons=await makeIcons(d,c);
   const sink=makeImgSink();
   const files=[];
@@ -6371,7 +6472,7 @@ async function exportSiteZip(){
   const newsSeen={v:false};
   try{
     pages.forEach(p=>files.push({name:p.file,data:sitePageDoc(d,p,{files:true,ogp:!!ogp,icon:!!icons,newsSeen})}));
-  }finally{siteImgSink=null;}
+  }finally{siteImgSink=null;siteImgOpt=null;}
   const forms=siteFormsUsed;siteFormsUsed=null;
   files.push({name:'css/style.css',data:siteCss(c)},{name:'js/main.js',data:siteJs()},...sink.files);
   const extra=[];
@@ -6412,11 +6513,16 @@ ${pages.map(p=>`  <url><loc>${escXml(pageUrl(base,p))}</loc><lastmod>${day}</las
   const zip=await makeZip(files);
   const name=(d.name||'site').replace(/[\\\/:*?"<>|]+/g,'_');
   download(name+'.zip',URL.createObjectURL(zip));
-  toast(`サイト一式をZIPで保存しました(${pages.length}ページ・画像${sink.files.length}枚)`);
+  const optMsg=opt&&opt.n?`・画像を軽くしました ${fmtBytes(opt.before)}→${fmtBytes(opt.after)}`:'';
+  toast(`サイト一式をZIPで保存しました(${pages.length}ページ・画像${sink.files.length}枚${optMsg})`);
   return true;
 }
 /* 書き出しダイアログで編集中のページを、画像も埋め込んだHTML1つにする(確認用) */
-function curSiteHtml(){return sitePageDoc(curDoc(),curSitePage(),{files:false});}
+async function curSiteHtml(){
+  const d=curDoc(),p=curSitePage();
+  await prepareSiteImages(d,[p]);
+  try{return sitePageDoc(d,p,{files:false});}finally{siteImgOpt=null;}
+}
 /* 保存するファイル名(どの範囲を出したか分かるように) */
 function expName(){
   const base=curDoc().name;
@@ -6438,10 +6544,14 @@ $('#expSave').onclick=()=>{
         .catch(e=>{toast('書き出せませんでした: '+e.message);$('#expSave').disabled=false;});
       return;
     }
-    const html=curSiteHtml();if(!html)return;
-    download(curSitePage().file,URL.createObjectURL(new Blob([html],{type:'text/html'})));
-    toast('このページをHTMLで保存しました');
-    closeExportDlg();
+    $('#expSave').disabled=true;
+    curSiteHtml().then(html=>{
+      $('#expSave').disabled=false;
+      if(!html)return;
+      download(curSitePage().file,URL.createObjectURL(new Blob([html],{type:'text/html'})));
+      toast('このページをHTMLで保存しました');
+      closeExportDlg();
+    }).catch(e=>{toast('書き出せませんでした: '+e.message);$('#expSave').disabled=false;});
     return;
   }
   if(expFmt==='svg'){
@@ -6488,10 +6598,16 @@ $('#expSave').onclick=()=>{
 $('#expPrint').onclick=()=>{
   if(expFmt==='html'&&expMode==='img'){
     /* 書き出すHTMLを新しいタブで開いて、実際のブラウザでの見え方を確かめる */
-    const html=curSiteHtml();if(!html)return;
-    const url=URL.createObjectURL(new Blob([html],{type:'text/html'}));
-    if(!window.open(url,'_blank'))toast('新しいタブを開けませんでした(ポップアップの許可を確認してください)');
-    setTimeout(()=>URL.revokeObjectURL(url),120000);
+    /* 画像を軽くする間にポップアップ扱いされないよう、先にタブを開いておく */
+    const w=window.open('','_blank');
+    if(!w){toast('新しいタブを開けませんでした(ポップアップの許可を確認してください)');return;}
+    w.document.write('<p style="font-family:sans-serif;padding:24px">表示を準備しています…</p>');
+    curSiteHtml().then(html=>{
+      if(!html){w.close();return;}
+      const url=URL.createObjectURL(new Blob([html],{type:'text/html'}));
+      w.location.href=url;
+      setTimeout(()=>URL.revokeObjectURL(url),120000);
+    }).catch(e=>{w.close();toast('表示できませんでした: '+e.message);});
     return;
   }
   if(!expContent)return;
