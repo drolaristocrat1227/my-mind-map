@@ -342,6 +342,11 @@ body.wire-mode.rulers #rulerTop,body.wire-mode.rulers #rulerLeft,body.wire-mode.
 #expHtmlSec .numRow{padding:3px 2px;}
 #expHtmlSec .segRow{padding:5px 2px;}
 #expHtmlSec .menu-label{padding:8px 2px 0;}
+#expSiteCss{width:100%;min-height:120px;padding:8px 10px;border:1px solid var(--panel-border);border-radius:8px;background:var(--node-bg);color:var(--ink);
+  font:12.5px/1.6 "SFMono-Regular",Consolas,"MS Gothic",monospace;resize:vertical;tab-size:2;}
+#expSiteCss:focus{outline:none;border-color:var(--accent);}
+.expCssHint{font-size:11.5px;line-height:1.6;color:var(--ink-soft);padding:4px 2px 0;word-break:break-all;}
+.expCssHint code{font-family:"SFMono-Regular",Consolas,monospace;background:var(--btn-hover);padding:0 4px;border-radius:4px;color:var(--ink);}
 #expHtmlSec .expMini{flex:none;padding:6px 10px;font-size:12px;}
 #expHtmlSec .expHl{width:64px;flex:none;font-size:12px;font-weight:650;color:var(--ink-soft);}
 #expHtmlSec input[type=color]{width:40px;height:28px;flex:none;padding:0 2px;border:1px solid var(--panel-border);border-radius:7px;background:var(--node-bg);cursor:pointer;}
@@ -2016,6 +2021,9 @@ kbd{
         <button class="seg" data-v="1" role="radio">する(おすすめ)</button>
         <button class="seg" data-v="0" role="radio">しない(元の画像のまま)</button>
       </div>
+      <div class="menu-label">追加のCSS(サイトのすべてのページに効きます)</div>
+      <textarea id="expSiteCss" rows="7" spellcheck="false" autocomplete="off" placeholder=".hero-title { letter-spacing: .08em; }&#10;.cta:hover { filter: brightness(1.1); }&#10;#about { scroll-margin-top: 80px; }"></textarea>
+      <div id="expCssHint" class="expCssHint"></div>
       <div class="menu-label">ハンバーガーメニュー(表示する画面)</div>
       <div class="segRow" id="expMenuOnRow">
         <button class="seg" data-r="sp">スマホ</button>
@@ -2177,7 +2185,7 @@ kbd{
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-15.9';
+const APP_VERSION='2026-10-15.10';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -4311,6 +4319,15 @@ function updateSiteDlg(){
   setVal('#expPageFile',page.file);
   setVal('#expSiteTitle',page.title);setVal('#expSiteDesc',page.desc);setVal('#expSiteUrl',c.url);
   $('#expNoindex').classList.toggle('active',!!c.noindex);
+  if(document.activeElement!==$('#expSiteCss'))$('#expSiteCss').value=c.css||'';
+  /* このデザインで使っているクラス名・ID(追加のCSSを書く時の手がかり) */
+  const used=(d.shapes||[]).filter(x=>!x.hidden);
+  const cls=[...new Set(used.flatMap(x=>cleanHtmlCls(x.htmlCls).split(' ')).filter(Boolean))];
+  const ids=[...new Set(used.map(x=>cleanHtmlId(x.htmlId)).filter(Boolean))];
+  $('#expCssHint').innerHTML=(cls.length||ids.length
+    ?'このデザインのクラス・ID: '+[...cls.map(v=>'<code>.'+escXml(v)+'</code>'),...ids.map(v=>'<code>#'+escXml(v)+'</code>')].join(' ')+'<br>'
+    :'クラス名・IDは「色とスタイル」→「ホームページ用の設定」→「HTMLの名前」で付けられます。<br>')
+    +'図形の位置・大きさ・色はHTMLに直接書かれているため、変える時は <code>!important</code> を付けてください(例: <code>.cta{background:#000 !important}</code>)。';
   document.querySelectorAll('#expImgOptRow .seg').forEach(b=>{
     const on=(b.dataset.v==='1')===siteImgOptOn(c);
     b.classList.toggle('active',on);b.setAttribute('aria-checked',on?'true':'false');
@@ -4418,6 +4435,18 @@ $('#expSiteUrl').addEventListener('input',()=>{siteCfg().url=$('#expSiteUrl').va
   $('#'+id).addEventListener('pointerdown',e=>e.stopPropagation());
   $('#'+id).addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter')e.target.blur();});
 });
+$('#expSiteCss').addEventListener('input',()=>{const c=siteCfg();const v=$('#expSiteCss').value;if(v.trim())c.css=v;else delete c.css;save();});
+/* 入力中のキー操作(Tabで字下げ・Enterで改行)をアプリのショートカットに渡さない */
+$('#expSiteCss').addEventListener('keydown',e=>{
+  e.stopPropagation();
+  if(e.key==='Tab'&&!e.shiftKey){
+    e.preventDefault();
+    const t=e.target,a=t.selectionStart,b=t.selectionEnd;
+    t.value=t.value.slice(0,a)+'  '+t.value.slice(b);t.selectionStart=t.selectionEnd=a+2;
+    t.dispatchEvent(new Event('input'));
+  }
+});
+$('#expSiteCss').addEventListener('pointerdown',e=>e.stopPropagation());
 $('#expImgOptRow').addEventListener('click',e=>{
   const b=e.target.closest('.seg');if(!b)return;
   const c=siteCfg();
@@ -5813,6 +5842,14 @@ function siteJs(){
 })();
 `;
 }
+/* 追加のCSS。サイト一式では css/custom.css を読み込み、1ファイルではページに入れる */
+const customCssText=c=>(c.css||'').trim();
+function siteCustomCss(c,files){
+  const css=customCssText(c);if(!css)return'';
+  if(files)return'\n<link rel="stylesheet" href="css/custom.css">';
+  /* CSSの中に </style> があっても途中で閉じないように */
+  return'\n<style>\n/* 追加のCSS */\n'+css.replace(/<\/(style)/gi,'<\\/$1')+'\n</style>';
+}
 /* 公開URLの基準(末尾を / にそろえる) */
 function siteBaseUrl(c){
   let u=safeHref(c.url);
@@ -5868,7 +5905,7 @@ ${head}
 <script>document.documentElement.classList.add('nt-js');<\/script>
 ${opt.files?'<link rel="stylesheet" href="css/style.css">\n':''}<style>
 ${opt.files?'':siteCss(c)}${pageCss}
-</style>
+</style>${siteCustomCss(c,opt.files)}
 </head>
 <body>
 ${body}
@@ -6509,6 +6546,7 @@ function siteReadme(d,c,pages,extra){
     '',
     '■ その他のファイル',
     '・css/style.css … 見た目',
+    ...(customCssText(c)?['・css/custom.css … 追加のCSS(見た目を変える時はここに書き足せます)']:[]),
     '・js/main.js … 画面幅への合わせ込み・動き・メニュー',
     '・images/ … 画像',
     ...extra,
@@ -6539,6 +6577,7 @@ async function exportSiteZip(){
   }finally{siteImgSink=null;siteImgOpt=null;}
   const forms=siteFormsUsed;siteFormsUsed=null;
   files.push({name:'css/style.css',data:siteCss(c)},{name:'js/main.js',data:siteJs()},...sink.files);
+  if(customCssText(c))files.push({name:'css/custom.css',data:'/* 追加のCSS(NT-D の書き出し画面で書いたもの。css/style.css のあとに読み込まれます) */\n'+customCssText(c)+'\n'});
   const extra=[];
   if(ogp){files.push({name:'ogp.png',data:ogp});extra.push('・ogp.png … SNSでシェアされた時の画像');}
   if(icons){files.push({name:'favicon.png',data:icons.fav},{name:'apple-touch-icon.png',data:icons.apple});extra.push('・favicon.png / apple-touch-icon.png … ブラウザのタブ・ホーム画面のアイコン');}
