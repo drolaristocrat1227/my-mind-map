@@ -1948,7 +1948,7 @@ kbd{
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-15.1';
+const APP_VERSION='2026-10-15.2';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -3698,8 +3698,8 @@ function rangeShapes(){
   if(!d.shapes)return null;
   if(expRange==='frame'){
     const f=expFrame();if(!f)return null;
-    const fi=d.shapes.indexOf(f);
-    return[f,...d.shapes.filter((s,i)=>i>fi&&frameAt(d.shapes,i)===f)];
+    /* 中に置いたフレーム(区画)とその中身も含める */
+    return[f,...frameDescendants(d.shapes,f)];
   }
   if(expRange==='sel'){
     /* フレームを選んでいたら中身も連れてくる(移動・複製と同じ扱い) */
@@ -4287,42 +4287,56 @@ function safeHref(u){
   if(!u||/^(javascript|data|vbscript):/i.test(u))return'';
   return u;
 }
-/* フレームとその中身 → 1ページぶんのHTML */
+/* フレームの下地(デバイスの外装・影はホームページには出さない)。oはそのフレームの左上 */
+function siteFrameBg(f,o){
+  const bgShape={...f,rot:0,device:undefined};
+  delete bgShape.shadows;delete bgShape.sh;
+  return siteCssBox(bgShape,o)||siteSvg(bgShape,o);
+}
+/* フレームとその中身 → 1ページぶんのHTML。
+   フレームの中に置いたフレーム(ヘッダーなどの区画)も、中身ごと入れ子の箱にして含める */
 function sitePageHtml(f,cls){
-  const d=curDoc(),sh=d.shapes,fi=sh.indexOf(f);
-  const o={x:f.x-f.w/2,y:f.y-f.h/2};
-  const kids=sh.filter((s,i)=>i>fi&&frameAt(sh,i)===f&&!s.hidden);
+  const sh=curDoc().shapes;
+  const all=frameDescendants(sh,f).filter(s=>!s.hidden);
   /* 一番大きい文字を見出し(h1)、大きめの文字を小見出し(h2)にする(検索エンジン向け) */
-  const texts=kids.filter(s=>s.type==='text'&&(s.text||'').trim()&&siteTextOk(s));
+  const texts=all.filter(s=>s.type==='text'&&(s.text||'').trim()&&siteTextOk(s));
   const fsOf=s=>Math.max(...[...s.text].map((_,i)=>charAttr(s,i).fs));
   const maxFs=texts.length?Math.max(...texts.map(fsOf)):0;
   let h1=null;
   texts.forEach(s=>{if(!h1&&fsOf(s)===maxFs)h1=s;});
-  const parts=[];
-  /* フレームの下地(デバイスの外装はホームページには出さない) */
-  const bgShape={...f,rot:0,device:undefined,x:f.x,y:f.y};
-  delete bgShape.shadows;delete bgShape.sh;
-  parts.push(siteCssBox(bgShape,o)||siteSvg(bgShape,o));
-  kids.forEach(s=>{
-    if(s.type==='text'&&!(s.text||'').trim())return;
-    let el=null;
-    if(s.type==='text'&&siteTextOk(s))el=siteText(s,o,s===h1?'h1':fsOf(s)>=28?'h2':'p');
-    else if(s.type==='image')el=siteImage(s,o);
-    else el=siteCssBox(s,o);
-    if(!el)el=siteSvg(s,o);
-    const href=safeHref(s.href);
-    if(href){
-      const ext=/^https?:/i.test(href)?' target="_blank" rel="noopener"':'';
-      el=`<a href="${escXml(href)}"${ext}>${el}</a>`;
-    }
-    parts.push(el);
-  });
+  /* frの直接の中身を、frの左上(o)を原点にして並べる */
+  const inner=(fr,o)=>{
+    const fi=sh.indexOf(fr),parts=[];
+    sh.forEach((s,i)=>{
+      if(i<=fi||s.hidden||parentFrameAt(sh,i)!==fr)return;
+      if(isFrame(s)){
+        const io={x:s.x-s.w/2,y:s.y-s.h/2};
+        const st=`left:${cssNum(io.x-o.x)}px;top:${cssNum(io.y-o.y)}px;width:${cssNum(s.w)}px;height:${cssNum(s.h)}px`
+          +(s.clip!==false?';overflow:hidden':'');
+        parts.push(`<div class="nt-e" style="${st}">\n${siteFrameBg(s,io)}\n${inner(s,io)}\n</div>`);
+        return;
+      }
+      if(s.type==='text'&&!(s.text||'').trim())return;
+      let el=null;
+      if(s.type==='text'&&siteTextOk(s))el=siteText(s,o,s===h1?'h1':fsOf(s)>=28?'h2':'p');
+      else if(s.type==='image')el=siteImage(s,o);
+      else el=siteCssBox(s,o);
+      if(!el)el=siteSvg(s,o);
+      const href=safeHref(s.href);
+      if(href){
+        const ext=/^https?:/i.test(href)?' target="_blank" rel="noopener"':'';
+        el=`<a href="${escXml(href)}"${ext}>${el}</a>`;
+      }
+      parts.push(el);
+    });
+    return parts.join('\n');
+  };
+  const o={x:f.x-f.w/2,y:f.y-f.h/2};
   const bg=(!f.grad&&f.fill)?cssCol(f.fill,alphaOf(f,'fill')):'#FFFFFF';
-  /* 狭い画面用(幅768px未満)のデザインは画面いっぱいまで拡大してよい。広いデザインは等倍まで */
-  const max=f.w<SITE_BP?4:1;
-  return`<div class="nt-view ${cls}" data-w="${Math.round(f.w)}" data-h="${Math.round(f.h)}" data-max="${max}" style="width:${Math.round(f.w)}px;height:${Math.round(f.h)}px;background:${bg}">
+  return`<div class="nt-view ${cls}" data-w="${Math.round(f.w)}" data-h="${Math.round(f.h)}" style="width:${Math.round(f.w)}px;height:${Math.round(f.h)}px;background:${bg}">
 <div class="nt-page" style="width:${Math.round(f.w)}px;height:${Math.round(f.h)}px${f.clip!==false?';overflow:hidden':''}">
-${parts.join('\n')}
+${siteFrameBg(f,o)}
+${inner(f,o)}
 </div>
 </div>`;
 }
@@ -4367,7 +4381,9 @@ ${views}
     var W=document.documentElement.clientWidth;
     document.querySelectorAll('.nt-view').forEach(function(v){
       if(getComputedStyle(v).display==='none')return;
-      var w=+v.dataset.w,h=+v.dataset.h,k=Math.min(W/w,+v.dataset.max||1);
+      /* スマホなど狭い画面では幅いっぱいまで拡大、広い画面では等倍より大きくしない */
+      var w=+v.dataset.w,h=+v.dataset.h,k=W/w;
+      if(k>1&&W>=${SITE_BP})k=1;
       v.style.width=w*k+'px';v.style.height=h*k+'px';
       v.firstElementChild.style.transform='scale('+k+')';
     });
@@ -5600,6 +5616,22 @@ function frameAt(sh,i){
   if(isFrame(s))return null;
   for(let k=i-1;k>=0;k--)if(isFrame(sh[k])&&inFrame(sh[k],s))return sh[k];
   return null;
+}
+/* shapes[i] を含むフレーム(フレーム自身にも使える。フレームの中のフレーム=区画の親を探す) */
+function parentFrameAt(sh,i){
+  const s=sh[i];
+  for(let k=i-1;k>=0;k--)if(isFrame(sh[k])&&inFrame(sh[k],s))return sh[k];
+  return null;
+}
+/* フレームの中身すべて(中に置いたフレームとその中身も含む。重ね順のまま) */
+function frameDescendants(sh,f){
+  const fi=sh.indexOf(f),inside=new Set([f]),out=[];
+  sh.forEach((s,i)=>{
+    if(i<=fi)return;
+    const p=parentFrameAt(sh,i);
+    if(p&&inside.has(p)){out.push(s);if(isFrame(s))inside.add(s);}
+  });
+  return out;
 }
 /* 切り取り(クリップ)が有効なフレームだけを返す */
 function clipFrameAt(sh,i){
