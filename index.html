@@ -2399,7 +2399,7 @@ kbd{
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-16.2';
+const APP_VERSION='2026-10-16.3';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -5425,7 +5425,7 @@ function spLayout(ctx,items,pb,ox,oy,W,opt){
   const units=[];
   const byKey={};
   rest.forEach(s=>{
-    const k=s.fr?'f:'+s.fr.form:s.nw?'n:'+s.nw.box:s.gid?'g:'+s.gid:null;
+    const k=s.fr?'f:'+s.fr.form:s.nw?'n:'+s.nw.box:s.gid&&!opt.noGroup?'g:'+s.gid:null;
     if(k){if(byKey[k])byKey[k].m.push(s);else units.push(byKey[k]={kind:s.fr?'form':s.nw?'news':'group',m:[s]});}
     else units.push({kind:isFrame(s)?'section':'shape',m:[s]});
   });
@@ -5525,7 +5525,7 @@ function spRows(ctx,tops,pb,ox,oy,W,opt){
     r.u.sort((a,b)=>a.b.x1-b.b.x1);
     const x1=Math.min(...r.u.map(u=>u.b.x1)),span=Math.max(...r.u.map(u=>u.b.x2))-x1;
     const small=r.u.every(u=>u.kind!=='section'&&u.b.w<=inner*0.45);
-    if(r.u.length>1&&small&&inner/span>=0.6){
+    if(r.u.length>1&&small&&inner/span>=(r.u.length>=5?0.5:0.6)){   /* 表のように小さな物が5つ以上並ぶ行は、少し縮めてでも横並びを保つ */
       /* 小さな物の横並び: そのまま横に(はみ出す時は全体を縮める) */
       const k=Math.min(1,inner/span);
       const left=spAnchorX(pb,{x1,x2:x1+span,w:span},ox,W,span*k);
@@ -5639,16 +5639,21 @@ function spLayoutUnit(ctx,u,pb,ox,y,W){
   const b=u.b;
   const holder=u.m[0];
   /* 大きな箱(幅がスマホの1.15倍を超える入れ物): 箱を幅いっぱいにして、中身を並べ直す */
-  if(u.kind==='shape'&&u.kids&&u.kids.length&&b.w>inner*1.15&&b.h>=40){   /* 細い帯(棒グラフ等)は箱として扱わない */
+  /* グループのカード(背景の四角＋文字など)も、背景になる図形があれば同じように箱として扱う */
+  const gBg=u.kind==='group'&&b.w>inner*1.15&&b.h>=40
+    ?u.m.find(s=>['rect','ellipse','image'].includes(s.type)&&!s.media&&(q=>q.w*q.h>=b.w*b.h*0.85)(bx(s))):null;
+  if((u.kind==='shape'&&u.kids&&u.kids.length||gBg)&&b.w>inner*1.15&&b.h>=40){   /* 細い帯(棒グラフ等)は箱として扱わない */
+    const hd=gBg||holder;
     const full=b.w>=pb.w*0.9;
     const bw=full?W:inner,bxo=full?ox:ox+SPM;
-    const c=spClone(holder);c.rot=0;
+    const c=spClone(hd);c.rot=0;
     ctx.out.push(c);
-    const items=u.kids.flatMap(k=>k.m.concat((k.kids||[]).flatMap(kk=>kk.m)));
-    const H=spLayout(ctx,items,b,bxo,y,bw,{});
+    const sub=(u.kids||[]).flatMap(k=>k.m.concat((k.kids||[]).flatMap(kk=>kk.m)));
+    const items=gBg?u.m.filter(s=>s!==gBg).concat(sub):sub;
+    const H=spLayout(ctx,items,b,bxo,y,bw,{noGroup:!!gBg});
     c.w=bw;c.h=H;
-    spMove(c,holder,bxo+bw/2,y+H/2,bw/holder.w);
-    if(c.imgBox){const ib=holder.imgBox,k=Math.max(c.w/holder.w,c.h/holder.h);c.imgBox={w:ib.w*k,h:ib.h*k,x:c.x-ib.w*k/2,y:c.y-ib.h*k/2};}
+    spMove(c,hd,bxo+bw/2,y+H/2,bw/hd.w);
+    if(c.imgBox){const ib=hd.imgBox,k=Math.max(c.w/hd.w,c.h/hd.h);c.imgBox={w:ib.w*k,h:ib.h*k,x:c.x-ib.w*k/2,y:c.y-ib.h*k/2};}
     if(c.r)c.r=Math.min(c.r,16);
     return H;
   }
@@ -6537,6 +6542,8 @@ function siteJs(){
     /* ほかの物より手前に(ページの直下の祖先に z-index を付ける) */
     var a=el;while(a.parentElement&&!a.parentElement.classList.contains('nt-page'))a=a.parentElement;
     a.style.zIndex=el.dataset.pin==='top'?'60':el.dataset.pin==='bottom'?'59':el.dataset.pin==='stack'?String(30+(stackN++)):(a.style.zIndex||'58');
+    /* 区画の中だけ固定: 入れ物の区画の中でも、後ろに並ぶ物より手前に */
+    if(el.dataset.pin==='intop'&&a!==el){var b=el;while(b.parentElement&&b.parentElement.tagName!=='SECTION'&&!b.parentElement.classList.contains('nt-page'))b=b.parentElement;b.style.zIndex='20';}
   });
   function pinScale(el){return el.offsetHeight?el.getBoundingClientRect().height/el.offsetHeight:1;}
   /* 重なるカードの次の1枚(すぐ下に続けて置いたカード) */
