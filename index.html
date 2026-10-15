@@ -338,6 +338,15 @@ body.wire-mode.rulers #rulerTop,body.wire-mode.rulers #rulerLeft,body.wire-mode.
 #expPageBox.font-mincho .dpage{font-family:"Yu Mincho","YuMincho","Hiragino Mincho ProN","MS Mincho",serif;}
 #expPageBox.font-gothic .dpage{font-family:"Yu Gothic","YuGothic","Hiragino Sans","Meiryo","MS Gothic",sans-serif;}
 #expBtns{display:flex;gap:10px;margin-top:14px;}
+/* ホームページ(HTML)の設定欄 */
+#expHtmlSec .numRow{padding:3px 2px;}
+#expHtmlSec .segRow{padding:5px 2px;}
+#expHtmlSec .menu-label{padding:8px 2px 0;}
+#expHtmlSec .expHl{width:64px;flex:none;font-size:12px;font-weight:650;color:var(--ink-soft);}
+#expHtmlSec input[type=color]{width:40px;height:28px;flex:none;padding:0 2px;border:1px solid var(--panel-border);border-radius:7px;background:var(--node-bg);cursor:pointer;}
+#expMenuItems .numRow input[type=text]{height:30px;}
+.mi-del{width:28px;height:28px;flex:none;border-radius:7px;color:var(--ink-soft);font-size:16px;}
+.mi-del:hover{color:var(--danger);background:var(--btn-hover);}
 #expBtns button{flex:1;padding:11px;border-radius:11px;font-size:13.5px;font-weight:650;transition:all .15s;}
 #expCancel{background:var(--btn-hover);color:var(--ink-soft);}
 #expCancel:hover{color:var(--ink);}
@@ -1260,11 +1269,41 @@ kbd{
     <div class="numRow"><span class="radLbl">Y</span><input type="number" id="posY" step="1"><span class="unit">px</span></div>
     <div class="numRow"><span class="radLbl">回転</span><input type="number" id="posRot" step="1"><span class="unit">°</span></div>
   </div>
-  <!-- ホームページ(HTML)に書き出した時、押すと開くリンク -->
-  <div id="linkSec">
+  <!-- ホームページ(HTML)に書き出した時の設定(図形ごと)。グループはまとめて同じ設定にする -->
+  <div id="webSec">
     <hr>
-    <div class="menu-label">リンク(ホームページ書き出し時に押せるようになります)</div>
-    <div class="numRow"><span class="radLbl">URL</span><input type="text" id="lnkUrl" spellcheck="false" autocomplete="off" placeholder="https://…  /  mailto:…  /  tel:…"></div>
+    <div class="menu-label">ホームページ用の設定</div>
+    <div id="webLinkPart">
+      <div class="menu-label">リンク(押した時の動作)</div>
+      <div class="numRow"><select id="lnkType">
+        <option value="url">URL(別のページ・サイトを開く)</option>
+        <option value="sec">ページ内の区画へ移動</option>
+        <option value="tel">電話をかける</option>
+        <option value="mail">メールを送る</option>
+        <option value="menu">メニューを開く(ハンバーガー)</option>
+      </select></div>
+      <div class="numRow" id="lnkUrlRow"><span class="radLbl" id="lnkLbl">URL</span><input type="text" id="lnkUrl" spellcheck="false" autocomplete="off"></div>
+      <div class="numRow" id="lnkSecRow"><span class="radLbl">区画</span><select id="lnkSec"></select></div>
+    </div>
+    <div class="menu-label">登場の動き(スクロールで見えた時)</div>
+    <div class="numRow"><select id="anType"></select></div>
+    <div class="numRow" id="anTimeRow"><span class="radLbl">遅らせる</span><input type="number" id="anDelay" min="0" max="10" step="0.1"><span class="unit">秒</span><span class="radLbl">長さ</span><input type="number" id="anDur" min="0.1" max="10" step="0.1"><span class="unit">秒</span></div>
+    <div class="menu-label">マウスを乗せた時</div>
+    <div class="numRow"><select id="hvType"></select></div>
+    <div id="webTagPart">
+      <div class="menu-label">文字の種類(検索エンジン向け)</div>
+      <div class="numRow"><select id="webTag">
+        <option value="">自動(大きさで決める)</option>
+        <option value="h1">大見出し(h1・ページに1つ)</option>
+        <option value="h2">見出し(h2)</option>
+        <option value="h3">小見出し(h3)</option>
+        <option value="p">本文(p)</option>
+      </select></div>
+    </div>
+    <div id="webAltPart">
+      <div class="menu-label">画像の説明(検索・読み上げ用)</div>
+      <div class="numRow"><input type="text" id="webAlt" spellcheck="false" autocomplete="off" placeholder="例: 店内の様子"></div>
+    </div>
   </div>
   <div id="textSec">
     <hr>
@@ -1857,14 +1896,30 @@ kbd{
       <button class="seg" data-fmt="svg">SVG</button>
       <button class="seg" data-fmt="html">HTML</button>
     </div>
-    <!-- ホームページ(HTML): フレーム1枚=1ページ。スマホ用を選ぶと画面幅で切り替える -->
+    <!-- ホームページ(HTML): フレーム1枚=1ページ。画面の幅ごとに使うフレームを選ぶ。設定はデザインごとに保存 -->
     <div id="expHtmlSec" style="display:none">
-      <div class="menu-label">ホームページにするフレーム</div>
-      <div class="numRow"><span class="radLbl">PC用</span><select id="expPcSel"></select></div>
-      <div class="numRow"><span class="radLbl">スマホ用</span><select id="expSpSel"></select></div>
-      <div class="menu-label">ページの情報(検索結果・SNSで表示されます)</div>
-      <div class="numRow"><span class="radLbl">タイトル</span><input type="text" id="expSiteTitle" spellcheck="false" autocomplete="off"></div>
-      <div class="numRow"><span class="radLbl">説明文</span><input type="text" id="expSiteDesc" spellcheck="false" autocomplete="off" placeholder="省略できます"></div>
+      <div class="menu-label">画面の幅ごとに使うフレーム</div>
+      <div class="numRow"><span class="radLbl expHl">PC</span><select id="expPcSel"></select></div>
+      <div class="numRow"><span class="radLbl expHl">タブレット</span><select id="expTabSel"></select></div>
+      <div class="numRow"><span class="radLbl expHl">スマホ</span><select id="expSpSel"></select></div>
+      <div class="menu-label">検索・SNS向けの情報</div>
+      <div class="numRow"><span class="radLbl expHl">タイトル</span><input type="text" id="expSiteTitle" spellcheck="false" autocomplete="off"></div>
+      <div class="numRow"><span class="radLbl expHl">説明文</span><input type="text" id="expSiteDesc" spellcheck="false" autocomplete="off" placeholder="検索結果に出る紹介文(120字前後)"></div>
+      <div class="numRow"><span class="radLbl expHl">公開URL</span><input type="text" id="expSiteUrl" spellcheck="false" autocomplete="off" placeholder="https://example.com/ (決まっていれば)"></div>
+      <div class="segRow"><button class="seg" id="expNoindex">検索結果に出さない(テスト公開用)</button></div>
+      <div class="menu-label">ハンバーガーメニュー(表示する画面)</div>
+      <div class="segRow" id="expMenuOnRow">
+        <button class="seg" data-r="sp">スマホ</button>
+        <button class="seg" data-r="tab">タブレット</button>
+        <button class="seg" data-r="pc">PC</button>
+      </div>
+      <div id="expMenuEdit">
+        <div class="numRow"><span class="radLbl expHl">背景色</span><input type="color" id="expMenuBg"><span class="radLbl">文字色</span><input type="color" id="expMenuFg"></div>
+        <div class="menu-label">メニューの項目(リンク先は「#区画の名前」・URL・tel:・mailto:)</div>
+        <div id="expMenuItems"></div>
+        <datalist id="expSecList"></datalist>
+        <div class="segRow"><button class="seg" id="expMenuAdd">＋ 項目を追加</button><button class="seg" id="expMenuFromSec">区画から作る</button></div>
+      </div>
       <div id="expHtmlNote" style="font-size:11.5px;line-height:1.55;color:var(--ink-soft);padding:6px 2px 2px"></div>
     </div>
     <div class="menu-label">仕上がり</div>
@@ -1948,7 +2003,7 @@ kbd{
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-15.2';
+const APP_VERSION='2026-10-15.3';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -3845,9 +3900,8 @@ async function openExportDlg(){
     else if(ss.length)expRange='sel';
     /* 前回HTMLを選んでいたら、そのままフレーム単位で開く(フレームが無ければ画像に戻す) */
     if(expFmt==='html'){if(frames.length)expRange='frame';else expFmt='png';}
-    if(expSpFrameId&&!frames.some(f=>f.id===expSpFrameId))expSpFrameId='';
+    if(expFmt==='html')initSiteCfg();
   }else if(expFmt==='html')expFmt='png';
-  $('#expSiteTitle').value=curDoc().name||'';
   /* 図形・フレーム単位は実寸が既定、全体は今までどおり用紙に合わせる */
   expPaper=expRange==='all'?'landscape':'fit';
   expScale=1;
@@ -3956,28 +4010,7 @@ function updateExportDlg(){
   $('#expRangeSec').style.display=(wire&&!isHtml)?'block':'none';
   $('#expPrint').textContent=isHtml?'ブラウザで確認':'印刷';
   if(isHtml){
-    const frames=curDoc().shapes.filter(isFrame);
-    const opt=f=>`<option value="${f.id}">${escXml(f.name||'フレーム')} (${Math.round(f.w)}×${Math.round(f.h)})</option>`;
-    $('#expPcSel').innerHTML=frames.map(opt).join('');
-    if(expFrameId)$('#expPcSel').value=expFrameId;
-    $('#expSpSel').innerHTML='<option value="">なし(どの画面でも同じフレーム)</option>'
-      +frames.filter(f=>f.id!==expFrameId).map(opt).join('');
-    $('#expSpSel').value=expSpFrameId&&expSpFrameId!==expFrameId?expSpFrameId:'';
-    ['#expPaperRow','#expScaleSec','#expPosSec','#expSplitSec','#expBgSec','#expWirePagerRow'].forEach(q=>$(q).style.display='none');
-    $('#expPaperRow').previousElementSibling.style.display='none';
-    const pc=expFrame();
-    const sp=$('#expSpSel').value?frames.find(f=>f.id===$('#expSpSel').value):null;
-    $('#expSizeLabel').classList.remove('over');
-    $('#expSizeLabel').textContent=pc
-      ?(sp?`画面幅${SITE_BP}px以上は「${pc.name||'フレーム'}」、未満は「${sp.name||'フレーム'}」を表示します`
-          :`「${pc.name||'フレーム'}」(${Math.round(pc.w)}px幅)を画面の幅に合わせて表示します`)
-      :'';
-    $('#expHtmlNote').innerHTML='・フレームの中にある図形だけがページになります<br>'
-      +'・文字・四角・丸・画像はHTML/CSSに、それ以外の図形はSVGに変換します<br>'
-      +'・リンクは「色とスタイル」の「リンク」で図形ごとに設定できます<br>'
-      +'・画像はファイルの中に埋め込むので、HTMLファイル1つで表示できます';
-    $('#expSave').disabled=!pc;$('#expPrint').disabled=!pc;
-    $('#expPrev').src=expContent?finalCanvas().toDataURL('image/png'):'';
+    updateSiteDlg();
     return;
   }
   const isSvg=expFmt==='svg';
@@ -4053,7 +4086,7 @@ $('#expFmtRow').addEventListener('click',e=>{
     if(!frames.length){toast('先にフレームを作ってください(フレーム1枚が1ページになります)');return;}
     changeExp(()=>{
       expFmt='html';expRange='frame';expPaper='fit';expScale=1;
-      if(!frames.some(f=>f.id===expFrameId))expFrameId=frames[0].id;
+      initSiteCfg();
     });
     return;
   }
@@ -4062,11 +4095,113 @@ $('#expFmtRow').addEventListener('click',e=>{
   /* HTMLで隠していた用紙・倍率などの欄を出し直す */
   if(wasHtml)changeExp(()=>{});else updateExportDlg();
 });
-$('#expPcSel').addEventListener('change',()=>changeExp(()=>{expFrameId=$('#expPcSel').value;}));
-$('#expSpSel').addEventListener('change',()=>{expSpFrameId=$('#expSpSel').value;updateExportDlg();});
-['expSiteTitle','expSiteDesc'].forEach(id=>{
+/* ---------- ホームページ(HTML)の設定欄 ----------
+   設定は d.site に保存するので、次に開いた時もそのまま使える */
+function initSiteCfg(){
+  const d=curDoc(),c=siteCfg(d);
+  const frames=d.shapes.filter(isFrame);
+  ['pc','tab','sp'].forEach(k=>{if(c[k]&&!frames.some(f=>f.id===c[k]))c[k]=null;});
+  /* まだ何も選んでいなければ、選択中(無ければ先頭)のフレームをPC用にする */
+  if(!c.pc&&!c.tab&&!c.sp)c.pc=(frames.find(f=>f.id===expFrameId)||frames[0]||{}).id||null;
+  if(!c.title)c.title=d.name||'';
+  siteSyncPreview();
+}
+/* プレビューには一番広い画面で出すページを使う */
+function siteSyncPreview(){
+  const v=siteViews(curDoc());
+  const top=v.find(x=>x.ranges.includes('pc'))||v[v.length-1];
+  if(top)expFrameId=top.f.id;
+}
+function updateSiteDlg(){
+  const d=curDoc(),c=siteCfg(d);
+  const frames=d.shapes.filter(isFrame);
+  const opt=f=>`<option value="${f.id}">${escXml(f.name||'フレーム')} (${Math.round(f.w)}×${Math.round(f.h)})</option>`;
+  [['pc','#expPcSel','なし'],['tab','#expTabSel','なし(PCかスマホで代用)'],['sp','#expSpSel','なし(PCかタブレットで代用)']].forEach(([k,q,none])=>{
+    $(q).innerHTML=`<option value="">${none}</option>`+frames.map(opt).join('');
+    $(q).value=c[k]||'';
+  });
+  const setVal=(q,v)=>{if(document.activeElement!==$(q))$(q).value=v||'';};
+  setVal('#expSiteTitle',c.title);setVal('#expSiteDesc',c.desc);setVal('#expSiteUrl',c.url);
+  $('#expNoindex').classList.toggle('active',!!c.noindex);
+  document.querySelectorAll('#expMenuOnRow .seg').forEach(b=>b.classList.toggle('active',!!c.menu.on[b.dataset.r]));
+  $('#expMenuBg').value=/^#[0-9a-f]{6}$/i.test(c.menu.bg)?c.menu.bg:'#ffffff';
+  $('#expMenuFg').value=/^#[0-9a-f]{6}$/i.test(c.menu.fg)?c.menu.fg:'#1f2a44';
+  renderSiteMenuItems();
+  $('#expSecList').innerHTML=['top',...siteSectionNames(d)].map(n=>`<option value="#${escXml(n)}">`).join('');
+  ['#expPaperRow','#expScaleSec','#expPosSec','#expSplitSec','#expBgSec','#expWirePagerRow'].forEach(q=>$(q).style.display='none');
+  $('#expPaperRow').previousElementSibling.style.display='none';
+  /* どの幅でどのページが出るかの要約 */
+  const views=siteViews(d);
+  const rn={sp:'スマホ',tab:'タブレット',pc:'PC'};
+  $('#expSizeLabel').classList.remove('over');
+  $('#expSizeLabel').textContent=views.length
+    ?views.map(v=>`${v.ranges.map(r=>rn[r]).join('・')}:「${v.f.name||'フレーム'}」`).join(' / ')
+    :'フレームを1つ以上選んでください';
+  $('#expHtmlNote').innerHTML='・フレームの中にある図形だけがページになります。中に置いたフレームは「区画」になり、その名前でページ内リンク(#名前)できます<br>'
+    +'・リンク・動き・見出しの種類は「色とスタイル」の「ホームページ用の設定」で図形ごとに決められます<br>'
+    +'・画像はファイルの中に埋め込むので、HTMLファイル1つで表示できます';
+  $('#expSave').disabled=!views.length;$('#expPrint').disabled=!views.length;
+  $('#expPrev').src=expContent?finalCanvas().toDataURL('image/png'):'';
+}
+function renderSiteMenuItems(){
+  const c=siteCfg(),box=$('#expMenuItems');
+  /* 入力中は作り直さない(カーソルが飛ぶため) */
+  if(box.contains(document.activeElement)&&box.children.length===c.menu.items.length)return;
+  box.innerHTML=c.menu.items.map((it,i)=>`<div class="numRow" data-i="${i}">
+    <input type="text" class="mi-t" value="${escXml(it.t||'')}" placeholder="表示名" spellcheck="false" autocomplete="off">
+    <input type="text" class="mi-h" value="${escXml(it.h||'')}" placeholder="#区画 / URL" list="expSecList" spellcheck="false" autocomplete="off">
+    <button class="mi-del" title="この項目を消す">&times;</button></div>`).join('')
+    ||'<div class="menu-label" style="font-weight:600">項目がありません(メニューは表示されません)</div>';
+}
+/* メニュー項目を区画から作る(トップ＋区画の名前) */
+function siteMenuFromSections(){
+  const names=siteSectionNames(curDoc());
+  siteCfg().menu.items=[{t:'トップ',h:'#top'},...names.map(n=>({t:n,h:'#'+n}))];
+}
+$('#expPcSel').addEventListener('change',()=>siteSetFrame('pc','#expPcSel'));
+$('#expTabSel').addEventListener('change',()=>siteSetFrame('tab','#expTabSel'));
+$('#expSpSel').addEventListener('change',()=>siteSetFrame('sp','#expSpSel'));
+function siteSetFrame(k,q){
+  siteCfg()[k]=$(q).value||null;
+  save();
+  changeExp(siteSyncPreview);
+}
+[['expSiteTitle','title'],['expSiteDesc','desc'],['expSiteUrl','url']].forEach(([id,k])=>{
+  $('#'+id).addEventListener('input',()=>{siteCfg()[k]=$('#'+id).value.trim();save();});
+});
+['expSiteTitle','expSiteDesc','expSiteUrl'].forEach(id=>{
   $('#'+id).addEventListener('pointerdown',e=>e.stopPropagation());
   $('#'+id).addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter')e.target.blur();});
+});
+$('#expNoindex').onclick=()=>{const c=siteCfg();c.noindex=!c.noindex;save();updateExportDlg();};
+$('#expMenuOnRow').addEventListener('click',e=>{
+  const b=e.target.closest('.seg');if(!b)return;
+  const c=siteCfg(),r=b.dataset.r;
+  c.menu.on[r]=!c.menu.on[r];
+  /* 初めて使う時は、区画の名前から項目を作っておく */
+  if(c.menu.on[r]&&!c.menu.items.length)siteMenuFromSections();
+  save();updateExportDlg();
+});
+$('#expMenuBg').addEventListener('input',()=>{siteCfg().menu.bg=$('#expMenuBg').value;save();});
+$('#expMenuFg').addEventListener('input',()=>{siteCfg().menu.fg=$('#expMenuFg').value;save();});
+$('#expMenuAdd').onclick=()=>{siteCfg().menu.items.push({t:'',h:''});save();renderSiteMenuItems();
+  const rows=$('#expMenuItems').querySelectorAll('.mi-t');if(rows.length)rows[rows.length-1].focus();};
+$('#expMenuFromSec').onclick=()=>{
+  if(!siteSectionNames(curDoc()).length){toast('区画がありません(フレームの中にフレームを置き、名前を付けると区画になります)');return;}
+  siteMenuFromSections();save();renderSiteMenuItems();toast('区画の名前からメニューを作りました');
+};
+$('#expMenuItems').addEventListener('input',e=>{
+  const row=e.target.closest('[data-i]');if(!row)return;
+  const it=siteCfg().menu.items[+row.dataset.i];if(!it)return;
+  if(e.target.classList.contains('mi-t'))it.t=e.target.value;
+  if(e.target.classList.contains('mi-h'))it.h=e.target.value.trim();
+  save();
+});
+$('#expMenuItems').addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter')e.target.blur();});
+$('#expMenuItems').addEventListener('click',e=>{
+  const b=e.target.closest('.mi-del');if(!b)return;
+  siteCfg().menu.items.splice(+b.closest('[data-i]').dataset.i,1);
+  save();renderSiteMenuItems();
 });
 $('#expBgRow').addEventListener('click',e=>{
   const b=e.target.closest('.seg');
@@ -4147,8 +4282,7 @@ function makeWireSvg(shapes,box,pad,bgMode,measures,measureBg){
    画面と同じSVGをそのまま埋め込む(見た目を崩さないため)。
    ページはデザインの幅で組み、表示する画面の幅に合わせて全体を拡大縮小する。
    ============================================================ */
-const SITE_BP=768;   /* これより狭い画面ではスマホ用フレームを出す */
-let expSpFrameId='';
+const SITE_BP=768,SITE_PC=1024;   /* スマホ 〜767px / タブレット 768〜1023px / PC 1024px〜 */
 const cssNum=v=>Math.round(v*100)/100;
 /* style="…" の中に書くので、フォント名の " は ' にする */
 const cssFont=k=>fontStack(k).replace(/"/g,"'");
@@ -4287,75 +4421,199 @@ function safeHref(u){
   if(!u||/^(javascript|data|vbscript):/i.test(u))return'';
   return u;
 }
+/* ---------- サイト全体の設定(デザインごとに保存) ----------
+   d.site={pc,tab,sp:フレームid, title,desc,url,noindex,
+           menu:{on:{sp,tab,pc}, bg,fg, items:[{t:表示名,h:リンク先}]}} */
+function siteCfg(d){
+  d=d||curDoc();
+  const s=d.site||(d.site={});
+  if(!s.menu)s.menu={on:{sp:false,tab:false,pc:false},bg:'#FFFFFF',fg:'#1F2A44',items:[]};
+  if(!s.menu.on)s.menu.on={sp:false,tab:false,pc:false};
+  if(!s.menu.items)s.menu.items=[];
+  return s;
+}
+/* 画面の幅の区切り: スマホ 〜767px / タブレット 768〜1023px / PC 1024px〜 */
+const SITE_RANGES=[
+  {r:'sp', n:'スマホ',     mq:`(max-width:${SITE_BP-0.02}px)`},
+  {r:'tab',n:'タブレット', mq:`(min-width:${SITE_BP}px) and (max-width:${SITE_PC-0.02}px)`},
+  {r:'pc', n:'PC',         mq:`(min-width:${SITE_PC}px)`}
+];
+/* それぞれの幅でどのフレームを出すか。選んでいない幅は近いフレームで代用する */
+function siteViews(d){
+  const c=siteCfg(d),frames=d.shapes.filter(isFrame);
+  const get=id=>id?frames.find(f=>f.id===id):null;
+  const pick={sp:get(c.sp),tab:get(c.tab),pc:get(c.pc)};
+  const order={sp:['sp','tab','pc'],tab:['tab','pc','sp'],pc:['pc','tab','sp']};
+  const views=[];
+  SITE_RANGES.forEach(({r})=>{
+    const f=order[r].map(k=>pick[k]).find(Boolean);
+    if(!f)return;
+    let v=views.find(x=>x.f===f);
+    if(!v)views.push(v={f,ranges:[]});
+    v.ranges.push(r);
+  });
+  return views;
+}
+/* ページ内の区画(フレームの中に置いたフレーム)の名前一覧。リンク先「#名前」に使う */
+function siteSectionNames(d){
+  const sh=(d||curDoc()).shapes||[];
+  const names=[];
+  sh.forEach((s,i)=>{if(isFrame(s)&&parentFrameAt(sh,i)&&s.name&&!names.includes(s.name))names.push(s.name);});
+  return names;
+}
+/* リンクの種類(パネルの「種類」) */
+function linkKind(h){
+  if(!h)return'url';
+  if(h==='#nt-menu')return'menu';
+  if(/^tel:/i.test(h))return'tel';
+  if(/^mailto:/i.test(h))return'mail';
+  if(h[0]==='#')return'sec';
+  return'url';
+}
+const ANIMS=[['','なし'],['fade','ふわっと表示'],['up','下から'],['down','上から'],['left','左から'],['right','右から'],['zoom','拡大しながら'],['blur','ぼかしから']];
+const HOVERS=[['','なし'],['lift','浮き上がる'],['grow','少し大きく'],['shrink','少し小さく(押した感じ)']];
 /* フレームの下地(デバイスの外装・影はホームページには出さない)。oはそのフレームの左上 */
 function siteFrameBg(f,o){
   const bgShape={...f,rot:0,device:undefined};
   delete bgShape.shadows;delete bgShape.sh;
   return siteCssBox(bgShape,o)||siteSvg(bgShape,o);
 }
+/* 1つの図形 → 要素(リンク・動きは付けない) */
+function siteShapeEl(s,o,tagOf){
+  if(s.type==='text'&&siteTextOk(s))return siteText(s,o,tagOf(s));
+  return(s.type==='image'?siteImage(s,o):siteCssBox(s,o))||siteSvg(s,o);
+}
+/* リンク・動き・ホバーを付ける。グループ(ボタン=四角+文字など)はまとめて1つにする */
+function siteWrapUnit(members,html,o){
+  const pick=k=>{const m=members.find(s=>s[k]);return m?m[k]:null;};
+  const href=safeHref(pick('href')),anim=pick('anim'),hover=pick('hover');
+  if(href){
+    if(href==='#nt-menu')html=`<a href="#nt-menu" class="nt-open" role="button" aria-label="メニューを開く" aria-controls="nt-menu">${html}</a>`;
+    else{
+      const ext=/^https?:/i.test(href)?' target="_blank" rel="noopener"':'';
+      html=`<a href="${escXml(href)}"${ext}>${html}</a>`;
+    }
+  }
+  if(!hover&&!(anim&&anim.t))return html;
+  /* 拡大・縮小の中心をこのまとまりの中心にする */
+  const b=unionWorldBox(members);
+  const org=`transform-origin:${cssNum(b.x+b.w/2-o.x)}px ${cssNum(b.y+b.h/2-o.y)}px`;
+  if(hover)html=`<div class="nt-u nt-h-${hover}" style="${org}">${html}</div>`;
+  if(anim&&anim.t){
+    const d=anim.d||0,t=anim.dur||0.8;
+    html=`<div class="nt-u nt-an nt-an-${anim.t}" style="${org};--d:${cssNum(d)}s;--t:${cssNum(t)}s">${html}</div>`;
+  }
+  return html;
+}
 /* フレームとその中身 → 1ページぶんのHTML。
    フレームの中に置いたフレーム(ヘッダーなどの区画)も、中身ごと入れ子の箱にして含める */
-function sitePageHtml(f,cls){
+function sitePageHtml(f,ranges,top){
   const sh=curDoc().shapes;
   const all=frameDescendants(sh,f).filter(s=>!s.hidden);
-  /* 一番大きい文字を見出し(h1)、大きめの文字を小見出し(h2)にする(検索エンジン向け) */
+  /* 見出し: 指定があればそれ、「自動」なら一番大きい文字をh1、28px以上をh2にする */
   const texts=all.filter(s=>s.type==='text'&&(s.text||'').trim()&&siteTextOk(s));
   const fsOf=s=>Math.max(...[...s.text].map((_,i)=>charAttr(s,i).fs));
-  const maxFs=texts.length?Math.max(...texts.map(fsOf)):0;
+  const autoT=texts.filter(s=>!s.tag);
   let h1=null;
-  texts.forEach(s=>{if(!h1&&fsOf(s)===maxFs)h1=s;});
+  if(!texts.some(s=>s.tag==='h1')&&autoT.length){
+    const maxFs=Math.max(...autoT.map(fsOf));
+    h1=autoT.find(s=>fsOf(s)===maxFs);
+  }
+  const tagOf=s=>s.tag||(s===h1?'h1':fsOf(s)>=28?'h2':'p');
   /* frの直接の中身を、frの左上(o)を原点にして並べる */
   const inner=(fr,o)=>{
-    const fi=sh.indexOf(fr),parts=[];
-    sh.forEach((s,i)=>{
-      if(i<=fi||s.hidden||parentFrameAt(sh,i)!==fr)return;
-      if(isFrame(s)){
-        const io={x:s.x-s.w/2,y:s.y-s.h/2};
+    const fi=sh.indexOf(fr),kids=[];
+    sh.forEach((s,i)=>{if(i>fi&&!s.hidden&&parentFrameAt(sh,i)===fr)kids.push(s);});
+    /* 重ね順で続いている同じグループはひとまとまりにする */
+    const units=[];
+    kids.forEach(s=>{
+      const u=units[units.length-1];
+      if(s.gid&&!isFrame(s)&&u&&u.gid===s.gid)u.m.push(s);else units.push({gid:isFrame(s)?null:s.gid,m:[s]});
+    });
+    return units.map(u=>{
+      if(isFrame(u.m[0])){
+        const s=u.m[0],io={x:s.x-s.w/2,y:s.y-s.h/2};
         const st=`left:${cssNum(io.x-o.x)}px;top:${cssNum(io.y-o.y)}px;width:${cssNum(s.w)}px;height:${cssNum(s.h)}px`
           +(s.clip!==false?';overflow:hidden':'');
-        parts.push(`<div class="nt-e" style="${st}">\n${siteFrameBg(s,io)}\n${inner(s,io)}\n</div>`);
-        return;
+        const sec=s.name?` data-sec="${escXml(s.name)}"`:'';
+        return siteWrapUnit(u.m,`<section class="nt-e"${sec} style="${st}">\n${siteFrameBg(s,io)}\n${inner(s,io)}\n</section>`,o);
       }
-      if(s.type==='text'&&!(s.text||'').trim())return;
-      let el=null;
-      if(s.type==='text'&&siteTextOk(s))el=siteText(s,o,s===h1?'h1':fsOf(s)>=28?'h2':'p');
-      else if(s.type==='image')el=siteImage(s,o);
-      else el=siteCssBox(s,o);
-      if(!el)el=siteSvg(s,o);
-      const href=safeHref(s.href);
-      if(href){
-        const ext=/^https?:/i.test(href)?' target="_blank" rel="noopener"':'';
-        el=`<a href="${escXml(href)}"${ext}>${el}</a>`;
-      }
-      parts.push(el);
-    });
-    return parts.join('\n');
+      const els=u.m.filter(s=>!(s.type==='text'&&!(s.text||'').trim())).map(s=>siteShapeEl(s,o,tagOf));
+      return els.length?siteWrapUnit(u.m,els.join(''),o):'';
+    }).filter(Boolean).join('\n');
   };
   const o={x:f.x-f.w/2,y:f.y-f.h/2};
   const bg=(!f.grad&&f.fill)?cssCol(f.fill,alphaOf(f,'fill')):'#FFFFFF';
-  return`<div class="nt-view ${cls}" data-w="${Math.round(f.w)}" data-h="${Math.round(f.h)}" style="width:${Math.round(f.w)}px;height:${Math.round(f.h)}px;background:${bg}">
+  const cls=ranges.map(r=>'nt-r-'+r).join(' ');
+  return`<div class="nt-view ${cls}" data-w="${Math.round(f.w)}" data-h="${Math.round(f.h)}"${top?' data-top="1"':''} style="width:${Math.round(f.w)}px;height:${Math.round(f.h)}px;background:${bg}">
 <div class="nt-page" style="width:${Math.round(f.w)}px;height:${Math.round(f.h)}px${f.clip!==false?';overflow:hidden':''}">
 ${siteFrameBg(f,o)}
 ${inner(f,o)}
 </div>
 </div>`;
 }
+/* フレームの中に「メニューを開く」図形を自分で置いているか */
+const hasOwnMenuBtn=f=>frameDescendants(curDoc().shapes,f).some(s=>!s.hidden&&s.href==='#nt-menu');
+/* ハンバーガーメニュー(開くボタンと、右から出てくるメニュー) */
+function siteMenuHtml(c,views){
+  const m=c.menu;
+  const items=m.items.filter(it=>(it.t||'').trim());
+  const ownBtn=views.some(v=>hasOwnMenuBtn(v.f));
+  const anyOn=SITE_RANGES.some(({r})=>m.on[r]);
+  if(!items.length||(!anyOn&&!ownBtn))return{html:'',css:''};
+  const li=items.map(it=>{
+    const h=safeHref(it.h)||'#top';
+    const ext=/^https?:/i.test(h)?' target="_blank" rel="noopener"':'';
+    return`<li><a href="${escXml(h)}"${ext}>${escXml(it.t)}</a></li>`;
+  }).join('');
+  /* 自動のボタンは、メニューを使う幅で、しかもその幅のデザインに自前のボタンが無い時だけ出す */
+  const showIn=SITE_RANGES.filter(({r})=>{
+    if(!m.on[r])return false;
+    const v=views.find(x=>x.ranges.includes(r));
+    return!(v&&hasOwnMenuBtn(v.f));
+  });
+  const css=showIn.map(({mq})=>`@media ${mq}{.nt-burger{display:flex}}`).join('\n');
+  const html=`<button class="nt-burger nt-open" type="button" aria-label="メニューを開く" aria-controls="nt-menu" aria-expanded="false"><span></span><span></span><span></span></button>
+<div class="nt-menu" id="nt-menu" aria-hidden="true">
+<div class="nt-menu-bg"></div>
+<nav class="nt-menu-panel" aria-label="メニュー">
+<button class="nt-menu-close" type="button" aria-label="メニューを閉じる">&times;</button>
+<ul>${li}</ul>
+</nav>
+</div>`;
+  return{html,css};
+}
 /* ホームページ1枚ぶんのHTMLファイル(画像も埋め込んだ1ファイル) */
-function makeSiteHtml(pc,sp,title,desc){
+function makeSiteHtml(d){
+  d=d||curDoc();
+  const c=siteCfg(d);
+  const views=siteViews(d);
+  if(!views.length)return null;
   svgInlineImages=true;
   try{
-    const views=sp?sitePageHtml(pc,'nt-pc')+'\n'+sitePageHtml(sp,'nt-sp'):sitePageHtml(pc,'nt-one');
-    const bg=(!pc.grad&&pc.fill)?cssCol(pc.fill,alphaOf(pc,'fill')):'#FFFFFF';
-    const t=escXml(title||pc.name||'ホームページ'),ds=escXml(desc||'');
+    /* 一番広い幅を受け持つページを「基準」にする(そのページの色を全体の背景にする) */
+    const topV=views.find(v=>v.ranges.includes('pc'))||views[views.length-1];
+    const body=views.map(v=>sitePageHtml(v.f,v.ranges,v===topV)).join('\n');
+    const pf=topV.f;
+    const bg=(!pf.grad&&pf.fill)?cssCol(pf.fill,alphaOf(pf,'fill')):'#FFFFFF';
+    const t=escXml(c.title||d.name||'ホームページ'),ds=escXml(c.desc||'');
+    const url=safeHref(c.url);
+    const menu=siteMenuHtml(c,views);
+    const hide=views.length>1?SITE_RANGES.map(({r,mq})=>`@media ${mq}{.nt-view:not(.nt-r-${r}){display:none}}`).join('\n')+'\n':'';
+    const mBg=cssCol(c.menu.bg||'#FFFFFF'),mFg=cssCol(c.menu.fg||'#1F2A44');
     return`<!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${t}</title>
-${ds?`<meta name="description" content="${ds}">\n`:''}<meta property="og:type" content="website">
+${ds?`<meta name="description" content="${ds}">\n`:''}${c.noindex?'<meta name="robots" content="noindex, nofollow">\n':''}${url?`<link rel="canonical" href="${escXml(url)}">\n`:''}<meta property="og:type" content="website">
 <meta property="og:title" content="${t}">
-${ds?`<meta property="og:description" content="${ds}">\n`:''}<meta name="generator" content="NT-D">
+${ds?`<meta property="og:description" content="${ds}">\n`:''}${url?`<meta property="og:url" content="${escXml(url)}">\n`:''}<meta property="og:locale" content="ja_JP">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="${bg}">
+<meta name="generator" content="NT-D">
+<script>document.documentElement.classList.add('nt-js');<\/script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{background:${bg}}
@@ -4368,27 +4626,92 @@ img{display:block;max-width:none}
 .nt-t{white-space:pre;font-style:normal}
 .nt-l{display:block;position:absolute;left:0;white-space:pre}
 .nt-svg{overflow:visible}
-${sp?`@media (max-width:${SITE_BP-0.02}px){.nt-pc{display:none}}
-@media (min-width:${SITE_BP}px){.nt-sp{display:none}}
-`:''}</style>
+${hide}/* 動き(スクロールして見えたら .nt-in が付いて表示される) */
+.nt-u{position:absolute;left:0;top:0;width:0;height:0}
+.nt-js .nt-an{opacity:0;transition:opacity var(--t) ease var(--d),translate var(--t) cubic-bezier(.2,.7,.2,1) var(--d),scale var(--t) cubic-bezier(.2,.7,.2,1) var(--d),filter var(--t) ease var(--d)}
+.nt-js .nt-an-up{translate:0 48px}
+.nt-js .nt-an-down{translate:0 -48px}
+.nt-js .nt-an-left{translate:-64px 0}
+.nt-js .nt-an-right{translate:64px 0}
+.nt-js .nt-an-zoom{scale:.86}
+.nt-js .nt-an-blur{filter:blur(12px)}
+.nt-js .nt-an.nt-in{opacity:1;translate:0 0;scale:1;filter:none}
+.nt-h-lift,.nt-h-grow,.nt-h-shrink{transition:translate .25s ease,scale .25s ease}
+.nt-h-lift:hover{translate:0 -6px}
+.nt-h-grow:hover{scale:1.05}
+.nt-h-shrink:hover{scale:.96}
+@media (prefers-reduced-motion:reduce){.nt-js .nt-an{opacity:1;translate:none;scale:none;filter:none;transition:none}}
+/* ハンバーガーメニュー */
+.nt-burger{position:fixed;top:14px;right:14px;z-index:999;width:48px;height:48px;border:0;border-radius:12px;background:${mBg};box-shadow:0 2px 12px rgba(0,0,0,.18);display:none;flex-direction:column;align-items:center;justify-content:center;gap:5px;cursor:pointer}
+.nt-burger span{display:block;width:22px;height:2px;border-radius:2px;background:${mFg}}
+.nt-menu{position:fixed;inset:0;z-index:1000;visibility:hidden;transition:visibility 0s .35s}
+.nt-menu.on{visibility:visible;transition:none}
+.nt-menu-bg{position:absolute;inset:0;background:rgba(0,0,0,.4);opacity:0;transition:opacity .3s}
+.nt-menu.on .nt-menu-bg{opacity:1}
+.nt-menu-panel{position:absolute;top:0;right:0;bottom:0;width:min(340px,86vw);padding:76px 28px 32px;overflow-y:auto;background:${mBg};color:${mFg};transform:translateX(100%);transition:transform .35s cubic-bezier(.2,.8,.2,1);font-family:system-ui,-apple-system,"Hiragino Sans","Yu Gothic UI","Meiryo",sans-serif}
+.nt-menu.on .nt-menu-panel{transform:none}
+.nt-menu ul{list-style:none}
+.nt-menu li a{display:block;padding:15px 4px;font-size:17px;font-weight:600;border-bottom:1px solid color-mix(in srgb,currentColor 18%,transparent)}
+.nt-menu-close{position:absolute;top:14px;right:14px;width:48px;height:48px;border:0;background:none;color:inherit;font-size:32px;line-height:1;cursor:pointer}
+${menu.css}
+</style>
 </head>
 <body>
-${views}
+${body}
+${menu.html}
 <script>
-/* デザインの幅で組んだページを、画面の幅に合わせて拡大縮小する */
 (function(){
+  /* デザインの幅で組んだページを、画面の幅に合わせて拡大縮小する。
+     広い画面では、デザインより大きくはしない(スマホ用のデザインをPCで見た時も等倍で中央に出す) */
   function fit(){
     var W=document.documentElement.clientWidth;
     document.querySelectorAll('.nt-view').forEach(function(v){
       if(getComputedStyle(v).display==='none')return;
-      /* スマホなど狭い画面では幅いっぱいまで拡大、広い画面では等倍より大きくしない */
       var w=+v.dataset.w,h=+v.dataset.h,k=W/w;
-      if(k>1&&W>=${SITE_BP})k=1;
+      if(k>1&&W>=${SITE_BP}&&(w<${SITE_BP}||v.dataset.top))k=1;
       v.style.width=w*k+'px';v.style.height=h*k+'px';
       v.firstElementChild.style.transform='scale('+k+')';
     });
   }
   addEventListener('resize',fit);fit();
+  /* 動き: 画面に入ったら表示する */
+  var an=document.querySelectorAll('.nt-an');
+  if('IntersectionObserver' in window){
+    var io=new IntersectionObserver(function(es){
+      es.forEach(function(e){
+        if(e.isIntersecting){e.target.__nt.classList.add('nt-in');io.unobserve(e.target);}
+      });
+    },{rootMargin:'0px 0px -8% 0px'});
+    an.forEach(function(a){var t=a.querySelector('.nt-e')||a;t.__nt=a;io.observe(t);});
+  }else an.forEach(function(a){a.classList.add('nt-in');});
+  /* メニュー */
+  var menu=document.getElementById('nt-menu');
+  function setMenu(on){
+    if(!menu)return;
+    menu.classList.toggle('on',on);
+    menu.setAttribute('aria-hidden',on?'false':'true');
+    document.querySelectorAll('.nt-open').forEach(function(b){b.setAttribute('aria-expanded',on?'true':'false');});
+    document.documentElement.style.overflow=on?'hidden':'';
+  }
+  if(menu){
+    menu.querySelector('.nt-menu-bg').onclick=function(){setMenu(false);};
+    menu.querySelector('.nt-menu-close').onclick=function(){setMenu(false);};
+    addEventListener('keydown',function(e){if(e.key==='Escape')setMenu(false);});
+  }
+  /* ページ内リンク(#区画名)は、いま表示中のページの区画へなめらかに移動する */
+  document.addEventListener('click',function(e){
+    var a=e.target.closest('a.nt-open,button.nt-open');
+    if(a){e.preventDefault();setMenu(!(menu&&menu.classList.contains('on')));return;}
+    a=e.target.closest('a[href^="#"]');
+    if(!a)return;
+    var h=decodeURIComponent(a.getAttribute('href').slice(1));
+    e.preventDefault();setMenu(false);
+    if(!h||h==='top'){scrollTo({top:0,behavior:'smooth'});return;}
+    var t=[].filter.call(document.querySelectorAll('[data-sec]'),function(el){
+      return el.getAttribute('data-sec')===h&&el.getClientRects().length;
+    })[0];
+    if(t)scrollTo({top:t.getBoundingClientRect().top+scrollY,behavior:'smooth'});
+  });
 })();
 <\/script>
 </body>
@@ -4396,13 +4719,8 @@ ${views}
 `;
   }finally{svgInlineImages=false;}
 }
-/* 書き出しダイアログで選んでいるPC用/スマホ用フレームからHTMLを作る */
-function curSiteHtml(){
-  const pc=expFrame();if(!pc)return null;
-  const frames=curDoc().shapes.filter(isFrame);
-  const sp=expSpFrameId&&expSpFrameId!==pc.id?frames.find(f=>f.id===expSpFrameId):null;
-  return makeSiteHtml(pc,sp,$('#expSiteTitle').value.trim(),$('#expSiteDesc').value.trim());
-}
+/* 書き出しダイアログで選んでいる設定からHTMLを作る */
+function curSiteHtml(){return makeSiteHtml(curDoc());}
 /* 保存するファイル名(どの範囲を出したか分かるように) */
 function expName(){
   const base=curDoc().name;
@@ -8966,19 +9284,130 @@ function applyPosInput(dim){
 $('#posX').addEventListener('change',()=>applyPosInput('x'));
 $('#posY').addEventListener('change',()=>applyPosInput('y'));
 $('#posRot').addEventListener('change',()=>applyPosInput('rot'));
-/* リンク(ホームページ書き出し時に押せるようにする)。空にするとリンクを外す */
-$('#lnkUrl').addEventListener('pointerdown',e=>e.stopPropagation());
-$('#lnkUrl').addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter')e.target.blur();});
-$('#lnkUrl').addEventListener('change',()=>{
-  const ss=selShapes().filter(s=>!isFrame(s));if(!ss.length)return;
-  let v=$('#lnkUrl').value.trim();
-  /* 「www.～」「example.com」のように書いた時は https:// を補う */
-  if(v&&!/^([a-z][a-z0-9+.-]*:|#|\/|\.)/i.test(v)&&/^[^\s]+\.[a-z]{2,}([\/?#].*)?$/i.test(v))v='https://'+v;
-  if(v&&!safeHref(v)){toast('このリンクは使えません');updateStyleMenu();return;}
+/* ---------- ホームページ用の設定(図形ごと) ----------
+   s.href=リンク先 / s.anim={t,d,dur}=登場の動き / s.hover=マウスを乗せた時 / s.tag=文字の種類 / s.alt=画像の説明。
+   グループ(ボタン=四角+文字など)は全員に同じ値を入れ、書き出し時に1つのまとまりとして扱う */
+$('#anType').innerHTML=ANIMS.map(([v,n])=>`<option value="${v}">${n}</option>`).join('');
+$('#hvType').innerHTML=HOVERS.map(([v,n])=>`<option value="${v}">${n}</option>`).join('');
+const LINK_UI={
+  url:{lbl:'URL',ph:'https://…  (www.～ でも可)'},
+  tel:{lbl:'番号',ph:'03-1234-5678'},
+  mail:{lbl:'宛先',ph:'info@example.com'}
+};
+let lnkTypePending=null;   /* 種類だけ変えて、まだ中身を入れていない状態({k,key}。選択が変わったら無効) */
+const selKey=()=>selShapes().map(s=>s.id).join();
+function webTargets(){return selShapes().filter(s=>!s.locked);}
+function updateWebSec(ss){
+  $('#webSec').style.display=ss.length?'block':'none';
+  if(!ss.length)return;
+  const same=k=>{const v=JSON.stringify(ss[0][k]||null);return ss.every(s=>JSON.stringify(s[k]||null)===v);};
+  /* リンク(フレーム=区画には付けない) */
+  const linkable=ss.filter(s=>!isFrame(s));
+  $('#webLinkPart').style.display=linkable.length?'block':'none';
+  if(linkable.length){
+    const h0=linkable[0].href||'';
+    const mixed=linkable.some(s=>(s.href||'')!==h0);
+    const kind=(lnkTypePending&&lnkTypePending.key===selKey())?lnkTypePending.k:linkKind(h0);
+    $('#lnkType').value=kind;
+    $('#lnkUrlRow').style.display=(kind==='url'||kind==='tel'||kind==='mail')?'flex':'none';
+    $('#lnkSecRow').style.display=kind==='sec'?'flex':'none';
+    if(LINK_UI[kind]){
+      $('#lnkLbl').textContent=LINK_UI[kind].lbl;
+      if(document.activeElement!==$('#lnkUrl')){
+        const v=mixed||linkKind(h0)!==kind?'':kind==='tel'?h0.replace(/^tel:/i,''):kind==='mail'?h0.replace(/^mailto:/i,''):h0;
+        $('#lnkUrl').value=v;
+      }
+      $('#lnkUrl').placeholder=mixed?'(図形ごとに違います)':LINK_UI[kind].ph;
+    }
+    if(kind==='sec'){
+      const names=siteSectionNames(curDoc());
+      $('#lnkSec').innerHTML='<option value="">選んでください</option><option value="top">ページの先頭</option>'
+        +names.map(n=>`<option value="${escXml(n)}">${escXml(n)}</option>`).join('');
+      $('#lnkSec').value=linkKind(h0)==='sec'?decodeURIComponent(h0.slice(1)):'';
+    }
+  }
+  /* 動き */
+  const an=same('anim')?ss[0].anim:null;
+  $('#anType').value=an&&an.t||'';
+  $('#anTimeRow').style.display=an&&an.t?'flex':'none';
+  if(an&&an.t){
+    if(document.activeElement!==$('#anDelay'))$('#anDelay').value=an.d||0;
+    if(document.activeElement!==$('#anDur'))$('#anDur').value=an.dur||0.8;
+  }
+  $('#hvType').value=same('hover')?(ss[0].hover||''):'';
+  /* 文字の種類はテキストだけ、画像の説明は画像だけ */
+  const texts=ss.filter(s=>s.type==='text');
+  $('#webTagPart').style.display=texts.length?'block':'none';
+  if(texts.length)$('#webTag').value=texts.every(t=>(t.tag||'')===(texts[0].tag||''))?(texts[0].tag||''):'';
+  const imgs=ss.filter(s=>s.type==='image');
+  $('#webAltPart').style.display=imgs.length?'block':'none';
+  if(imgs.length&&document.activeElement!==$('#webAlt'))$('#webAlt').value=imgs[0].alt||'';
+}
+/* 図形のプロパティをまとめて変える(アンドゥ1回ぶん) */
+function setWebProp(list,fn,msg){
+  if(!list.length)return;
   pushUndo();
-  ss.forEach(s=>{if(v)s.href=v;else delete s.href;});
+  list.forEach(fn);
   save();updateStyleMenu();
-  toast(v?'リンクを設定しました(HTML書き出しで押せるようになります)':'リンクを外しました');
+  if(msg)toast(msg);
+}
+function applyLink(v){
+  const ss=webTargets().filter(s=>!isFrame(s));
+  lnkTypePending=null;
+  if(v&&!safeHref(v)){toast('このリンクは使えません');updateStyleMenu();return;}
+  setWebProp(ss,s=>{if(v)s.href=v;else delete s.href;},
+    v?'リンクを設定しました(HTML書き出しで押せるようになります)':'リンクを外しました');
+}
+$('#lnkType').addEventListener('change',()=>{
+  const k=$('#lnkType').value;
+  if(k==='menu'){applyLink('#nt-menu');return;}
+  /* 中身(URL・番号・区画)を入れるまでは種類の表示だけ切り替える */
+  lnkTypePending={k,key:selKey()};
+  updateStyleMenu();
+  if(LINK_UI[k])$('#lnkUrl').focus();
+});
+$('#lnkUrl').addEventListener('change',()=>{
+  const k=$('#lnkType').value;
+  let v=$('#lnkUrl').value.trim();
+  if(v){
+    if(k==='tel')v='tel:'+v.replace(/^tel:/i,'').replace(/[^\d+#*]/g,'');
+    else if(k==='mail')v='mailto:'+v.replace(/^mailto:/i,'');
+    /* 「www.～」「example.com」のように書いた時は https:// を補う */
+    else if(!/^([a-z][a-z0-9+.-]*:|#|\/|\.)/i.test(v)&&/^[^\s]+\.[a-z]{2,}([\/?#].*)?$/i.test(v))v='https://'+v;
+  }
+  applyLink(v);
+});
+$('#lnkSec').addEventListener('change',()=>{
+  const v=$('#lnkSec').value;
+  applyLink(v?'#'+v:'');
+});
+$('#anType').addEventListener('change',()=>{
+  const t=$('#anType').value;
+  setWebProp(webTargets(),s=>{
+    if(t)s.anim={t,d:s.anim&&s.anim.d||0,dur:s.anim&&s.anim.dur||0.8};else delete s.anim;
+  },t?'書き出したページで、スクロールして見えた時に動きます':'動きを外しました');
+});
+[['anDelay','d',0,10],['anDur','dur',0.1,10]].forEach(([id,k,lo,hi])=>{
+  $('#'+id).addEventListener('change',()=>{
+    const v=clamp(+$('#'+id).value||0,lo,hi);
+    setWebProp(webTargets().filter(s=>s.anim&&s.anim.t),s=>{s.anim={...s.anim,[k]:v};});
+  });
+});
+$('#hvType').addEventListener('change',()=>{
+  const v=$('#hvType').value;
+  setWebProp(webTargets(),s=>{if(v)s.hover=v;else delete s.hover;});
+});
+$('#webTag').addEventListener('change',()=>{
+  const v=$('#webTag').value;
+  setWebProp(webTargets().filter(s=>s.type==='text'),s=>{if(v)s.tag=v;else delete s.tag;});
+});
+$('#webAlt').addEventListener('change',()=>{
+  const v=$('#webAlt').value.trim();
+  setWebProp(webTargets().filter(s=>s.type==='image'),s=>{if(v)s.alt=v;else delete s.alt;});
+});
+['lnkUrl','anDelay','anDur','webAlt','lnkType','lnkSec','anType','hvType','webTag'].forEach(id=>{
+  $('#'+id).addEventListener('pointerdown',e=>e.stopPropagation());
+  $('#'+id).addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter'&&e.target.tagName==='INPUT')e.target.blur();});
 });
 /* パネル内の操作でパネル自体がドラッグされないように止める */
 ['frName','frW','frH','frPreset','frDevice'].forEach(id=>
@@ -9931,15 +10360,7 @@ function updateStyleMenu(){
     if(document.activeElement!==$('#posY'))$('#posY').value=Math.round(posOne.y);
     if(document.activeElement!==$('#posRot'))$('#posRot').value=Math.round(posOne.rot||0);
   }
-  /* リンク: フレーム以外を選んでいる時(ボタンのグループはまとめて同じリンクにする) */
-  const linkable=ss.filter(s=>!isFrame(s));
-  $('#linkSec').style.display=linkable.length?'block':'none';
-  if(linkable.length&&document.activeElement!==$('#lnkUrl')){
-    const h0=linkable[0].href||'';
-    const mixed=linkable.some(s=>(s.href||'')!==h0);
-    $('#lnkUrl').value=mixed?'':h0;
-    $('#lnkUrl').placeholder=mixed?'(図形ごとに違います)':'https://…  /  mailto:…  /  tel:…';
-  }
+  updateWebSec(ss);
   /* 大きさ(px)入力: 単一選択の図形・画像のみ(フレーム・テキストは別) */
   const szS=(ss.length===1&&sizeableShape(ss[0]))?ss[0]:null;
   $('#sizeSec').style.display=szS?'block':'none';
@@ -10260,6 +10681,7 @@ function initColl(){
    ['aspectSec','元の縦横比に戻す',false],
    ['imgFxSec','画像の補正',false],
    ['refineSec','切り取り後の補正',false],
+   ['webSec','ホームページ用の設定(リンク・動き)',false],
    /* テキスト内(ネスト)。フォント・サイズ・太さ・揃えは常に見えるようにし、
       たまにしか使わない文字組みだけ畳む */
    ['txWeightSec','太さ(ウェイト)',true],
