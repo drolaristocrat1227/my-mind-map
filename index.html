@@ -1105,6 +1105,12 @@ body.wirebar-off #wireHint{bottom:18px;}
 #formDlg textarea{height:auto;padding:6px 9px;line-height:1.5;resize:vertical;}
 #formDlg input:focus,#formDlg textarea:focus,#formDlg select:focus{outline:none;border-color:var(--accent);}
 .fm-field{border:1px solid var(--panel-border);border-radius:12px;padding:7px 9px;margin-bottom:8px;}
+.nw-pics{flex-wrap:wrap}
+.nw-pics .seg{flex:none;padding:5px 10px;font-size:12px}
+.nw-th{position:relative;display:inline-flex;flex-direction:column;align-items:center;gap:2px;font-size:10px;color:var(--ink-soft)}
+.nw-th img{width:64px;height:44px;object-fit:cover;border-radius:6px;border:1px solid var(--panel-border)}
+.nw-th b{font-weight:500}
+.nw-th .fm-ico{position:absolute;top:-6px;right:-6px;width:20px;height:20px;font-size:14px}
 .fm-ico{width:28px;height:28px;flex:none;border-radius:7px;color:var(--ink-soft);font-size:14px;font-weight:700;}
 .fm-ico:hover:not(:disabled){background:var(--btn-hover);color:var(--ink);}
 .fm-ico:disabled{opacity:.3;}
@@ -2343,8 +2349,24 @@ kbd{
       <div class="fm-row"><span class="fm-lbl">パスワード</span><input type="password" id="nwPw" autocomplete="new-password" placeholder="8文字以上(クライアントに伝えるもの)"><button class="seg" id="nwPwSet" style="flex:none;padding:6px 12px">設定する</button></div>
       <div class="fm-note" id="nwPwState"></div>
     </div>
+    <div class="menu-label">表示のしかた(サイト全体)</div>
+    <div class="segRow" id="nwBlogRow">
+      <button class="seg" data-blog="0">お知らせ(押すと小窓で開く)</button>
+      <button class="seg" data-blog="1">ブログ形式(記事ごとにページ)</button>
+    </div>
+    <div id="nwBlogPart">
+      <div class="fm-note">記事ごとにページができ、検索結果にも1記事ずつ出ます。記事の一覧のページ(news/)も作ります。本文には「## 見出し」「**太字**」「- 箇条書き」「[文字](https://…)」が使え、本文の画像は [画像1] と書いた所に入ります。</div>
+      <div class="fm-row"><span class="fm-lbl">一覧の見出し</span><input type="text" id="nwBTitle" placeholder="お知らせ(例: ブログ・スタッフ日記)"></div>
+      <div class="fm-row"><span class="fm-lbl">ページの色</span><input type="color" id="nwBAccent"><span class="fm-note" style="margin:0">記事のページ・一覧のページの見出しやボタンの色</span></div>
+    </div>
     <div id="nwBoxPart">
       <div class="menu-label">このお知らせ欄の表示</div>
+      <div class="fm-row"><span class="fm-lbl">中身</span><div class="segRow" id="nwSrcRow" style="flex:1"><button class="seg" data-src="site">このサイトのお知らせ</button><button class="seg" data-src="rss">外部のブログ(RSS)</button></div></div>
+      <div id="nwFeedPart">
+        <div class="fm-row"><span class="fm-lbl">RSSのURL</span><input type="text" id="nwFeed" spellcheck="false" autocomplete="off" placeholder="https://note.com/(ユーザー名)/rss"></div>
+        <div class="fm-note">note: https://note.com/(ユーザー名)/rss ／ アメブロ: https://rssblog.ameba.jp/(アメーバID)/rss20.xml ／ WordPress: https://(ブログのURL)/feed/ ／ はてなブログ: https://(ブログのURL)/rss<br>サイトに最新の記事が自動で並び、押すとそのブログの記事が開きます。PHPが使えるサーバーが必要です(news/feed.php が30分ごとに読み直します)。</div>
+      </div>
+      <div class="fm-row"><span class="fm-lbl">並べ方</span><div class="segRow" id="nwLayoutRow" style="flex:1"><button class="seg" data-layout="list">1行ずつ</button><button class="seg" data-layout="card">写真つきのカード</button></div></div>
       <div class="fm-row"><span class="fm-lbl">表示する件数</span><input type="number" id="nwCount" min="1" max="20" step="1"><span class="fm-lbl" style="width:auto">文字の大きさ</span><input type="number" id="nwFs" min="10" max="32" step="1"></div>
       <div class="fm-colors">
         <label>日付<input type="color" id="nwcDate"></label>
@@ -2352,9 +2374,12 @@ kbd{
         <label>区切り線<input type="color" id="nwcLine"></label>
       </div>
     </div>
+    <div id="nwItemsPart">
     <div class="menu-label">お知らせ(新しい順に並びます)</div>
     <div class="segRow"><button class="seg" id="nwAdd">＋ お知らせを追加</button></div>
     <div id="nwItems"></div>
+    </div>
+    <input type="file" id="nwFileInput" accept="image/*" hidden>
     <div id="newsDlgFoot">
       <button id="nwCancel">キャンセル</button>
       <button id="nwApply">反映する</button>
@@ -2404,7 +2429,7 @@ kbd{
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-16.4';
+const APP_VERSION='2026-10-16.5';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -2554,6 +2579,11 @@ function eachImageSrc(d,fn){
       (m.items||[]).forEach(it=>{if(it.img)fn(it,'img');});
     }
   }));
+  /* お知らせ(ブログ形式)の記事の画像: アイキャッチと本文の画像 */
+  (d.wires||[]).forEach(w=>{
+    const n=w.site&&w.site.news;if(!n||!n.items)return;
+    n.items.forEach(it=>{if(it.img)fn(it,'img');(it.pics||[]).forEach((_,i)=>fn(it.pics,i));});
+  });
 }
 /* 参照された画像本体をIndexedDBから読み込む。
    旧形式(インラインの大きなdataURL)は別保存へ移し替える */
@@ -5197,21 +5227,44 @@ $('#fmApply').onclick=()=>{
    role: box=箱 / date=日付 / title=タイトル / line=区切り線(どれも編集画面での見本。書き出しでは本物の一覧にする)
    更新方法: mode='nt'=NT-Dで書いて書き出し直す / 'web'=ブラウザの更新画面(news/admin.php・パスワード)
    ============================================================ */
-const NEWS_ROW=56,NEWS_PAD=8;
+const NEWS_ROW=56,NEWS_PAD=8,NEWS_MORE=44;
+/* ブログ形式(c.news.blog): 記事ごとにページを作る。NT-Dで更新=静的な news/(id).html、ブラウザから更新=news/article.php?id=
+   記事: {id,date,title,body,link,cat(カテゴリ),img(アイキャッチ),pics(本文の画像。本文に [画像1] と書くとそこに入る)}
+   お知らせ欄: layout='list'(1行ずつ)/'card'(写真つきのカード)、src='site'(このサイトのお知らせ)/'rss'(外部のブログ。feed=RSSのURL) */
 function siteNews(d){
   const c=siteCfg(d);
   if(!c.news)c.news={mode:'nt',items:[],pw:null};
   if(!c.news.items)c.news.items=[];
   return c.news;
 }
+const newsBlogTitle=n=>(n.btitle||'').trim()||'お知らせ';
+/* 記事・一覧のURL(pre=そのページからサイトの一番上までの道。トップのページなら '') */
+const newsArticleUrl=(n,it,pre)=>(pre||'')+(n.mode==='web'?'news/article.php?id='+encodeURIComponent(it.id):'news/'+it.id+'.html');
+const newsListUrl=(n,pre)=>(pre||'')+'news/';
+/* カードの並べ方(欄の幅から列の数を決める。編集画面の見本と書き出しで同じ計算) */
+function newsGrid(cfg,W){
+  const fs=cfg.style.fs,cols=clamp(Math.round((W-48)/300),1,4),gap=20;
+  const cw=(W-48-(cols-1)*gap)/cols,ih=Math.round(cw*0.62),th=Math.round(28+fs*0.85*1.4+fs*1.5*2+16);
+  const rows=Math.ceil(cfg.count/cols),ch=ih+th;
+  return{cols,gap,cw,ih,th,ch,rows};
+}
+/* 「一覧を見る」の行を出すか */
+const newsHasMore=(cfg,n)=>cfg.src==='rss'||(cfg.src!=='rss'&&!!n.blog);
+function newsBoxH(cfg,W,n){
+  const more=newsHasMore(cfg,n)?NEWS_MORE:0;
+  if(cfg.layout!=='card')return NEWS_PAD*2+cfg.count*NEWS_ROW+more;
+  const g=newsGrid(cfg,W);
+  return 24*2+g.rows*g.ch+(g.rows-1)*g.gap+more;
+}
 const newsSorted=items=>items.slice().sort((a,b)=>(b.date||'').localeCompare(a.date||''));
 const newsDate=v=>(v||'').replace(/-/g,'.');
 const todayStr=()=>{const t=new Date();return`${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;};
 function defaultNewsBox(){
-  return{id:'nb'+uid().slice(-6),count:5,style:{date:'#8B93A6',text:'#1F2A44',line:'#E3E6EC',fs:16}};
+  return{id:'nb'+uid().slice(-6),count:5,layout:'list',src:'site',feed:'',style:{date:'#8B93A6',text:'#1F2A44',line:'#E3E6EC',fs:16}};
 }
-/* 見本として表示する行(中身が無い時は見本の文) */
-function newsPreviewItems(d,count){
+/* 見本として表示する行(中身が無い時・外部のブログの時は見本の文) */
+function newsPreviewItems(d,count,cfg){
+  if(cfg&&cfg.src==='rss')return Array.from({length:count},(_,i)=>({date:todayStr(),title:'ブログの記事タイトル(見本'+(i+1)+')',cat:'ブログ'}));
   const it=newsSorted(siteNews(d).items);
   if(it.length)return it.slice(0,count);
   return Array.from({length:Math.min(count,3)},(_,i)=>({date:todayStr(),title:['ホームページを公開しました','年末年始の営業についてのお知らせ','新しいサービスを始めました'][i]}));
@@ -5231,15 +5284,38 @@ function fitText(s,maxW){
 }
 /* 設定から、お知らせ欄の図形を並べる(左上=x0,y0、幅W。箱の見た目は box を引き継ぐ) */
 function buildNewsShapes(d,cfg,x0,y0,W,box){
-  const st=cfg.style,gid='g'+cfg.id,out=[];
+  const st=cfg.style,gid='g'+cfg.id,out=[],n=siteNews(d);
   const nw=role=>({box:cfg.id,role});
-  const H=NEWS_PAD*2+cfg.count*NEWS_ROW;
+  const H=newsBoxH(cfg,W,n);
   const b={id:uid(),type:'rect',x:x0+W/2,y:y0+H/2,w:W,h:H,rot:0,fill:'#FFFFFF',noStroke:true,r:12,
     ...(box||{}),gid,nw:nw('box'),news:cfg};
   b.id=uid();b.x=x0+W/2;b.y=y0+H/2;b.w=W;b.h=H;b.gid=gid;b.nw=nw('box');b.news=cfg;
   out.push(b);
+  /* 「一覧を見る →」(ブログ形式・外部のブログの時) */
+  if(newsHasMore(cfg,n)){
+    const mt={id:uid(),type:'text',rot:0,text:cfg.src==='rss'?'ブログを見る →':'一覧を見る →',fs:Math.round(st.fs*0.9),fw:700,ff:'gothic',fill:st.text,align:'right',gid,nw:nw('more')};
+    measureWText(mt);mt.x=x0+W-24-mt.w/2;mt.y=y0+H-NEWS_MORE/2-4;out.push(mt);
+  }
+  if(cfg.layout==='card'){
+    /* カード: 写真・日付(とカテゴリ)・タイトル */
+    const g=newsGrid(cfg,W);
+    newsPreviewItems(d,cfg.count,cfg).forEach((it,i)=>{
+      const col=i%g.cols,row=Math.floor(i/g.cols);
+      const cx=x0+24+col*(g.cw+g.gap),cy=y0+24+row*(g.ch+g.gap);
+      out.push({id:uid(),type:'rect',x:cx+g.cw/2,y:cy+g.ch/2,w:g.cw,h:g.ch,rot:0,fill:st.card||'#F6F7FA',noStroke:true,r:10,gid,nw:nw('card')});
+      const im={id:uid(),type:'rect',x:cx+g.cw/2,y:cy+g.ih/2,w:g.cw,h:g.ih,rot:0,fill:'#D9DEE7',noStroke:true,r:10,gid,nw:nw('img')};
+      if(it.img)im.imgFill={src:it.img,iw:1600,ih:1000,ox:0,oy:0,scale:1};
+      out.push(im);
+      const meta=newsDate(it.date)+(it.cat?'　'+it.cat:'');
+      const dt={id:uid(),type:'text',rot:0,text:meta,fs:Math.round(st.fs*0.85),fw:500,ff:'gothic',fill:st.date,align:'left',gid,nw:nw('date')};
+      fitText(dt,g.cw-28);dt.x=cx+14+dt.w/2;dt.y=cy+g.ih+14+dt.h/2;out.push(dt);
+      const tt={id:uid(),type:'text',rot:0,text:it.title||'',fs:st.fs,fw:700,ff:'gothic',fill:st.text,align:'left',gid,nw:nw('title')};
+      fitText(tt,g.cw-28);tt.x=cx+14+tt.w/2;tt.y=dt.y+dt.h/2+8+tt.h/2;out.push(tt);
+    });
+    return out;
+  }
   const left=x0+24,dateW=st.fs*6.2;
-  newsPreviewItems(d,cfg.count).forEach((it,i)=>{
+  newsPreviewItems(d,cfg.count,cfg).forEach((it,i)=>{
     const top=y0+NEWS_PAD+i*NEWS_ROW,cy=top+NEWS_ROW/2;
     const dt={id:uid(),type:'text',rot:0,text:newsDate(it.date),fs:Math.round(st.fs*0.85),fw:500,ff:'gothic',fill:st.date,align:'left',gid,nw:nw('date')};
     measureWText(dt);dt.x=left+dt.w/2;dt.y=cy;out.push(dt);
@@ -5257,7 +5333,7 @@ function addNewsBox(){
   pushUndo();
   const cfg=defaultNewsBox(),W=720;
   const c=s2w(viewW()/2,viewH()/2);
-  const H=NEWS_PAD*2+cfg.count*NEWS_ROW;
+  const H=newsBoxH(cfg,W,siteNews(d));
   const shapes=buildNewsShapes(d,cfg,c.x-W/2,c.y-H/2,W);
   d.shapes.push(...shapes);
   wireSel=shapes.map(s=>s.id);selAnchor=null;
@@ -5310,18 +5386,53 @@ function renderNewsDlg(){
   $('#nwWebPart').style.display=n.mode==='web'?'block':'none';
   $('#nwPwState').textContent=n.pw?`設定済み(${new Date(n.pw.at).toLocaleString('ja-JP')})。変える時は新しいパスワードを入れて「設定する」`:'まだ設定していません(8文字以上)';
   $('#nwBoxPart').style.display=newsBoxDraft?'block':'none';
+  document.querySelectorAll('#nwBlogRow .seg').forEach(b=>b.classList.toggle('active',(b.dataset.blog==='1')===!!n.blog));
+  $('#nwBlogPart').style.display=n.blog?'block':'none';
+  if(document.activeElement!==$('#nwBTitle'))$('#nwBTitle').value=n.btitle||'';
+  $('#nwBAccent').value=/^#[0-9a-f]{6}$/i.test(n.accent||'')?n.accent:'#1f2a44';
   if(newsBoxDraft){
-    const st=newsBoxDraft.style;
-    $('#nwCount').value=newsBoxDraft.count;$('#nwFs').value=st.fs;
+    const bd=newsBoxDraft,st=bd.style;
+    $('#nwCount').value=bd.count;$('#nwFs').value=st.fs;
     [['nwcDate','date'],['nwcText','text'],['nwcLine','line']].forEach(([id,k])=>{$('#'+id).value=/^#[0-9a-f]{6}$/i.test(st[k])?st[k]:'#000000';});
+    document.querySelectorAll('#nwSrcRow .seg').forEach(b=>b.classList.toggle('active',b.dataset.src===(bd.src||'site')));
+    document.querySelectorAll('#nwLayoutRow .seg').forEach(b=>b.classList.toggle('active',b.dataset.layout===(bd.layout||'list')));
+    $('#nwFeedPart').style.display=bd.src==='rss'?'block':'none';
+    if(document.activeElement!==$('#nwFeed'))$('#nwFeed').value=bd.feed||'';
   }
+  const blog=!!n.blog;
+  const thumb=(ref,act,lbl)=>`<span class="nw-th"><img src="${escXml(imgHref(ref))}" alt=""><b>${lbl}</b><button class="fm-ico" data-act="${act}" title="外す">&times;</button></span>`;
   $('#nwItems').innerHTML=n.items.map((it,i)=>`<div class="fm-field" data-i="${i}">
-    <div class="fm-row"><input type="date" class="nw-date" value="${escXml(it.date||'')}"><button class="fm-ico fm-del" data-act="del" title="このお知らせを消す">&times;</button></div>
+    <div class="fm-row"><input type="date" class="nw-date" value="${escXml(it.date||'')}">${blog?`<input type="text" class="nw-cat" value="${escXml(it.cat||'')}" placeholder="カテゴリ(省略可)">`:''}<button class="fm-ico fm-del" data-act="del" title="このお知らせを消す">&times;</button></div>
     <div class="fm-row"><input type="text" class="nw-title" value="${escXml(it.title||'')}" placeholder="タイトル"></div>
-    <div class="fm-row"><textarea class="nw-body" rows="2" placeholder="本文(押すと小窓で開きます・省略可)">${escXml(it.body||'')}</textarea></div>
-    <div class="fm-row"><input type="text" class="nw-link" value="${escXml(it.link||'')}" placeholder="リンク https://…(省略可)"></div>
+    ${blog?`<div class="fm-row nw-pics">${it.img?thumb(it.img,'img-x','アイキャッチ'):''}<button class="seg" data-act="img">${it.img?'アイキャッチを替える':'＋ アイキャッチ画像'}</button><button class="seg" data-act="pic">＋ 本文に画像を入れる</button></div>
+    ${(it.pics||[]).length?`<div class="fm-row nw-pics">${it.pics.map((r,k)=>thumb(r,'pic-x:'+k,'画像'+(k+1))).join('')}</div>`:''}`:''}
+    <div class="fm-row"><textarea class="nw-body" rows="${blog?6:2}" placeholder="${blog?'本文(## 見出し ／ **太字** ／ - 箇条書き ／ [文字](https://…) ／ [画像1])':'本文(押すと小窓で開きます・省略可)'}">${escXml(it.body||'')}</textarea></div>
+    <div class="fm-row"><input type="text" class="nw-link" value="${escXml(it.link||'')}" placeholder="${blog?'関連リンク https://…(記事の最後にボタンで出ます・省略可)':'リンク https://…(省略可)'}"></div>
   </div>`).join('')||'<div class="fm-note">お知らせはまだありません。「＋ お知らせを追加」で書けます。</div>';
 }
+/* 画像を選ぶ(アイキャッチ・本文の画像) */
+let nwPick=null;
+$('#nwFileInput').addEventListener('change',async e=>{
+  const f=e.target.files[0];e.target.value='';
+  if(!f||!nwPick||!newsDraft)return;
+  const it=newsDraft.items[nwPick.i];if(!it)return;
+  const ref=await storeImage(await readFileURL(f));
+  if(nwPick.kind==='img')it.img=ref;
+  else{
+    it.pics=[...(it.pics||[]),ref];
+    const tag='[画像'+it.pics.length+']',ta=document.querySelector(`#nwItems .fm-field[data-i="${nwPick.i}"] .nw-body`);
+    const pos=ta&&document.activeElement===ta?ta.selectionStart:(it.body||'').length;
+    const b=it.body||'';
+    it.body=b.slice(0,pos)+(pos&&b[pos-1]!=='\n'?'\n\n':'')+tag+'\n\n'+b.slice(pos);
+  }
+  nwPick=null;renderNewsDlg();
+});
+document.querySelectorAll('#nwBlogRow .seg').forEach(b=>b.addEventListener('click',()=>{if(newsDraft){newsDraft.blog=b.dataset.blog==='1';renderNewsDlg();}}));
+$('#nwBTitle').addEventListener('input',()=>{if(newsDraft)newsDraft.btitle=$('#nwBTitle').value;});
+$('#nwBAccent').addEventListener('input',()=>{if(newsDraft)newsDraft.accent=$('#nwBAccent').value;});
+document.querySelectorAll('#nwSrcRow .seg').forEach(b=>b.addEventListener('click',()=>{if(newsBoxDraft){newsBoxDraft.src=b.dataset.src;renderNewsDlg();}}));
+document.querySelectorAll('#nwLayoutRow .seg').forEach(b=>b.addEventListener('click',()=>{if(newsBoxDraft){newsBoxDraft.layout=b.dataset.layout;renderNewsDlg();}}));
+$('#nwFeed').addEventListener('input',()=>{if(newsBoxDraft)newsBoxDraft.feed=$('#nwFeed').value.trim();});
 document.querySelectorAll('#nwModeRow .seg').forEach(b=>b.addEventListener('click',()=>{if(newsDraft){newsDraft.mode=b.dataset.mode;renderNewsDlg();}}));
 $('#nwPwSet').onclick=async()=>{
   const pw=$('#nwPw').value;
@@ -5339,12 +5450,20 @@ $('#nwAdd').onclick=()=>{
 $('#nwItems').addEventListener('input',e=>{
   const box=e.target.closest('.fm-field');if(!box||!newsDraft)return;
   const it=newsDraft.items[+box.dataset.i];
-  [['nw-date','date'],['nw-title','title'],['nw-body','body'],['nw-link','link']].forEach(([c,k])=>{if(e.target.classList.contains(c))it[k]=e.target.value;});
+  [['nw-date','date'],['nw-title','title'],['nw-body','body'],['nw-link','link'],['nw-cat','cat']].forEach(([c,k])=>{if(e.target.classList.contains(c))it[k]=e.target.value;});
 });
 $('#nwItems').addEventListener('click',e=>{
-  const b=e.target.closest('[data-act="del"]');if(!b||!newsDraft)return;
-  newsDraft.items.splice(+b.closest('.fm-field').dataset.i,1);
-  renderNewsDlg();
+  const b=e.target.closest('[data-act]');if(!b||!newsDraft)return;
+  const i=+b.closest('.fm-field').dataset.i,it=newsDraft.items[i],a=b.dataset.act;
+  if(a==='del'){newsDraft.items.splice(i,1);renderNewsDlg();return;}
+  if(a==='img'||a==='pic'){nwPick={i,kind:a};$('#nwFileInput').click();return;}
+  if(a==='img-x'){delete it.img;renderNewsDlg();return;}
+  if(a.startsWith('pic-x:')){
+    /* 本文の画像を外す: 後ろの画像の番号を1つずつ詰め、本文の [画像N] も合わせる */
+    const k=+a.slice(6);it.pics.splice(k,1);
+    it.body=(it.body||'').replace(/\[画像(\d+)\]/g,(m,nn)=>{const v=+nn;return v===k+1?'':v>k+1?'[画像'+(v-1)+']':m;}).replace(/\n{3,}/g,'\n\n');
+    renderNewsDlg();
+  }
 });
 $('#nwCount').addEventListener('input',()=>{if(newsBoxDraft)newsBoxDraft.count=clamp(Math.round(+$('#nwCount').value||5),1,20);});
 $('#nwFs').addEventListener('input',()=>{if(newsBoxDraft)newsBoxDraft.style.fs=clamp(Math.round(+$('#nwFs').value||16),10,32);});
@@ -5363,6 +5482,7 @@ $('#nwApply').onclick=()=>{
     if(it.link&&!/^https?:\/\//i.test(it.link)&&!/^[a-z0-9_-]+\.html(#.*)?$/i.test(it.link)){toast('リンクは https:// から始めてください');return;}
   }
   if(n.mode==='web'&&!n.pw){toast('ブラウザから更新する時は、パスワードを設定してください');return;}
+  if(newsBoxDraft&&newsBoxDraft.src==='rss'&&!/^https?:\/\/[^\s"'<>]+$/i.test(newsBoxDraft.feed||'')){toast('外部のブログのRSSのURLを https:// から入れてください');return;}
   pushUndo();
   const c=siteCfg();
   n.items=newsSorted(n.items);
@@ -6481,6 +6601,19 @@ button.nt-news-i,a.nt-news-i{cursor:pointer}
 .nt-news-i span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--nfs);font-weight:500}
 button.nt-news-i:hover span,a.nt-news-i:hover span{text-decoration:underline}
 .nt-news-none{display:flex;align-items:center;color:var(--nd);font-size:var(--nfs)}
+.nt-news.nt-card{padding:24px}
+.nt-news.nt-card ul{display:grid;grid-template-columns:repeat(var(--ncols),minmax(0,1fr));gap:20px}
+.nt-news.nt-card li{height:auto;border:0}
+.nt-news.nt-card .nt-news-none{height:var(--nrh)}
+.nt-news-c{display:flex;flex-direction:column;width:100%;height:var(--nch);padding:0;border:0;border-radius:10px;overflow:hidden;background:var(--nc);font:inherit;color:var(--nt);text-align:left;text-decoration:none;cursor:pointer}
+.nt-nc-im{display:block;flex:none;height:var(--nih);background:#D9DEE7;overflow:hidden}
+.nt-nc-im img{display:block;width:100%;height:100%;object-fit:cover;transition:scale .4s ease}
+.nt-news-c:hover .nt-nc-im img{scale:1.05}
+.nt-nc-m{display:flex;align-items:center;gap:10px;padding:14px 14px 0;font-size:calc(var(--nfs) * .85);color:var(--nd);white-space:nowrap;overflow:hidden}
+.nt-nc-m em{font-style:normal;padding:0 8px;border-radius:999px;background:var(--nl);color:var(--nt);font-size:.9em}
+.nt-nc-t{padding:6px 14px 0;font-size:var(--nfs);font-weight:700;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.nt-news-more{position:absolute;right:24px;bottom:12px;font-size:calc(var(--nfs) * .9);font-weight:700;color:var(--nt);text-decoration:none}
+.nt-news-more:hover{text-decoration:underline}
 .nt-nmodal{position:fixed;inset:0;z-index:1001;display:none;align-items:center;justify-content:center;padding:20px}
 .nt-nmodal.on{display:flex}
 .nt-nm-bg{position:absolute;inset:0;background:rgba(0,0,0,.45)}
@@ -7123,27 +7256,53 @@ function siteJs(){
         .then(function(){if(b)b.disabled=false;});
     });
   });
-  /* お知らせ: ブラウザから更新する設定なら、最新(news/news.json)を読んで一覧を描き直す */
-  var nd=document.getElementById('nt-news-data'),news=[];
+  /* お知らせ: ブラウザから更新する設定なら、最新(news/news.json)を読んで一覧を描き直す。
+     ブログ形式(data-blog)なら記事のページへ、外部のブログ(data-feed)なら news/feed.php が読んだ記事を出す */
+  var nd=document.getElementById('nt-news-data'),news=[],blogM=nd?nd.getAttribute('data-blog')||'':'';
   try{news=JSON.parse(nd.textContent).items||[];}catch(e){}
   var nm=document.getElementById('nt-nmodal');
-  function newsRender(){
-    document.querySelectorAll('.nt-news').forEach(function(box){
-      var ul=box.querySelector('ul');ul.textContent='';
-      var list=news.slice(0,+box.dataset.count||5);
-      if(!list.length){var e=document.createElement('li');e.className='nt-news-none';e.textContent='お知らせはまだありません';ul.appendChild(e);}
-      list.forEach(function(it){
-        var li=document.createElement('li'),el;
-        if(it.body){el=document.createElement('button');el.type='button';el.dataset.id=it.id;}
-        else if(/^https?:/i.test(it.link||'')){el=document.createElement('a');el.href=it.link;el.target='_blank';el.rel='noopener';}
-        else el=document.createElement('div');
-        el.className='nt-news-i';
-        var t=document.createElement('time');t.dateTime=it.date;t.textContent=(it.date||'').replace(/-/g,'.');
-        var s=document.createElement('span');s.textContent=it.title||'';
-        el.appendChild(t);el.appendChild(s);li.appendChild(el);ul.appendChild(li);
-      });
-    });
+  function newsItem(it,card,ext){
+    var el;
+    if(ext){el=document.createElement('a');el.href=it.link;el.target='_blank';el.rel='noopener';}
+    else if(blogM){el=document.createElement('a');el.href=blogM==='web'?'news/article.php?id='+encodeURIComponent(it.id):'news/'+it.id+'.html';}
+    else if(it.body){el=document.createElement('button');el.type='button';el.dataset.id=it.id;}
+    else if(/^https?:/i.test(it.link||'')){el=document.createElement('a');el.href=it.link;el.target='_blank';el.rel='noopener';}
+    else el=document.createElement('div');
+    el.className=card?'nt-news-c':'nt-news-i';
+    var t=document.createElement('time');t.dateTime=it.date||'';t.textContent=(it.date||'').replace(/-/g,'.');
+    if(card){
+      var im=document.createElement('span');im.className='nt-nc-im';
+      if(it.img){var g=document.createElement('img');g.src=it.img;g.alt='';g.loading='lazy';im.appendChild(g);}
+      var m=document.createElement('span');m.className='nt-nc-m';m.appendChild(t);
+      if(it.cat){var c=document.createElement('em');c.textContent=it.cat;m.appendChild(c);}
+      var tt=document.createElement('span');tt.className='nt-nc-t';tt.textContent=it.title||'';
+      el.appendChild(im);el.appendChild(m);el.appendChild(tt);
+    }else{
+      var s=document.createElement('span');s.textContent=it.title||'';
+      el.appendChild(t);el.appendChild(s);
+    }
+    var li=document.createElement('li');li.appendChild(el);return li;
   }
+  function newsFill(box,list,ext,none){
+    var ul=box.querySelector('ul');ul.textContent='';
+    list=list.slice(0,+box.dataset.count||5);
+    if(!list.length){var e=document.createElement('li');e.className='nt-news-none';e.textContent=none;ul.appendChild(e);}
+    var card=box.dataset.layout==='card';
+    list.forEach(function(it){ul.appendChild(newsItem(it,card,ext));});
+  }
+  function newsRender(){
+    document.querySelectorAll('.nt-news:not([data-feed])').forEach(function(box){newsFill(box,news,false,'お知らせはまだありません');});
+  }
+  /* 外部のブログ: サーバー(news/feed.php)が読んだ記事を出す */
+  if(window.fetch)document.querySelectorAll('.nt-news[data-feed]').forEach(function(box){
+    fetch('news/feed.php?f='+encodeURIComponent(box.dataset.feed))
+      .then(function(r){if(!r.ok)throw 0;return r.json();})
+      .then(function(j){
+        newsFill(box,(j.items||[]).filter(function(it){return /^https?:/i.test(it.link||'');}),true,'記事がまだありません');
+        var mo=box.querySelector('.nt-news-more');if(mo&&/^https?:/i.test(j.link||''))mo.href=j.link;
+      })
+      .catch(function(){newsFill(box,[],true,'ブログを読み込めませんでした(PHPが使えるサーバーで表示されます)');});
+  });
   function newsOpen(it){
     if(!nm)return;
     nm.querySelector('.nt-nm-date').textContent=(it.date||'').replace(/-/g,'.');
@@ -7161,7 +7320,7 @@ function siteJs(){
     nm.querySelector('.nt-nm-x').onclick=newsClose;
     addEventListener('keydown',function(e){if(e.key==='Escape')newsClose();});
     document.addEventListener('click',function(e){
-      var b=e.target.closest('button.nt-news-i');if(!b)return;
+      var b=e.target.closest('button.nt-news-i,button.nt-news-c');if(!b)return;
       var it=news.filter(function(x){return x.id===b.dataset.id;})[0];
       if(it)newsOpen(it);
     });
@@ -7458,13 +7617,20 @@ nt_respond(true, $F['thanks']);
 }
 /* ---------- お知らせの書き出し ---------- */
 let siteNewsUsed=false;   /* 書き出したページにお知らせ欄があったか */
-/* 一覧の1行(ページを開いた時の表示。js/main.js が同じ形で描き直す) */
-function siteNewsLi(it){
-  const inner=`<time datetime="${escXml(it.date)}">${escXml(newsDate(it.date))}</time><span>${escXml(it.title)}</span>`;
-  if(it.body)return`<li><button type="button" class="nt-news-i" data-id="${escXml(it.id)}">${inner}</button></li>`;
+let siteNewsFeeds=null;   /* 書き出し中: 外部のブログを出すお知らせ欄(欄のid → RSSのURL) */
+/* 一覧の1行・1枚(ページを開いた時の表示。js/main.js が同じ形で描き直す)。it は書き出す形(newsExportItems) */
+function siteNewsLi(it,cfg,n){
+  const card=!!cfg&&cfg.layout==='card';
+  const date=`<time datetime="${escXml(it.date)}">${escXml(newsDate(it.date))}</time>`;
+  const inner=card
+    ?`<span class="nt-nc-im">${it.img?`<img src="${escXml(it.img)}" alt="" loading="lazy">`:''}</span><span class="nt-nc-m">${date}${it.cat?`<em>${escXml(it.cat)}</em>`:''}</span><span class="nt-nc-t">${escXml(it.title)}</span>`
+    :`${date}<span>${escXml(it.title)}</span>`;
+  const cls=card?'nt-news-c':'nt-news-i';
+  if(n&&n.blog)return`<li><a class="${cls}" href="${escXml(newsArticleUrl(n,it,''))}">${inner}</a></li>`;
+  if(it.body)return`<li><button type="button" class="${cls}" data-id="${escXml(it.id)}">${inner}</button></li>`;
   const h=safeHref(it.link);
-  if(h){const ext=/^https?:/i.test(h)?' target="_blank" rel="noopener"':'';return`<li><a class="nt-news-i" href="${escXml(h)}"${ext}>${inner}</a></li>`;}
-  return`<li><div class="nt-news-i">${inner}</div></li>`;
+  if(h){const ext=/^https?:/i.test(h)?' target="_blank" rel="noopener"':'';return`<li><a class="${cls}" href="${escXml(h)}"${ext}>${inner}</a></li>`;}
+  return`<li><div class="${cls}">${inner}</div></li>`;
 }
 /* お知らせ欄(グループ)→ 箱＋本物の一覧 */
 function siteNewsUnit(members,o){
@@ -7472,22 +7638,32 @@ function siteNewsUnit(members,o){
   if(!box)return'';
   siteNewsUsed=true;
   const cfg=box.news,st=cfg.style;
-  const n=siteNews();
-  const items=newsSorted(n.items).slice(0,cfg.count);
+  const n=siteNews(),rss=cfg.src==='rss'&&!!cfg.feed,card=cfg.layout==='card';
+  if(rss&&siteNewsFeeds)siteNewsFeeds.set(cfg.id,cfg.feed);
+  const items=rss?[]:newsExportItems(n).slice(0,cfg.count);
   const bgEl=siteShapeEl(box,o,()=>'p');
-  const vars=`--nd:${cssCol(st.date)};--nt:${cssCol(st.text)};--nl:${cssCol(st.line)};--nfs:${st.fs}px;--nrh:${NEWS_ROW}px`;
+  let vars=`--nd:${cssCol(st.date)};--nt:${cssCol(st.text)};--nl:${cssCol(st.line)};--nfs:${st.fs}px;--nrh:${NEWS_ROW}px`;
+  if(card){const g=newsGrid(cfg,box.w);vars+=`;--ncols:${g.cols};--nih:${g.ih}px;--nch:${g.ch}px;--nc:${cssCol(st.card||'#F6F7FA')}`;}
+  /* 「一覧を見る →」: ブログ形式なら記事の一覧、外部のブログならそのブログ(読み込んだ後に正しいURLへ直す) */
+  let more='';
+  if(newsHasMore(cfg,n)){
+    let href=newsListUrl(n,''),ext='';
+    if(rss){try{href=new URL(cfg.feed).origin+'/';}catch(e){href='#';}ext=' target="_blank" rel="noopener"';}
+    more=`\n<a class="nt-news-more" href="${escXml(href)}"${ext}>${rss?'ブログを見る':'一覧を見る'} →</a>`;
+  }
+  const none=rss?'読み込んでいます…':'お知らせはまだありません';
   return`${bgEl}
-<div class="nt-e nt-news" data-count="${cfg.count}" style="${siteBox(box,o,box.w,box.h)};${vars}">
-<ul>${items.length?items.map(siteNewsLi).join(''):'<li class="nt-news-none">お知らせはまだありません</li>'}</ul>
+<div class="nt-e nt-news${card?' nt-card':''}" data-count="${cfg.count}"${card?' data-layout="card"':''}${rss?` data-feed="${escXml(cfg.id)}"`:''} style="${siteBox(box,o,box.w,box.h)};${vars}">
+<ul>${items.length?items.map(it=>siteNewsLi(it,cfg,n)).join(''):`<li class="nt-news-none">${none}</li>`}</ul>${more}
 </div>`;
 }
-/* ページに入れるお知らせのデータ(本文の小窓に使う)と小窓 */
+/* ページに入れるお知らせのデータ(本文の小窓・描き直しに使う)と小窓 */
 function siteNewsData(){
   const n=siteNews();
-  const items=newsSorted(n.items).map(it=>({id:it.id,date:it.date,title:it.title,body:it.body||'',link:it.link||''}));
+  const items=newsExportItems(n);
   /* データの中の「<」でscriptタグが途中で閉じられないよう、< を <(JSONの書き方)にする */
   const json=JSON.stringify({items}).replace(/</g,'\\u003c');
-  return`<script type="application/json" id="nt-news-data"${n.mode==='web'?' data-live="1"':''}>${json}<\/script>
+  return`<script type="application/json" id="nt-news-data"${n.mode==='web'?' data-live="1"':''}${n.blog?` data-blog="${n.mode==='web'?'web':'nt'}"`:''}>${json}<\/script>
 <div class="nt-nmodal" id="nt-nmodal" aria-hidden="true">
 <div class="nt-nm-bg"></div>
 <div class="nt-nm-panel" role="dialog" aria-modal="true" aria-labelledby="nt-nm-title">
@@ -7506,26 +7682,202 @@ function newsConfigPhp(pw){
 $NT_PW = array('salt' => ${phpStr(pw.salt)}, 'iter' => ${pw.iter|0}, 'hash' => ${phpStr(pw.hash)});
 `;
 }
-function newsInitialJson(){
-  const n=siteNews();
-  return JSON.stringify({updated:new Date().toISOString(),items:newsSorted(n.items).map(it=>({id:it.id,date:it.date,title:it.title,body:it.body||'',link:it.link||''}))},null,2);
+/* 最初の中身(news/initial.json)。items は newsExportItems で作った、画像の場所に直した形 */
+function newsInitialJson(items){
+  return JSON.stringify({updated:new Date().toISOString(),items:items.map(it=>({id:it.id,date:it.date,title:it.title,body:it.body||'',link:it.link||'',cat:it.cat||'',img:it.img||''}))},null,2);
 }
-function newsAdminPhp(siteName){
-  return`<?php
+/* ---------- お知らせ: ブログ形式(記事のページ・一覧のページ)・外部のブログ(RSS) ---------- */
+/* 本文の書き方 → HTML(PHP の nt_body() と同じ規則)
+   ## 見出し / ### 小見出し / - 箇条書き / **太字** / [文字](URL) / ![説明](画像のURL) / 空行で段落・改行はそのまま */
+function blogInline(t){
+  return escXml(t)
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+|[a-z0-9_\-][a-z0-9_\-./]*\.html(?:#[^\s)]*)?)\)/gi,(m,a,u)=>`<a href="${u}"${/^https?:/i.test(u)?' target="_blank" rel="noopener"':''}>${a}</a>`);
+}
+/* 本文の画像のURL(https:// か、サイトの中の画像。pre=そのページからサイトの一番上までの道) */
+function blogImgUrl(u,pre){
+  if(/^https?:\/\/[^\s"'<>]+$/i.test(u))return u;
+  if(/^[a-z0-9_\-][a-z0-9_\-./]*$/i.test(u)&&!u.includes('..'))return(pre||'')+u;
+  return'';
+}
+function blogBody(src,pre){
+  const out=[],blocks=String(src||'').replace(/\r\n?/g,'\n').split(/\n{2,}/);
+  while(blocks.length){
+    const b=blocks.shift().replace(/^\n+|\n+$/g,'');if(!b.trim())continue;
+    const lines=b.split('\n');
+    let m=lines[0].match(/^(#{2,3})\s+(.+)$/);
+    if(m){const lv=m[1].length;out.push(`<h${lv}>${blogInline(m[2])}</h${lv}>`);if(lines.length>1)blocks.unshift(lines.slice(1).join('\n'));continue;}
+    m=b.match(/^!\[([^\]]*)\]\(([^)\s]+)\)$/);
+    if(m){const u=blogImgUrl(m[2],pre);if(u)out.push(`<figure><img src="${escXml(u)}" alt="${escXml(m[1])}" loading="lazy"></figure>`);continue;}
+    if(lines.every(l=>/^(-|・)\s*\S/.test(l))){out.push('<ul>'+lines.map(l=>'<li>'+blogInline(l.replace(/^(-|・)\s*/,''))+'</li>').join('')+'</ul>');continue;}
+    out.push('<p>'+lines.map(blogInline).join('<br>')+'</p>');
+  }
+  return out.join('\n');
+}
+/* 一覧に出す短い説明(記法を取り除いた本文の最初の方) */
+function blogExcerpt(src,len){
+  const t=String(src||'').replace(/!\[[^\]]*\]\([^)]*\)/g,'').replace(/\[([^\]]+)\]\([^)]*\)/g,'$1').replace(/^#{2,3}\s+/gm,'').replace(/^(-|・)\s*/gm,'').replace(/\*\*/g,'').replace(/\s+/g,' ').trim();
+  const a=[...t];return a.length>(len||90)?a.slice(0,len||90).join('')+'…':t;
+}
+/* 書き出す時の記事(画像はファイルの場所にし、本文の [画像N] を ![](場所) にする)。画像を書き出す途中(siteImgSink がある時)に呼ぶ */
+function newsExportItems(n){
+  return newsSorted(n.items).map(it=>({
+    id:it.id,date:it.date,title:it.title||'',cat:(it.cat||'').trim(),link:it.link||'',
+    img:it.img?imgHref(it.img):'',
+    body:(it.body||'').replace(/\[画像(\d+)\]/g,(m,k)=>{const r=(it.pics||[])[+k-1];return r?`\n\n![](${imgHref(r)})\n\n`:'';}).replace(/\n{3,}/g,'\n\n')
+  }));
+}
+/* 記事・一覧のページの見た目(PHP の更新するサイトでも同じものを使う) */
+const BLOG_CSS=`*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:#F6F7F9;color:#1F2A44;font-family:system-ui,-apple-system,"Hiragino Sans","Yu Gothic UI","Meiryo",sans-serif;line-height:1.8}
+a{color:var(--ac)}
+.bh{position:sticky;top:0;z-index:10;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px max(20px,calc((100% - 1080px) / 2));background:#fff;border-bottom:1px solid #E6E8EE}
+.bh-s{font-weight:800;font-size:18px;color:#1F2A44;text-decoration:none}
+.bh nav{display:flex;gap:18px;font-size:14px;flex:none}
+.bh nav a{color:#1F2A44;text-decoration:none;font-weight:700}
+.bw{max-width:1080px;margin:0 auto;padding:40px 20px 64px}
+.bt{font-size:30px;line-height:1.4;margin:0;color:var(--ac)}
+.bcats{display:flex;flex-wrap:wrap;gap:8px;margin:20px 0 28px;padding:0;list-style:none}
+.bcats a{display:block;padding:4px 14px;border-radius:999px;background:#fff;border:1px solid #DDE1E8;color:#1F2A44;text-decoration:none;font-size:13px}
+.bcats a.on{background:var(--ac);border-color:var(--ac);color:#fff}
+.bgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:24px;margin:28px 0 0;padding:0;list-style:none}
+.bcats+.bgrid{margin-top:0}
+.bgrid>li[hidden]{display:none}
+.bcard{display:flex;flex-direction:column;height:100%;background:#fff;border-radius:14px;overflow:hidden;color:#1F2A44;text-decoration:none;box-shadow:0 2px 10px rgba(20,30,60,.06);transition:translate .25s,box-shadow .25s}
+.bcard:hover{translate:0 -4px;box-shadow:0 10px 24px rgba(20,30,60,.12)}
+.bcard-im{aspect-ratio:16/10;background:#E3E7EE;overflow:hidden}
+.bcard-im img{width:100%;height:100%;object-fit:cover;display:block}
+.bcard-b{padding:16px 18px 20px}
+.bmeta{display:flex;flex-wrap:wrap;align-items:center;gap:10px;font-size:13px;color:#7A8395}
+.bcat{display:inline-block;padding:0 10px;border-radius:999px;background:var(--acl);color:var(--ac);font-weight:700;text-decoration:none;font-size:12px;line-height:1.9}
+.bcard h2{font-size:17px;line-height:1.5;margin:8px 0 6px}
+.bcard p{margin:0;font-size:14px;line-height:1.7;color:#5B6475;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.bpager{display:flex;justify-content:center;gap:8px;margin-top:40px;flex-wrap:wrap}
+.bpager a,.bpager span{min-width:42px;padding:8px 12px;border-radius:10px;background:#fff;border:1px solid #DDE1E8;text-align:center;text-decoration:none;color:#1F2A44;font-weight:700}
+.bpager .on{background:var(--ac);border-color:var(--ac);color:#fff}
+.bnone{color:#7A8395}
+.ba{max-width:760px;margin:0 auto}
+.ba h1{font-size:clamp(24px,4vw,32px);line-height:1.45;margin:10px 0 24px}
+.beye{margin:0 0 32px;border-radius:14px;overflow:hidden;background:#E3E7EE}
+.beye img{display:block;width:100%;height:auto}
+.bbody{font-size:16px;line-height:2;overflow-wrap:anywhere}
+.bbody h2{font-size:22px;line-height:1.5;margin:48px 0 16px;padding:0 0 8px 14px;border-left:4px solid var(--ac);border-bottom:1px solid #E6E8EE}
+.bbody h3{font-size:18px;line-height:1.5;margin:32px 0 12px}
+.bbody p{margin:0 0 1.4em}
+.bbody figure{margin:28px 0}
+.bbody img{max-width:100%;height:auto;border-radius:10px;display:block}
+.bbody ul{padding-left:1.4em;margin:0 0 1.4em}
+.blink{display:inline-block;margin:8px 0 0;padding:12px 28px;border-radius:999px;background:var(--ac);color:#fff;text-decoration:none;font-weight:700}
+.bnav{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:56px 0 0;padding:24px 0 0;border-top:1px solid #E6E8EE}
+.bnav a{display:block;padding:14px 16px;border-radius:12px;background:#fff;color:#1F2A44;text-decoration:none;font-size:14px;line-height:1.5}
+.bnav a small{display:block;color:#7A8395;font-size:12px}
+.bnav .nx{grid-column:2;text-align:right}
+.bback{display:block;width:max-content;margin:32px auto 0;color:var(--ac);font-weight:700}
+.bf{padding:28px 20px;text-align:center;font-size:12px;color:#7A8395}
+@media (max-width:600px){.bw{padding:28px 16px 48px}.bt{font-size:24px}.bh nav{gap:12px}.bnav{grid-template-columns:1fr}.bnav .nx{grid-column:1}}
+`;
+/* 記事・一覧のページ(news/ の中。pre='../') */
+function blogDoc(ctx,o){
+  const ac=cssCol(ctx.accent||'#1F2A44');
+  const head=[
+    `<title>${escXml(o.title)}</title>`,
+    o.desc&&`<meta name="description" content="${escXml(o.desc)}">`,
+    ctx.noindex&&'<meta name="robots" content="noindex, nofollow">',
+    o.canon&&`<link rel="canonical" href="${escXml(o.canon)}">`,
+    `<meta property="og:type" content="${o.article?'article':'website'}">`,
+    `<meta property="og:title" content="${escXml(o.title)}">`,
+    o.desc&&`<meta property="og:description" content="${escXml(o.desc)}">`,
+    o.canon&&`<meta property="og:url" content="${escXml(o.canon)}">`,
+    o.og&&`<meta property="og:image" content="${escXml(o.og)}">`,
+    `<meta property="og:site_name" content="${escXml(ctx.siteName)}">`,
+    `<meta name="twitter:card" content="${o.og?'summary_large_image':'summary'}">`,
+    ctx.icon&&'<link rel="icon" href="../favicon.png" type="image/png">',
+    ctx.icon&&'<link rel="apple-touch-icon" href="../apple-touch-icon.png">',
+    '<meta name="generator" content="NT-D">'
+  ].filter(Boolean).join('\n');
+  return`<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+${head}
+<style>
+:root{--ac:${ac};--acl:color-mix(in srgb,${ac} 12%,#fff)}
+${BLOG_CSS}</style>
+</head>
+<body>
+<header class="bh"><a class="bh-s" href="../${escXml(ctx.top)}">${escXml(ctx.siteName)}</a><nav><a href="${escXml(ctx.listHref)}">${escXml(ctx.btitle)}</a><a href="../${escXml(ctx.top)}">トップ</a></nav></header>
+<main class="bw">
+${o.main}
+</main>
+<footer class="bf">&copy; ${new Date().getFullYear()} ${escXml(ctx.siteName)}</footer>
+${o.script||''}</body>
+</html>
+`;
+}
+/* 一覧のカード1枚(href=記事のURL、pre=画像の道) */
+function blogCard(it,href,pre){
+  const im=it.img?`<img src="${escXml(blogImgUrl(it.img,pre))}" alt="" loading="lazy">`:'';
+  return`<li data-cat="${escXml(it.cat)}"><a class="bcard" href="${escXml(href)}"><div class="bcard-im">${im}</div><div class="bcard-b"><div class="bmeta"><time datetime="${escXml(it.date)}">${escXml(newsDate(it.date))}</time>${it.cat?`<span class="bcat">${escXml(it.cat)}</span>`:''}</div><h2>${escXml(it.title)}</h2><p>${escXml(blogExcerpt(it.body,70))}</p></div></a></li>`;
+}
+/* NT-Dで更新するサイト: 一覧のページ(news/index.html)。カテゴリでの絞り込みとページ送りは、ページの中の小さなJSで行う */
+function blogListStatic(ctx,items){
+  const cats=[...new Set(items.map(it=>it.cat).filter(Boolean))];
+  const per=ctx.per||9;
+  const script='<script>(function(){var q=new URLSearchParams(location.search),cat=q.get("cat")||"",pg=Math.max(1,parseInt(q.get("page"),10)||1),per='+per+';'
+    +'var lis=[].slice.call(document.querySelectorAll(".bgrid>li")),shown=lis.filter(function(l){return!cat||l.getAttribute("data-cat")===cat;});'
+    +'var pages=Math.max(1,Math.ceil(shown.length/per));if(pg>pages)pg=pages;'
+    +'lis.forEach(function(l){l.hidden=true;});shown.slice((pg-1)*per,pg*per).forEach(function(l){l.hidden=false;});'
+    +'[].forEach.call(document.querySelectorAll(".bcats a"),function(a){a.classList.toggle("on",(a.getAttribute("data-cat")||"")===cat);});'
+    +'var nav=document.querySelector(".bpager");if(nav&&pages>1)for(var i=1;i<=pages;i++){var e;if(i===pg){e=document.createElement("span");e.className="on";}else{e=document.createElement("a");var p=new URLSearchParams();if(cat)p.set("cat",cat);if(i>1)p.set("page",i);var s=p.toString();e.href="index.html"+(s?"?"+s:"");}e.textContent=i;nav.appendChild(e);}'
+    +'if(!shown.length){var n=document.createElement("p");n.className="bnone";n.textContent="この分類の記事はまだありません";document.querySelector(".bgrid").after(n);}'
+    +'})();<\/script>\n';
+  const main=`<h1 class="bt">${escXml(ctx.btitle)}</h1>
+${cats.length?`<ul class="bcats"><li><a href="index.html" data-cat="" class="on">すべて</a></li>${cats.map(cn=>`<li><a href="index.html?cat=${encodeURIComponent(cn)}" data-cat="${escXml(cn)}">${escXml(cn)}</a></li>`).join('')}</ul>`:''}
+<ul class="bgrid">
+${items.map(it=>blogCard(it,it.id+'.html','../')).join('\n')}
+</ul>
+${items.length?'':'<p class="bnone">まだ記事がありません</p>'}
+<nav class="bpager" aria-label="ページ"></nav>`;
+  return blogDoc(ctx,{title:`${ctx.btitle}｜${ctx.siteName}`,desc:`${ctx.siteName}の${ctx.btitle}の一覧です。`,canon:ctx.base?ctx.base+'news/':'',main,script});
+}
+/* NT-Dで更新するサイト: 記事のページ(news/(id).html) */
+function blogArticleStatic(ctx,items,i){
+  const it=items[i],older=items[i+1],newer=items[i-1];
+  const eye=it.img?blogImgUrl(it.img,'../'):'';
+  const main=`<article class="ba">
+<div class="bmeta"><time datetime="${escXml(it.date)}">${escXml(newsDate(it.date))}</time>${it.cat?`<a class="bcat" href="index.html?cat=${encodeURIComponent(it.cat)}">${escXml(it.cat)}</a>`:''}</div>
+<h1>${escXml(it.title)}</h1>
+${eye?`<figure class="beye"><img src="${escXml(eye)}" alt=""></figure>`:''}
+<div class="bbody">
+${blogBody(it.body,'../')}
+</div>
+${safeHref(it.link)?`<p><a class="blink" href="${escXml(safeHref(it.link))}"${/^https?:/i.test(it.link)?' target="_blank" rel="noopener"':''}>詳しくはこちら</a></p>`:''}
+<nav class="bnav" aria-label="前後の記事">${older?`<a class="pv" href="${escXml(older.id)}.html"><small>← 前の記事</small>${escXml(older.title)}</a>`:''}${newer?`<a class="nx" href="${escXml(newer.id)}.html"><small>次の記事 →</small>${escXml(newer.title)}</a>`:''}</nav>
+<a class="bback" href="index.html">${escXml(ctx.btitle)}の一覧へ</a>
+</article>`;
+  const og=it.img&&ctx.base&&!/^https?:/i.test(it.img)?ctx.base+it.img:(/^https?:/i.test(it.img||'')?it.img:'');
+  return blogDoc(ctx,{title:`${it.title}｜${ctx.siteName}`,desc:blogExcerpt(it.body,110)||it.title,canon:ctx.base?ctx.base+'news/'+it.id+'.html':'',og,article:true,main});
+}
+
+/* ---------- PHP(ブラウザから更新するサイト・外部のブログ)。元の形のまま埋め込み、設定の所だけ差し込む ---------- */
+const NEWS_PHP_ADMIN=String.raw`<?php
 /*
  * お知らせの更新画面(NT-D で書き出し)
  * https://(サイト)/news/admin.php を開き、パスワードでログインして使います。
  * お知らせは news.json に保存されます(サイトを上げ直しても消えません)。
+ * ブログ形式の時は、写真を news/uploads/ に保存します。
  */
 date_default_timezone_set('Asia/Tokyo');
 require __DIR__ . '/config.php';
-$SITE_NAME = ${phpStr(siteName||'ホームページ')};
+/*@SITE@*/
 $DATA = __DIR__ . '/news.json';
 $INIT = __DIR__ . '/initial.json';
 
 $secure = !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
 session_name('ntnews');
-session_set_cookie_params(0, rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\\\') . '/', '', $secure, true);
+session_set_cookie_params(0, rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\') . '/', '', $secure, true);
 session_start();
 header('X-Frame-Options: DENY');
 header('X-Robots-Tag: noindex, nofollow');
@@ -7545,6 +7897,25 @@ function save_items($items) {
   return file_put_contents($DATA, $json, LOCK_EX) !== false;
 }
 function go($q) { header('Location: admin.php' . ($q !== '' ? '?' . $q : '')); exit; }
+function f($a, $k) { return isset($a[$k]) ? (string)$a[$k] : ''; }
+/* 写真を受け取って news/uploads/ に保存する。返り値: array(成功したか, 場所 または 理由) */
+function nt_upload($file) {
+  if (!is_array($file) || !isset($file['error'])) return array(false, '写真を選んでください。');
+  if ($file['error'] === UPLOAD_ERR_INI_SIZE || $file['error'] === UPLOAD_ERR_FORM_SIZE) return array(false, '写真が大きすぎます(サーバーの設定で ' . ini_get('upload_max_filesize') . ' まで)。小さくしてから送ってください。');
+  if ($file['error'] !== UPLOAD_ERR_OK || !is_uploaded_file($file['tmp_name'])) return array(false, '写真を受け取れませんでした。');
+  if ($file['size'] > 8 * 1024 * 1024) return array(false, '写真が大きすぎます(8MBまで)。');
+  $info = @getimagesize($file['tmp_name']);
+  $ext = array(IMAGETYPE_JPEG => 'jpg', IMAGETYPE_PNG => 'png', IMAGETYPE_GIF => 'gif');
+  if (defined('IMAGETYPE_WEBP')) $ext[IMAGETYPE_WEBP] = 'webp';
+  if (!$info || !isset($ext[$info[2]])) return array(false, 'JPEG・PNG・GIF・WebP の写真を選んでください。');
+  $dir = __DIR__ . '/uploads';
+  if (!is_dir($dir) && !@mkdir($dir, 0755)) return array(false, 'uploads フォルダを作れませんでした(news フォルダの権限を確かめてください)。');
+  if (!is_file($dir . '/index.html')) @file_put_contents($dir . '/index.html', '');
+  $name = date('Ymd') . '-' . bin2hex(random_bytes(6)) . '.' . $ext[$info[2]];
+  if (!move_uploaded_file($file['tmp_name'], $dir . '/' . $name)) return array(false, '写真を保存できませんでした。');
+  @chmod($dir . '/' . $name, 0644);
+  return array(true, 'news/uploads/' . $name);
+}
 
 /* ログインの失敗が続いたら、しばらく受け付けない(5回で15分) */
 $lockf = sys_get_temp_dir() . '/ntnews_' . md5(__DIR__ . '|' . (isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : ''));
@@ -7555,7 +7926,12 @@ if (empty($_SESSION['csrf'])) $_SESSION['csrf'] = bin2hex(random_bytes(16));
 $err = '';
 $msg = isset($_GET['m']) ? (string)$_GET['m'] : '';
 $act = isset($_POST['act']) ? (string)$_POST['act'] : '';
+/* 送った量がサーバーの上限を超えると、中身がすべて空で届く */
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($_POST) && !empty($_SERVER['CONTENT_LENGTH'])) {
+  $err = '写真が大きすぎて受け取れませんでした(サーバーの設定で ' . ini_get('post_max_size') . ' まで)。小さくしてから送ってください。';
+}
 if ($act !== '' && !hash_equals($_SESSION['csrf'], isset($_POST['csrf']) ? (string)$_POST['csrf'] : '')) {
+  if ($act === 'upload') { header('Content-Type: application/json; charset=UTF-8'); echo json_encode(array('ok' => false, 'message' => '画面が古くなっていました。読み込み直してください。'), JSON_UNESCAPED_UNICODE); exit; }
   $err = '画面が古くなっていました。もう一度お試しください。';
   $act = '';
 }
@@ -7582,27 +7958,48 @@ if ($act === 'login') {
   $_SESSION = array();
   session_destroy();
   go('m=logout');
+} elseif ($act === 'upload') {
+  /* 本文に入れる写真(画面の中から送る) */
+  header('Content-Type: application/json; charset=UTF-8');
+  if (!$logged || !$BLOG) { echo json_encode(array('ok' => false, 'message' => 'ログインしてください。'), JSON_UNESCAPED_UNICODE); exit; }
+  $r = nt_upload(isset($_FILES['file']) ? $_FILES['file'] : null);
+  echo json_encode($r[0] ? array('ok' => true, 'path' => $r[1]) : array('ok' => false, 'message' => $r[1]), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+  exit;
 } elseif ($logged && $act === 'save') {
   $id = isset($_POST['id']) ? preg_replace('/[^a-z0-9]/i', '', (string)$_POST['id']) : '';
-  $date = isset($_POST['date']) ? (string)$_POST['date'] : '';
-  $title = trim(isset($_POST['title']) ? (string)$_POST['title'] : '');
-  $body = trim(str_replace("\\r\\n", "\\n", isset($_POST['body']) ? (string)$_POST['body'] : ''));
-  $link = trim(isset($_POST['link']) ? (string)$_POST['link'] : '');
-  if (!preg_match('/^\\d{4}-\\d{2}-\\d{2}$/', $date)) $err = '日付を正しく入れてください。';
+  $date = f($_POST, 'date');
+  $title = trim(f($_POST, 'title'));
+  $body = trim(str_replace("\r\n", "\n", f($_POST, 'body')));
+  $link = trim(f($_POST, 'link'));
+  $cat = $BLOG ? trim(f($_POST, 'cat')) : '';
+  if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) $err = '日付を正しく入れてください。';
   elseif ($title === '' || mb_strlen($title, 'UTF-8') > 200) $err = 'タイトルを入れてください(200文字まで)。';
-  elseif (mb_strlen($body, 'UTF-8') > 10000) $err = '本文が長すぎます(10000文字まで)。';
-  elseif ($link !== '' && !preg_match('#^https?://#i', $link)) $err = 'リンクは https:// から始めてください。';
+  elseif (mb_strlen($body, 'UTF-8') > 30000) $err = '本文が長すぎます(30000文字まで)。';
+  elseif ($link !== '' && !preg_match('~^https?://~i', $link)) $err = 'リンクは https:// から始めてください。';
+  elseif (mb_strlen($cat, 'UTF-8') > 30) $err = 'カテゴリは30文字までにしてください。';
   else {
     $items = load_items();
+    $old = null;
+    foreach ($items as $it) if (isset($it['id']) && $it['id'] === $id) $old = $it;
     $item = array('id' => $id !== '' ? $id : 'n' . bin2hex(random_bytes(4)), 'date' => $date, 'title' => $title, 'body' => $body, 'link' => $link);
-    $found = false;
-    foreach ($items as $i => $it) if (isset($it['id']) && $it['id'] === $item['id']) { $items[$i] = $item; $found = true; }
-    if (!$found) $items[] = $item;
-    if (!save_items($items)) $err = '保存できませんでした(news フォルダに書き込めるか確かめてください)。';
-    else go('m=saved');
+    if ($BLOG) {
+      $item['cat'] = $cat;
+      $item['img'] = ($old && empty($_POST['img_x'])) ? f($old, 'img') : '';
+      if (isset($_FILES['eye']) && $_FILES['eye']['error'] !== UPLOAD_ERR_NO_FILE) {
+        $r = nt_upload($_FILES['eye']);
+        if ($r[0]) $item['img'] = $r[1]; else $err = $r[1];
+      }
+    }
+    if ($err === '') {
+      $found = false;
+      foreach ($items as $i => $it) if (isset($it['id']) && $it['id'] === $item['id']) { $items[$i] = $item; $found = true; }
+      if (!$found) $items[] = $item;
+      if (!save_items($items)) $err = '保存できませんでした(news フォルダに書き込めるか確かめてください)。';
+      else go('m=saved');
+    }
   }
 } elseif ($logged && $act === 'delete') {
-  $id = isset($_POST['id']) ? (string)$_POST['id'] : '';
+  $id = f($_POST, 'id');
   $items = array_values(array_filter(load_items(), function ($it) use ($id) { return !isset($it['id']) || $it['id'] !== $id; }));
   if (!save_items($items)) $err = '保存できませんでした。';
   else go('m=deleted');
@@ -7612,21 +8009,24 @@ $items = $logged ? load_items() : array();
 usort($items, function ($a, $b) { return strcmp($b['date'], $a['date']); });
 $edit = null;
 if ($logged && isset($_GET['edit'])) foreach ($items as $it) if ($it['id'] === $_GET['edit']) $edit = $it;
-$form = $edit ? $edit : array('id' => '', 'date' => date('Y-m-d'), 'title' => '', 'body' => '', 'link' => '');
-if ($err !== '' && $act === 'save') $form = array('id' => isset($_POST['id']) ? (string)$_POST['id'] : '', 'date' => (string)$_POST['date'], 'title' => (string)$_POST['title'], 'body' => (string)$_POST['body'], 'link' => (string)$_POST['link']);
+$form = $edit ? $edit : array('id' => '', 'date' => date('Y-m-d'), 'title' => '', 'body' => '', 'link' => '', 'cat' => '', 'img' => '');
+if ($err !== '' && $act === 'save') $form = array('id' => f($_POST, 'id'), 'date' => f($_POST, 'date'), 'title' => f($_POST, 'title'), 'body' => f($_POST, 'body'), 'link' => f($_POST, 'link'), 'cat' => f($_POST, 'cat'), 'img' => $edit ? f($edit, 'img') : '');
+$cats = array();
+foreach ($items as $it) { $c = f($it, 'cat'); if ($c !== '' && !in_array($c, $cats, true)) $cats[] = $c; }
 $notes = array('saved' => '保存しました。', 'deleted' => '消しました。', 'logout' => 'ログアウトしました。');
 $csrf = h($_SESSION['csrf']);
+$word = $BLOG ? '記事' : 'お知らせ';
 ?><!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<title>お知らせの更新 | <?= h($SITE_NAME) ?></title>
+<title><?= h($word) ?>の更新 | <?= h($SITE_NAME) ?></title>
 <style>
 *{box-sizing:border-box}
 body{margin:0;background:#F3F4F7;color:#1F2A44;font-family:system-ui,-apple-system,"Hiragino Sans","Yu Gothic UI","Meiryo",sans-serif;line-height:1.6}
-.wrap{max-width:720px;margin:0 auto;padding:24px 16px 48px}
+.wrap{max-width:760px;margin:0 auto;padding:24px 16px 48px}
 h1{font-size:20px;margin:0 0 4px}
 .sub{color:#6B7385;font-size:13px;margin:0 0 20px}
 .card{background:#fff;border-radius:14px;padding:20px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
@@ -7634,15 +8034,22 @@ h1{font-size:20px;margin:0 0 4px}
 label{display:block;font-size:13px;font-weight:700;margin:12px 0 4px}
 input[type=text],input[type=date],input[type=password],input[type=url],textarea{width:100%;font:inherit;font-size:16px;padding:10px 12px;border:1px solid #CCD3DE;border-radius:8px;background:#fff;color:inherit}
 textarea{min-height:140px;resize:vertical}
+.blog textarea{min-height:320px}
 .btn{display:inline-block;font:inherit;font-size:15px;font-weight:700;padding:10px 22px;border:0;border-radius:999px;background:#FF2E5E;color:#fff;cursor:pointer;text-decoration:none}
 .btn.sub2{background:#E7E9EE;color:#1F2A44}
+.btn.sm{font-size:13px;padding:7px 14px}
 .btn.del{background:none;color:#C62828;padding:6px 8px;font-size:13px}
 .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:16px}
 .msg{padding:10px 14px;border-radius:10px;margin-bottom:14px;font-size:14px}
 .ok{background:#E6F6EC;color:#1B6B3A}.ng{background:#FDECEC;color:#B3261E}
+.help{font-size:12px;color:#6B7385;margin:6px 0 0;line-height:1.7}
+.help code{background:#F1F3F7;padding:1px 5px;border-radius:4px}
+.eye{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.eye img{width:160px;height:100px;object-fit:cover;border-radius:8px;background:#EEF0F4}
 ul{list-style:none;margin:0;padding:0}
 li{display:flex;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid #EEF0F4}
 li time{color:#6B7385;font-size:13px;flex:none}
+li img,li .noimg{width:56px;height:38px;object-fit:cover;border-radius:6px;flex:none;background:#EEF0F4}
 li .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 li a.e{font-size:13px;color:#2A5BD7;flex:none}
 li form{margin:0;flex:none}
@@ -7650,9 +8057,9 @@ li form{margin:0;flex:none}
 </style>
 </head>
 <body>
-<div class="wrap">
+<div class="wrap<?= $BLOG ? ' blog' : '' ?>">
 <?php if (!$logged): ?>
-  <h1>お知らせの更新</h1>
+  <h1><?= h($word) ?>の更新</h1>
   <p class="sub"><?= h($SITE_NAME) ?></p>
   <?php if ($err !== ''): ?><div class="msg ng"><?= h($err) ?></div><?php endif; ?>
   <?php if (isset($notes[$msg])): ?><div class="msg ok"><?= h($notes[$msg]) ?></div><?php endif; ?>
@@ -7664,38 +8071,347 @@ li form{margin:0;flex:none}
   </form>
 <?php else: ?>
   <div class="top">
-    <div><h1>お知らせの更新</h1><p class="sub"><?= h($SITE_NAME) ?> ・ <a href="../" target="_blank" rel="noopener">サイトを見る</a></p></div>
+    <div><h1><?= h($word) ?>の更新</h1><p class="sub"><?= h($SITE_NAME) ?> ・ <a href="../" target="_blank" rel="noopener">サイトを見る</a><?php if ($BLOG): ?> ・ <a href="./" target="_blank" rel="noopener"><?= h($word) ?>の一覧を見る</a><?php endif; ?></p></div>
     <form method="post" action="admin.php"><input type="hidden" name="act" value="logout"><input type="hidden" name="csrf" value="<?= $csrf ?>"><button class="btn sub2" type="submit">ログアウト</button></form>
   </div>
   <?php if ($err !== ''): ?><div class="msg ng"><?= h($err) ?></div><?php endif; ?>
   <?php if (isset($notes[$msg])): ?><div class="msg ok"><?= h($notes[$msg]) ?></div><?php endif; ?>
-  <form class="card" method="post" action="admin.php">
-    <h2><?= $edit ? 'お知らせを直す' : '新しいお知らせ' ?></h2>
+  <form class="card" method="post" action="admin.php"<?= $BLOG ? ' enctype="multipart/form-data"' : '' ?>>
+    <h2><?= $edit ? h($word) . 'を直す' : '新しい' . h($word) ?></h2>
     <input type="hidden" name="act" value="save"><input type="hidden" name="csrf" value="<?= $csrf ?>">
     <input type="hidden" name="id" value="<?= h($form['id']) ?>">
     <label for="date">日付</label><input type="date" id="date" name="date" value="<?= h($form['date']) ?>" required>
     <label for="title">タイトル</label><input type="text" id="title" name="title" value="<?= h($form['title']) ?>" maxlength="200" required>
+<?php if ($BLOG): ?>
+    <label for="cat">カテゴリ(省略可)</label><input type="text" id="cat" name="cat" value="<?= h(f($form, 'cat')) ?>" maxlength="30" list="cats" placeholder="例: お知らせ・イベント・スタッフ日記">
+    <datalist id="cats"><?php foreach ($cats as $c): ?><option value="<?= h($c) ?>"><?php endforeach; ?></datalist>
+    <label for="eye">アイキャッチ写真(一覧や記事の上に出ます・省略可)</label>
+    <div class="eye">
+      <?php if (f($form, 'img') !== ''): ?><img src="../<?= h(f($form, 'img')) ?>" alt=""><label style="margin:0;font-weight:400"><input type="checkbox" name="img_x" value="1"> 外す</label><?php endif; ?>
+      <input type="file" id="eye" name="eye" accept="image/jpeg,image/png,image/gif,image/webp">
+    </div>
+    <label for="body">本文</label>
+    <textarea id="body" name="body"><?= h($form['body']) ?></textarea>
+    <div class="row" style="margin-top:8px"><button class="btn sub2 sm" type="button" id="picBtn">＋ 本文に写真を入れる</button><input type="file" id="pic" accept="image/jpeg,image/png,image/gif,image/webp" hidden></div>
+    <p class="help">書き方: 空いた行で段落が分かれます。<code>## 見出し</code> <code>### 小見出し</code> <code>**太字**</code> <code>- 箇条書き</code> <code>[文字](https://…)</code>。写真はボタンで入れると、その場所に <code>![](news/uploads/…)</code> が入ります。</p>
+    <label for="link">関連リンク(記事の最後にボタンで出ます・省略可)</label><input type="url" id="link" name="link" value="<?= h($form['link']) ?>" placeholder="https://">
+<?php else: ?>
     <label for="body">本文(省略できます。お知らせを押すと小窓で開きます)</label><textarea id="body" name="body"><?= h($form['body']) ?></textarea>
     <label for="link">リンク(本文が無い時、押すと開くページ。省略可)</label><input type="url" id="link" name="link" value="<?= h($form['link']) ?>" placeholder="https://">
+<?php endif; ?>
     <div class="row"><button class="btn" type="submit"><?= $edit ? '保存する' : '公開する' ?></button><?php if ($edit): ?><a class="btn sub2" href="admin.php">やめる</a><?php endif; ?></div>
   </form>
   <div class="card">
-    <h2>公開中のお知らせ(<?= count($items) ?>件)</h2>
+    <h2>公開中の<?= h($word) ?>(<?= count($items) ?>件)</h2>
     <?php if (!$items): ?><p class="sub">まだありません。</p><?php endif; ?>
     <ul>
     <?php foreach ($items as $it): ?>
-      <li><time><?= h(str_replace('-', '.', $it['date'])) ?></time><span class="t"><?= h($it['title']) ?></span>
+      <li><?php if ($BLOG): ?><?php if (f($it, 'img') !== ''): ?><img src="../<?= h(f($it, 'img')) ?>" alt=""><?php else: ?><span class="noimg"></span><?php endif; ?><?php endif; ?><time><?= h(str_replace('-', '.', $it['date'])) ?></time><span class="t"><?= h($it['title']) ?></span>
+        <?php if ($BLOG): ?><a class="e" href="article.php?id=<?= h(rawurlencode($it['id'])) ?>" target="_blank" rel="noopener">見る</a><?php endif; ?>
         <a class="e" href="admin.php?edit=<?= h(rawurlencode($it['id'])) ?>">直す</a>
-        <form method="post" action="admin.php" onsubmit="return confirm('このお知らせを消しますか？')"><input type="hidden" name="act" value="delete"><input type="hidden" name="csrf" value="<?= $csrf ?>"><input type="hidden" name="id" value="<?= h($it['id']) ?>"><button class="btn del" type="submit">消す</button></form>
+        <form method="post" action="admin.php" onsubmit="return confirm('この<?= h($word) ?>を消しますか？')"><input type="hidden" name="act" value="delete"><input type="hidden" name="csrf" value="<?= $csrf ?>"><input type="hidden" name="id" value="<?= h($it['id']) ?>"><button class="btn del" type="submit">消す</button></form>
       </li>
     <?php endforeach; ?>
     </ul>
   </div>
+<?php if ($BLOG): ?>
+<script>
+/* 本文に写真を入れる: 写真を送り、本文の書いている場所に ![](写真の場所) を入れる */
+(function () {
+  var b = document.getElementById('picBtn'), f = document.getElementById('pic'), ta = document.getElementById('body');
+  if (!b) return;
+  b.onclick = function () { f.click(); };
+  f.onchange = function () {
+    if (!f.files[0]) return;
+    var fd = new FormData();
+    fd.append('act', 'upload'); fd.append('csrf', <?= json_encode($_SESSION['csrf']) ?>); fd.append('file', f.files[0]);
+    b.disabled = true; b.textContent = '送っています…';
+    fetch('admin.php', { method: 'POST', body: fd, credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        if (!j.ok) { alert(j.message || '送れませんでした'); return; }
+        var p = ta.selectionStart || ta.value.length, v = ta.value;
+        var ins = (p && v.charAt(p - 1) !== '\n' ? '\n\n' : '') + '![](' + j.path + ')\n\n';
+        ta.value = v.slice(0, p) + ins + v.slice(p);
+        ta.focus(); ta.selectionStart = ta.selectionEnd = p + ins.length;
+      })
+      .catch(function () { alert('写真を送れませんでした。大きすぎないか確かめてください。'); })
+      .then(function () { b.disabled = false; b.textContent = '＋ 本文に写真を入れる'; f.value = ''; });
+  };
+})();
+@ENDSCRIPT@
+<?php endif; ?>
 <?php endif; ?>
 </div>
 </body>
 </html>
 `;
+const NEWS_PHP_LIB=String.raw`<?php
+/*
+ * ブログ形式のお知らせ: 記事のページ(article.php)・一覧のページ(index.php)の共通部分(NT-D で書き出し)
+ * 記事は news.json(更新画面で保存したもの)、まだ無ければ initial.json から読みます。
+ */
+date_default_timezone_set('Asia/Tokyo');
+/*@CFG@*/
+function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
+function nt_items() {
+  $f = is_file(__DIR__ . '/news.json') ? __DIR__ . '/news.json' : __DIR__ . '/initial.json';
+  $j = is_file($f) ? json_decode((string)file_get_contents($f), true) : null;
+  $items = (is_array($j) && isset($j['items']) && is_array($j['items'])) ? $j['items'] : array();
+  usort($items, function ($a, $b) { return strcmp($b['date'], $a['date']); });
+  return $items;
+}
+function nt_f($it, $k) { return isset($it[$k]) ? (string)$it[$k] : ''; }
+function nt_date($d) { return str_replace('-', '.', (string)$d); }
+/* 本文の書き方 → HTML(NT-D の blogBody() と同じ規則) */
+function nt_inline($t) {
+  $t = h($t);
+  $t = preg_replace('/\*\*(.+?)\*\*/u', '<strong>$1</strong>', $t);
+  return preg_replace_callback('~\[([^\]]+)\]\((https?://[^\s)]+|[a-z0-9_\-][a-z0-9_\-./]*\.html(?:#[^\s)]*)?)\)~iu', function ($m) {
+    $ext = preg_match('~^https?:~i', $m[2]) ? ' target="_blank" rel="noopener"' : '';
+    return '<a href="' . $m[2] . '"' . $ext . '>' . $m[1] . '</a>';
+  }, $t);
+}
+function nt_img_url($u, $pre) {
+  if (preg_match('~^https?://[^\s"\'<>]+$~i', $u)) return $u;
+  if (preg_match('~^[a-z0-9_\-][a-z0-9_\-./]*$~i', $u) && strpos($u, '..') === false) return $pre . $u;
+  return '';
+}
+function nt_body($src, $pre) {
+  $src = str_replace(array("\r\n", "\r"), "\n", (string)$src);
+  $blocks = preg_split('/\n{2,}/', $src);
+  $out = array();
+  while ($blocks) {
+    $b = trim(array_shift($blocks), "\n");
+    if (trim($b) === '') continue;
+    $lines = explode("\n", $b);
+    if (preg_match('/^(#{2,3})\s+(.+)$/u', $lines[0], $m)) {
+      $lv = strlen($m[1]);
+      $out[] = '<h' . $lv . '>' . nt_inline($m[2]) . '</h' . $lv . '>';
+      if (count($lines) > 1) array_unshift($blocks, implode("\n", array_slice($lines, 1)));
+      continue;
+    }
+    if (preg_match('/^!\[([^\]]*)\]\(([^)\s]+)\)$/u', $b, $m)) {
+      $u = nt_img_url($m[2], $pre);
+      if ($u !== '') $out[] = '<figure><img src="' . h($u) . '" alt="' . h($m[1]) . '" loading="lazy"></figure>';
+      continue;
+    }
+    $list = true;
+    foreach ($lines as $l) if (!preg_match('/^(-|・)\s*\S/u', $l)) $list = false;
+    if ($list) {
+      $li = '';
+      foreach ($lines as $l) $li .= '<li>' . nt_inline(preg_replace('/^(-|・)\s*/u', '', $l)) . '</li>';
+      $out[] = '<ul>' . $li . '</ul>';
+      continue;
+    }
+    $out[] = '<p>' . implode('<br>', array_map('nt_inline', $lines)) . '</p>';
+  }
+  return implode("\n", $out);
+}
+function nt_excerpt($src, $len) {
+  $t = (string)$src;
+  $t = preg_replace('/!\[[^\]]*\]\([^)]*\)/u', '', $t);
+  $t = preg_replace('/\[([^\]]+)\]\([^)]*\)/u', '$1', $t);
+  $t = preg_replace('/^#{2,3}\s+/mu', '', $t);
+  $t = preg_replace('/^(-|・)\s*/mu', '', $t);
+  $t = trim(preg_replace('/\s+/u', ' ', str_replace('**', '', $t)));
+  return mb_strlen($t, 'UTF-8') > $len ? mb_substr($t, 0, $len, 'UTF-8') . '…' : $t;
+}
+function nt_card($it) {
+  $img = nt_f($it, 'img') !== '' ? '<img src="' . h(nt_img_url(nt_f($it, 'img'), '../')) . '" alt="" loading="lazy">' : '';
+  $cat = nt_f($it, 'cat') !== '' ? '<span class="bcat">' . h(nt_f($it, 'cat')) . '</span>' : '';
+  return '<li><a class="bcard" href="article.php?id=' . rawurlencode(nt_f($it, 'id')) . '"><div class="bcard-im">' . $img . '</div><div class="bcard-b"><div class="bmeta"><time datetime="' . h(nt_f($it, 'date')) . '">' . h(nt_date(nt_f($it, 'date'))) . '</time>' . $cat . '</div><h2>' . h(nt_f($it, 'title')) . '</h2><p>' . h(nt_excerpt(nt_f($it, 'body'), 70)) . '</p></div></a></li>';
+}
+/* ページ全体を出す */
+function nt_doc($o) {
+  global $NT;
+  $t = $o['title'];
+  $desc = isset($o['desc']) ? $o['desc'] : '';
+  $canon = isset($o['canon']) ? $o['canon'] : '';
+  $og = isset($o['og']) ? $o['og'] : '';
+  header('Content-Type: text/html; charset=UTF-8');
+  echo "<!DOCTYPE html>\n<html lang=\"ja\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n";
+  echo '<title>' . h($t) . "</title>\n";
+  if ($desc !== '') echo '<meta name="description" content="' . h($desc) . "\">\n";
+  if (!empty($NT['noindex']) || !empty($o['noindex'])) echo "<meta name=\"robots\" content=\"noindex, nofollow\">\n";
+  if ($canon !== '') echo '<link rel="canonical" href="' . h($canon) . "\">\n";
+  echo '<meta property="og:type" content="' . (!empty($o['article']) ? 'article' : 'website') . "\">\n";
+  echo '<meta property="og:title" content="' . h($t) . "\">\n";
+  if ($desc !== '') echo '<meta property="og:description" content="' . h($desc) . "\">\n";
+  if ($canon !== '') echo '<meta property="og:url" content="' . h($canon) . "\">\n";
+  if ($og !== '') echo '<meta property="og:image" content="' . h($og) . "\">\n";
+  echo '<meta property="og:site_name" content="' . h($NT['site']) . "\">\n";
+  echo '<meta name="twitter:card" content="' . ($og !== '' ? 'summary_large_image' : 'summary') . "\">\n";
+  if (!empty($NT['icon'])) echo "<link rel=\"icon\" href=\"../favicon.png\" type=\"image/png\">\n<link rel=\"apple-touch-icon\" href=\"../apple-touch-icon.png\">\n";
+  echo "<meta name=\"generator\" content=\"NT-D\">\n<style>\n:root{--ac:" . $NT['accent'] . ';--acl:color-mix(in srgb,' . $NT['accent'] . " 12%,#fff)}\n";
+  echo <<<'CSS'
+/*@CSS@*/
+CSS;
+  echo "</style>\n</head>\n<body>\n";
+  echo '<header class="bh"><a class="bh-s" href="../' . h($NT['top']) . '">' . h($NT['site']) . '</a><nav><a href="./">' . h($NT['btitle']) . '</a><a href="../' . h($NT['top']) . '">トップ</a></nav></header>' . "\n";
+  echo "<main class=\"bw\">\n" . $o['main'] . "\n</main>\n";
+  echo '<footer class="bf">&copy; ' . date('Y') . ' ' . h($NT['site']) . "</footer>\n</body>\n</html>\n";
+}
+`;
+const NEWS_PHP_INDEX=String.raw`<?php
+/* お知らせ(ブログ形式)の一覧のページ。?cat=カテゴリ で絞り込み、?page=2 で次のページ */
+require __DIR__ . '/lib.php';
+$all = nt_items();
+$cats = array();
+foreach ($all as $it) { $c = nt_f($it, 'cat'); if ($c !== '' && !in_array($c, $cats, true)) $cats[] = $c; }
+$cat = isset($_GET['cat']) ? (string)$_GET['cat'] : '';
+if ($cat !== '' && !in_array($cat, $cats, true)) $cat = '';
+$list = $cat === '' ? $all : array_values(array_filter($all, function ($it) use ($cat) { return nt_f($it, 'cat') === $cat; }));
+$per = (int)$NT['per'];
+$pages = max(1, (int)ceil(count($list) / $per));
+$page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
+if ($page > $pages) $page = $pages;
+$q = function ($c, $p) { $a = array(); if ($c !== '') $a['cat'] = $c; if ($p > 1) $a['page'] = $p; return './' . ($a ? '?' . http_build_query($a) : ''); };
+$m = '<h1 class="bt">' . h($NT['btitle']) . ($cat !== '' ? '<small style="display:block;font-size:15px;color:#7A8395">' . h($cat) . '</small>' : '') . '</h1>' . "\n";
+if ($cats) {
+  $m .= '<ul class="bcats"><li><a href="./"' . ($cat === '' ? ' class="on"' : '') . '>すべて</a></li>';
+  foreach ($cats as $c) $m .= '<li><a href="' . h($q($c, 1)) . '"' . ($cat === $c ? ' class="on"' : '') . '>' . h($c) . '</a></li>';
+  $m .= "</ul>\n";
+}
+$m .= "<ul class=\"bgrid\">\n";
+foreach (array_slice($list, ($page - 1) * $per, $per) as $it) $m .= nt_card($it) . "\n";
+$m .= "</ul>\n";
+if (!$list) $m .= '<p class="bnone">' . ($cat !== '' ? 'この分類の記事はまだありません' : 'まだ記事がありません') . "</p>\n";
+if ($pages > 1) {
+  $m .= '<nav class="bpager" aria-label="ページ">';
+  for ($i = 1; $i <= $pages; $i++) $m .= $i === $page ? '<span class="on">' . $i . '</span>' : '<a href="' . h($q($cat, $i)) . '">' . $i . '</a>';
+  $m .= "</nav>\n";
+}
+$canon = $NT['base'] !== '' ? $NT['base'] . 'news/' . ($q($cat, $page) === './' ? '' : substr($q($cat, $page), 2)) : '';
+nt_doc(array('title' => ($cat !== '' ? $cat . '｜' : '') . $NT['btitle'] . '｜' . $NT['site'], 'desc' => $NT['site'] . 'の' . $NT['btitle'] . 'の一覧です。', 'canon' => $canon, 'main' => $m));
+`;
+const NEWS_PHP_ARTICLE=String.raw`<?php
+/* お知らせ(ブログ形式)の記事のページ。article.php?id=記事の番号 */
+require __DIR__ . '/lib.php';
+$all = nt_items();
+$id = isset($_GET['id']) ? preg_replace('/[^a-z0-9]/i', '', (string)$_GET['id']) : '';
+$i = -1;
+foreach ($all as $k => $it) if (nt_f($it, 'id') === $id && $id !== '') { $i = $k; break; }
+if ($i < 0) {
+  http_response_code(404);
+  nt_doc(array('title' => '記事が見つかりません｜' . $NT['site'], 'noindex' => true, 'main' => '<article class="ba"><h1>記事が見つかりません</h1><p>消されたか、アドレスが違うようです。</p><a class="bback" href="./">' . h($NT['btitle']) . 'の一覧へ</a></article>'));
+  exit;
+}
+$it = $all[$i];
+$older = isset($all[$i + 1]) ? $all[$i + 1] : null;
+$newer = $i > 0 ? $all[$i - 1] : null;
+$cat = nt_f($it, 'cat');
+$img = nt_f($it, 'img');
+$eye = $img !== '' ? nt_img_url($img, '../') : '';
+$link = nt_f($it, 'link');
+$m = '<article class="ba">' . "\n";
+$m .= '<div class="bmeta"><time datetime="' . h(nt_f($it, 'date')) . '">' . h(nt_date(nt_f($it, 'date'))) . '</time>' . ($cat !== '' ? '<a class="bcat" href="./?cat=' . rawurlencode($cat) . '">' . h($cat) . '</a>' : '') . "</div>\n";
+$m .= '<h1>' . h(nt_f($it, 'title')) . "</h1>\n";
+if ($eye !== '') $m .= '<figure class="beye"><img src="' . h($eye) . '" alt=""></figure>' . "\n";
+$m .= "<div class=\"bbody\">\n" . nt_body(nt_f($it, 'body'), '../') . "\n</div>\n";
+if (preg_match('~^https?://[^\s"\'<>]+$~i', $link)) $m .= '<p><a class="blink" href="' . h($link) . '" target="_blank" rel="noopener">詳しくはこちら</a></p>' . "\n";
+$m .= '<nav class="bnav" aria-label="前後の記事">';
+if ($older) $m .= '<a class="pv" href="article.php?id=' . rawurlencode(nt_f($older, 'id')) . '"><small>← 前の記事</small>' . h(nt_f($older, 'title')) . '</a>';
+if ($newer) $m .= '<a class="nx" href="article.php?id=' . rawurlencode(nt_f($newer, 'id')) . '"><small>次の記事 →</small>' . h(nt_f($newer, 'title')) . '</a>';
+$m .= "</nav>\n" . '<a class="bback" href="./">' . h($NT['btitle']) . "の一覧へ</a>\n</article>";
+$og = $img === '' ? '' : (preg_match('~^https?://~i', $img) ? $img : ($NT['base'] !== '' ? $NT['base'] . $img : ''));
+$desc = nt_excerpt(nt_f($it, 'body'), 110);
+nt_doc(array('title' => nt_f($it, 'title') . '｜' . $NT['site'], 'desc' => $desc !== '' ? $desc : nt_f($it, 'title'), 'canon' => $NT['base'] !== '' ? $NT['base'] . 'news/article.php?id=' . rawurlencode($id) : '', 'og' => $og, 'article' => true, 'main' => $m));
+`;
+const NEWS_PHP_FEED=String.raw`<?php
+/*
+ * 外部のブログ(RSS)の最新の記事を、サイトのお知らせ欄に出すための中継(NT-D で書き出し)
+ * ブラウザからは他のサイトのRSSを直接読めないので、サーバーが代わりに読みます。
+ * 読むのは下の一覧にあるURLだけです(ほかのURLは読みません)。30分ごとに読み直します。
+ */
+date_default_timezone_set('Asia/Tokyo');
+header('Content-Type: application/json; charset=UTF-8');
+header('X-Robots-Tag: noindex, nofollow');
+header('Cache-Control: public, max-age=600');
+/*@FEEDS@*/
+$id = isset($_GET['f']) ? (string)$_GET['f'] : '';
+if (!isset($FEEDS[$id])) { http_response_code(404); echo '{"items":[]}'; exit; }
+$url = $FEEDS[$id];
+$cache = sys_get_temp_dir() . '/ntfeed_' . md5(__DIR__ . '|' . $url) . '.json';
+if (is_file($cache) && time() - filemtime($cache) < 1800) { readfile($cache); exit; }
+
+function nt_fetch($url) {
+  $ua = 'Mozilla/5.0 (compatible; NT-D feed reader)';
+  if (function_exists('curl_init')) {
+    $c = curl_init($url);
+    curl_setopt_array($c, array(CURLOPT_RETURNTRANSFER => true, CURLOPT_FOLLOWLOCATION => true, CURLOPT_MAXREDIRS => 3, CURLOPT_CONNECTTIMEOUT => 6, CURLOPT_TIMEOUT => 10, CURLOPT_USERAGENT => $ua, CURLOPT_PROTOCOLS => CURLPROTO_HTTP | CURLPROTO_HTTPS));
+    $b = curl_exec($c);
+    $code = curl_getinfo($c, CURLINFO_HTTP_CODE);
+    curl_close($c);
+    return ($b !== false && $code >= 200 && $code < 300) ? $b : '';
+  }
+  $ctx = stream_context_create(array('http' => array('timeout' => 10, 'user_agent' => $ua, 'follow_location' => 1, 'max_redirects' => 3)));
+  $b = @file_get_contents($url, false, $ctx);
+  return $b === false ? '' : $b;
+}
+function nt_txt($s) { return trim(preg_replace('/\s+/u', ' ', html_entity_decode(strip_tags((string)$s), ENT_QUOTES, 'UTF-8'))); }
+function nt_url($u) { $u = trim((string)$u); return preg_match('~^https?://[^\s"\'<>]+$~i', $u) ? $u : ''; }
+function nt_first_img($html) { return preg_match('~<img[^>]+src=["\']([^"\']+)["\']~i', (string)$html, $m) ? nt_url(html_entity_decode($m[1], ENT_QUOTES, 'UTF-8')) : ''; }
+function nt_ymd($s) { $t = strtotime((string)$s); return $t ? date('Y-m-d', $t) : ''; }
+
+$out = array('title' => '', 'link' => '', 'items' => array());
+$xml = nt_fetch($url);
+if ($xml !== '' && function_exists('simplexml_load_string')) {
+  libxml_use_internal_errors(true);
+  $x = simplexml_load_string($xml, 'SimpleXMLElement', LIBXML_NOCDATA);
+  if ($x) {
+    $NS = array('media' => 'http://search.yahoo.com/mrss/', 'content' => 'http://purl.org/rss/1.0/modules/content/', 'dc' => 'http://purl.org/dc/elements/1.1/');
+    $list = array();
+    /* RSS 1.0(RDF): 中身が別の名前空間にある */
+    if (!isset($x->channel) && !isset($x->entry)) { $r1 = $x->children('http://purl.org/rss/1.0/'); if (isset($r1->channel)) { $out['title'] = nt_txt($r1->channel->title); $out['link'] = nt_url($r1->channel->link); $list = $r1->item; } }
+    if (isset($x->channel)) {   /* RSS 2.0 */
+      $out['title'] = nt_txt($x->channel->title);
+      $out['link'] = nt_url($x->channel->link);
+      $list = isset($x->channel->item) && count($x->channel->item) ? $x->channel->item : $x->item;
+    } elseif (isset($x->entry)) {   /* Atom */
+      $out['title'] = nt_txt($x->title);
+      foreach ($x->link as $l) if ((string)$l['rel'] === '' || (string)$l['rel'] === 'alternate') { $out['link'] = nt_url($l['href']); break; }
+      $list = $x->entry;
+    }
+    foreach ($list as $e) {
+      if (count($out['items']) >= 20) break;
+      $media = $e->children($NS['media']);
+      $content = $e->children($NS['content']);
+      $dc = $e->children($NS['dc']);
+      $link = nt_url($e->link);
+      if ($link === '' && isset($e->link)) foreach ($e->link as $l) if ((string)$l['rel'] === '' || (string)$l['rel'] === 'alternate') { $link = nt_url($l['href']); break; }
+      $date = nt_ymd(isset($e->pubDate) ? $e->pubDate : (isset($dc->date) ? $dc->date : (isset($e->published) ? $e->published : $e->updated)));
+      $img = '';
+      if (isset($media->thumbnail)) { $img = nt_url($media->thumbnail->attributes()->url); if ($img === '') $img = nt_url((string)$media->thumbnail); }
+      if ($img === '' && isset($media->content)) $img = nt_url($media->content->attributes()->url);
+      if ($img === '' && isset($e->enclosure) && strpos((string)$e->enclosure['type'], 'image') === 0) $img = nt_url($e->enclosure['url']);
+      $html = isset($content->encoded) ? (string)$content->encoded : (isset($e->description) ? (string)$e->description : (isset($e->content) ? (string)$e->content : (string)$e->summary));
+      if ($img === '') $img = nt_first_img($html);
+      $text = nt_txt($html);
+      $title = nt_txt($e->title);
+      if ($title === '' || $link === '') continue;
+      $out['items'][] = array('title' => $title, 'link' => $link, 'date' => $date, 'img' => $img, 'excerpt' => mb_strlen($text, 'UTF-8') > 80 ? mb_substr($text, 0, 80, 'UTF-8') . '…' : $text);
+    }
+  }
+}
+$json = json_encode($out, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+if ($out['items']) @file_put_contents($cache, $json, LOCK_EX);
+elseif (is_file($cache)) { readfile($cache); exit; }   /* 読めなかった時は前回の内容を出す */
+echo $json;
+`;
+function newsAdminPhp(siteName,blog){
+  return NEWS_PHP_ADMIN
+    .replace('/*@SITE@*/',()=>'$SITE_NAME = '+phpStr(siteName||'ホームページ')+';\n$BLOG = '+(blog?'true':'false')+';')
+    .replace('@ENDSCRIPT@',()=>'</'+'script>');
+}
+function newsBlogLibPhp(ctx){
+  const cfg='$NT = array('+[['site',phpStr(ctx.siteName)],['btitle',phpStr(ctx.btitle)],['accent',phpStr(ctx.accentHex)],['top',phpStr(ctx.top)],
+    ['per',String(ctx.per|0)],['base',phpStr(ctx.base||'')],['icon',ctx.icon?'true':'false'],['noindex',ctx.noindex?'true':'false']].map(([k,v])=>"'"+k+"' => "+v).join(', ')+');';
+  return NEWS_PHP_LIB.replace('/*@CFG@*/',()=>cfg).replace('/*@CSS@*/',()=>BLOG_CSS.trim());
+}
+function newsFeedPhp(feeds){
+  const arr='$FEEDS = array('+Object.entries(feeds).map(([k,u])=>phpStr(k)+' => '+phpStr(u)).join(', ')+');';
+  return NEWS_PHP_FEED.replace('/*@FEEDS@*/',()=>arr);
 }
 /* ---------- 画像を軽くする(書き出し時) ----------
    表示される大きさの2.2倍(高精細な画面でも粗く見えない大きさ)より大きい画像は縮め、
@@ -7733,6 +8449,9 @@ function siteImageUses(d,pages){
       if(big){const k=Math.max(s.w/big.w,900/big.h)*1.02;need(big.src,big.w*k,big.h*k);}
     }
   }));
+  /* お知らせ(ブログ形式)の記事の画像: 記事のページでは幅760px程度で出る */
+  const nn=siteCfg(d).news;
+  if(nn&&nn.items)nn.items.forEach(it=>{if(it.img)need(it.img,1200,750);(it.pics||[]).forEach(r=>need(r,1200,1200));});
   return uses;
 }
 const loadData=data=>new Promise((res,rej)=>{const im=new Image();im.onload=()=>res(im);im.onerror=rej;im.src=data;});
@@ -7944,38 +8663,67 @@ async function exportSiteZip(){
   siteImgSink=sink;
   siteFormsUsed=new Map();
   const newsSeen={v:false};
+  siteNewsFeeds=new Map();
+  const nws=siteNews(d),base=siteBaseUrl(c);
+  /* ブログ形式の記事・一覧のページの設定 */
+  const bctx={siteName:(pages[0]&&pages[0].title)||d.name||'ホームページ',btitle:newsBlogTitle(nws),accent:nws.accent||'#1F2A44',
+    accentHex:/^#[0-9a-f]{6}$/i.test(nws.accent||'')?nws.accent:'#1F2A44',top:(pages[0]&&pages[0].file)||'index.html',
+    listHref:nws.mode==='web'?'./':'index.html',base,icon:!!icons,noindex:!!c.noindex,per:9};
+  let newsX=null;const blogFiles=[];
   try{
     pages.forEach(p=>files.push({name:p.file,data:sitePageDoc(d,p,{files:true,ogp:!!ogp,icon:!!icons,newsSeen})}));
+    /* 記事の画像も images/ に書き出すので、画像を書き出している間に作る */
+    if(newsSeen.v&&(nws.mode==='web'||nws.blog))newsX=newsExportItems(nws);
+    if(newsSeen.v&&nws.blog&&nws.mode!=='web'){
+      blogFiles.push({name:'news/index.html',data:blogListStatic(bctx,newsX)});
+      newsX.forEach((it,i)=>blogFiles.push({name:'news/'+it.id+'.html',data:blogArticleStatic(bctx,newsX,i)}));
+    }
   }finally{siteImgSink=null;siteImgOpt=null;}
+  const feeds=siteNewsFeeds;siteNewsFeeds=null;
   const forms=siteFormsUsed;siteFormsUsed=null;
   files.push({name:'css/style.css',data:siteCss(c)},{name:'js/main.js',data:siteJs()},...sink.files);
   if(customCssText(c))files.push({name:'css/custom.css',data:'/* 追加のCSS(NT-D の書き出し画面で書いたもの。css/style.css のあとに読み込まれます) */\n'+customCssText(c)+'\n'});
   const extra=[];
   if(ogp){files.push({name:'ogp.png',data:ogp});extra.push('・ogp.png … SNSでシェアされた時の画像');}
   if(icons){files.push({name:'favicon.png',data:icons.fav},{name:'apple-touch-icon.png',data:icons.apple});extra.push('・favicon.png / apple-touch-icon.png … ブラウザのタブ・ホーム画面のアイコン');}
-  const base=siteBaseUrl(c);
   files.push({name:'robots.txt',data:c.noindex?'User-agent: *\nDisallow: /\n':`User-agent: *\nAllow: /\n${base?`Sitemap: ${base}sitemap.xml\n`:''}`});
   extra.push('・robots.txt … 検索エンジンへの案内');
   if(base&&!c.noindex){
     const day=new Date().toISOString().slice(0,10);
     files.push({name:'sitemap.xml',data:`<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${pages.map(p=>`  <url><loc>${escXml(pageUrl(base,p))}</loc><lastmod>${day}</lastmod></url>`).join('\n')}
+${[...pages.map(p=>pageUrl(base,p)),
+  ...(newsX&&nws.blog?[base+'news/',...(nws.mode==='web'?[]:newsX.map(it=>base+'news/'+it.id+'.html'))]:[])
+].map(u=>`  <url><loc>${escXml(u)}</loc><lastmod>${day}</lastmod></url>`).join('\n')}
 </urlset>
 `});
     extra.push('・sitemap.xml … 検索エンジン向けのページ一覧');
   }
-  const nws=siteNews(d);
+  const newsRedirect={name:'news/index.html',data:'<!DOCTYPE html><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=../"><title>移動します</title>\n'};
   if(newsSeen.v&&nws.mode==='web'){
     if(!nws.pw){toast('お知らせをブラウザから更新する設定です。お知らせの設定でパスワードを決めてください');return false;}
-    files.push({name:'news/admin.php',data:newsAdminPhp(d.name)},{name:'news/config.php',data:newsConfigPhp(nws.pw)},
-      {name:'news/initial.json',data:newsInitialJson()},
-      {name:'news/index.html',data:'<!DOCTYPE html><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=../"><title>移動します</title>\n'});
+    files.push({name:'news/admin.php',data:newsAdminPhp(d.name,!!nws.blog)},{name:'news/config.php',data:newsConfigPhp(nws.pw)},
+      {name:'news/initial.json',data:newsInitialJson(newsX||[])});
+    if(nws.blog){
+      files.push({name:'news/lib.php',data:newsBlogLibPhp(bctx)},{name:'news/index.php',data:NEWS_PHP_INDEX},{name:'news/article.php',data:NEWS_PHP_ARTICLE});
+      extra.push('・news/ … ブログ形式のお知らせ(一覧 news/ ・記事 news/article.php?id=…。PHPが使えるサーバーが必要です)',
+        '  更新画面で入れた写真は news/uploads/ に保存されます(このZIPには入っていないので、上げ直しても消えません)。');
+    }else files.push(newsRedirect);
     extra.push('・news/ … お知らせ(更新画面 news/admin.php・PHPが使えるサーバーが必要です)',
       `  更新画面: ${base?base+'news/admin.php':'https://(ドメイン)/news/admin.php'} を開き、パスワードでログインします。`,
       '  更新したお知らせは news/news.json に保存されます。このZIPには入っていないので、',
       '  サイトを直してアップロードし直しても、更新したお知らせは消えません。',
       '  news フォルダにPHPが書き込めない設定のサーバーでは、フォルダの権限を 755(または 705)にしてください。');
+  }else if(newsSeen.v&&nws.blog){
+    files.push(...blogFiles);
+    extra.push(`・news/ … ブログ形式のお知らせ(index.html=記事の一覧、(番号).html=記事 ${blogFiles.length-1}件)`,
+      '  記事を足したり直したりする時は、NT-D で書いて書き出し直し、news フォルダごと上げ直してください。');
+  }
+  if(feeds.size){
+    files.push({name:'news/feed.php',data:newsFeedPhp(Object.fromEntries(feeds))});
+    if(!(newsSeen.v&&(nws.mode==='web'||nws.blog)))files.push(newsRedirect);
+    extra.push('・news/feed.php … 外部のブログ(RSS)の最新の記事をお知らせ欄に出す中継(PHPが使えるサーバーが必要です)',
+      '  読むブログ: '+[...new Set(feeds.values())].join(' ／ ')+'(30分ごとに読み直します)');
   }
   if(forms.size){
     files.push({name:'send.php',data:siteSendPhp(forms,d.name)});
