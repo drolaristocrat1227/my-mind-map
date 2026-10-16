@@ -2215,6 +2215,10 @@ kbd{
         <button class="seg" data-v="1" role="radio">する(おすすめ)</button>
         <button class="seg" data-v="0" role="radio">しない(元の画像のまま)</button>
       </div>
+      <div class="menu-label">フォント(このデザインの基本の文字)</div>
+      <div class="numRow"><span class="radLbl expHl">基本のフォント</span><select id="expFontSel"></select></div>
+      <div class="expCssHint" id="expFontNote"></div>
+      <div class="segRow"><button class="seg" id="expFontFix">端末のフォントを、近いWebフォントにまとめて置き換える</button></div>
       <div class="menu-label">ローディング画面(ページを開いた時)</div>
       <div class="segRow mWrap" id="expLoaderRow" role="radiogroup">
         <button class="seg" data-ld="" role="radio">なし</button>
@@ -2429,7 +2433,7 @@ kbd{
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-16.5';
+const APP_VERSION='2026-10-16.6';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -3971,7 +3975,8 @@ $('#drawerWrap').addEventListener('touchmove',e=>{if(mapDrag)e.preventDefault();
 
 /* 新しいワイヤーフレーム */
 $('#newWireBtn').onclick=()=>{
-  const w={id:uid(),name:'新しいデザイン',shapes:[],updated:Date.now()};
+  /* 基本のフォントは Webフォント(どの端末でも同じ見た目・幅になり、公開した時に崩れない) */
+  const w={id:uid(),name:'新しいデザイン',shapes:[],updated:Date.now(),site:{font:'w-notosans'}};
   doc.wires.push(w);
   doc.tree.unshift({t:'w',id:w.id});
   openWire(w.id);
@@ -4585,6 +4590,20 @@ function updateSiteDlg(){
     ?'このデザインのクラス・ID: '+[...cls.map(v=>'<code>.'+escXml(v)+'</code>'),...ids.map(v=>'<code>#'+escXml(v)+'</code>')].join(' ')+'<br>'
     :'クラス名・IDは「色とスタイル」→「ホームページ用の設定」→「HTMLの名前」で付けられます。<br>')
     +'図形の位置・大きさ・色はHTMLに直接書かれているため、変える時は <code>!important</code> を付けてください(例: <code>.cta{background:#000 !important}</code>)。';
+  /* フォント: 基本のフォントと、端末のフォント(Windowsなど)を使っている文字の数 */
+  {
+    const sel=$('#expFontSel'),d=curDoc();
+    if(!sel.options.length){
+      const groups=[...new Set(WFONTS.map(f=>f.g))];
+      sel.innerHTML=groups.map(g=>'<optgroup label="'+escXml(g)+'">'+WFONTS.filter(f=>f.g===g&&(!f.probe||f.probe.some(fontAvailable))).map(f=>`<option value="${f.k}">${escXml(f.n)}</option>`).join('')+'</optgroup>').join('');
+    }
+    sel.value=docFont(d);
+    const local=localFontTexts(d);
+    $('#expFontNote').innerHTML=webFontOf(docFont(d))
+      ?(local.length?`基本のフォントはWebフォントです。ただし <b>${local.length}か所</b>の文字が端末のフォント(Windowsなど)のままです。スマホやMacでは別の字形になり、幅が変わることがあります。`:'すべての文字がWebフォントです。どの端末でも同じ見た目・幅で表示されます。')
+      :'今の基本のフォントは「端末のフォント」です。Windowsで作ると、スマホやMacでは別のフォントに置き換わり、文字の幅が変わって崩れることがあります。<b>Webフォント(Noto Sans JP など)にすると、どの端末でも同じ見た目</b>になります。';
+    $('#expFontFix').style.display=(local.length||!webFontOf(docFont(d)))?'':'none';
+  }
   /* ローディング画面・カスタムカーソル */
   const ld=c.loader||{},cu=c.cursor||{};
   document.querySelectorAll('#expLoaderRow .seg').forEach(b=>{const on=b.dataset.ld===(ld.t||'');b.classList.toggle('active',on);b.setAttribute('aria-checked',on?'true':'false');});
@@ -4740,6 +4759,48 @@ $('#expPfxRow').addEventListener('click',e=>{
   if(b.dataset.pfx)c.pfx={c:'#1F2A44',...(c.pfx||{}),t:b.dataset.pfx};else delete c.pfx;
   save();updateExportDlg();
 });
+/* 端末のフォントを使っている文字(フォントを選んでいない文字は、基本のフォントが端末のフォントの時) */
+function localFontTexts(d){
+  const out=[];
+  (d.shapes||[]).forEach(s=>{
+    if(s.type!=='text'||s.hidden)return;
+    const ks=new Set([s.ff||docFont(d)]);(s.cattr||[]).forEach(a=>{if(a&&a.ff)ks.add(a.ff);});
+    if([...ks].some(k=>!webFontOf(k)))out.push(s);
+  });
+  return out;
+}
+/* 端末のフォント → 近いWebフォント */
+const FONT_TO_WEB={gothic:'w-notosans',meiryo:'w-notosans',bizud:'w-zenkaku',mincho:'w-notoserif',bizmin:'w-notoserif',kaisho:'w-shippori',gyosho:'w-shippori',
+  udkyo:'w-klee',maru:'w-zenmaru',pop:'w-rocknroll',serif:'w-playfair',classic:'w-playfair',elegant:'w-playfair',sans:'w-inter',soft:'w-poppins',geo:'w-montserrat',
+  impact:'w-oswald',din:'w-oswald',narrow:'w-oswald',slab:'w-robotoslab',script:'w-dancing',elegantscript:'w-dancing',hand:'w-caveat',crayon:'w-caveat',print:'w-caveat',
+  stencil:'w-oswald',deco:'w-playfair',retro:'w-oswald',gothic19:'w-playfair',tech:'w-oswald',mono:'w-notosans'};
+$('#expFontSel').addEventListener('change',()=>{
+  const d=curDoc(),c=siteCfg(d);
+  pushUndo();
+  c.font=$('#expFontSel').value;
+  dfRoot=null;   /* 覚えている基本のフォントを読み直す */
+  d.shapes.forEach(s=>{if(s.type==='text'){const w0=s.w;measureWText(s);if(!s.vert&&w0&&s.align==='left')s.x+=(s.w-w0)/2;else if(!s.vert&&w0&&s.align==='right')s.x-=(s.w-w0)/2;}});
+  save();renderWire();updateSiteDlg();
+  toast('基本のフォントを変えました(フォントを選んでいない文字が変わります)');
+});
+$('#expFontFix').onclick=()=>{
+  const d=curDoc(),c=siteCfg(d);
+  pushUndo();
+  if(!webFontOf(docFont(d)))c.font=FONT_TO_WEB[docFont(d)]||'w-notosans';
+  dfRoot=null;
+  let n=0;
+  d.shapes.forEach(s=>{
+    if(s.type!=='text')return;
+    let ch=false;
+    if(s.ff&&!webFontOf(s.ff)){s.ff=FONT_TO_WEB[s.ff]||'w-notosans';ch=true;}
+    if(s.cattr)s.cattr=s.cattr.map(a=>{if(a&&a.ff&&!webFontOf(a.ff)){ch=true;return{...a,ff:FONT_TO_WEB[a.ff]||'w-notosans'};}return a;});
+    const w0=s.w;measureWText(s);
+    if(!s.vert&&w0&&s.align==='left')s.x+=(s.w-w0)/2;else if(!s.vert&&w0&&s.align==='right')s.x-=(s.w-w0)/2;
+    if(ch)n++;
+  });
+  save();renderWire();updateSiteDlg();
+  toast(`Webフォントに置き換えました(${n}か所＋基本のフォント)。文字の幅が少し変わるので、見た目を確かめてください`);
+};
 $('#expTapRow').addEventListener('click',e=>{
   const b=e.target.closest('.seg');if(!b)return;
   const c=siteCfg();
@@ -4960,7 +5021,7 @@ function siteTextOk(s){
 function siteText(s,o,tag,attrs,cls){
   const L=textLayout(s);
   const fa=alphaOf(s,'fill');
-  const base={fs:s.fs||18,fw:s.fw||400,ff:s.ff||'gothic',ls:s.ls||0};
+  const base={fs:s.fs||18,fw:s.fw||400,ff:s.ff||docFont(),ls:s.ls||0};
   const st=[siteBox(s,o,L.w,L.h),
     `color:${cssCol(s.fill||'var(--ink)',fa)}`,
     `font-family:${cssFont(base.ff)}`,`font-size:${cssNum(base.fs)}px`,`font-weight:${base.fw}`];
@@ -5064,7 +5125,7 @@ function buildFormShapes(cfg,x0,y0,W){
   const out=[];
   const fr=(role,extra)=>({form:cfg.id,role,...(extra||{})});
   const text=(t,left,cy,o)=>{
-    const s={id:uid(),type:'text',rot:0,text:t,fs:15,fw:400,ff:'gothic',fill:st.text,align:'left',gid,...o};
+    const s={id:uid(),type:'text',rot:0,text:t,fs:15,fw:400,ff:docFont(),fill:st.text,align:'left',gid,...o};
     measureWText(s);
     s.x=left+s.w/2;s.y=cy;
     out.push(s);return s;
@@ -5293,7 +5354,7 @@ function buildNewsShapes(d,cfg,x0,y0,W,box){
   out.push(b);
   /* 「一覧を見る →」(ブログ形式・外部のブログの時) */
   if(newsHasMore(cfg,n)){
-    const mt={id:uid(),type:'text',rot:0,text:cfg.src==='rss'?'ブログを見る →':'一覧を見る →',fs:Math.round(st.fs*0.9),fw:700,ff:'gothic',fill:st.text,align:'right',gid,nw:nw('more')};
+    const mt={id:uid(),type:'text',rot:0,text:cfg.src==='rss'?'ブログを見る →':'一覧を見る →',fs:Math.round(st.fs*0.9),fw:700,ff:docFont(),fill:st.text,align:'right',gid,nw:nw('more')};
     measureWText(mt);mt.x=x0+W-24-mt.w/2;mt.y=y0+H-NEWS_MORE/2-4;out.push(mt);
   }
   if(cfg.layout==='card'){
@@ -5307,9 +5368,9 @@ function buildNewsShapes(d,cfg,x0,y0,W,box){
       if(it.img)im.imgFill={src:it.img,iw:1600,ih:1000,ox:0,oy:0,scale:1};
       out.push(im);
       const meta=newsDate(it.date)+(it.cat?'　'+it.cat:'');
-      const dt={id:uid(),type:'text',rot:0,text:meta,fs:Math.round(st.fs*0.85),fw:500,ff:'gothic',fill:st.date,align:'left',gid,nw:nw('date')};
+      const dt={id:uid(),type:'text',rot:0,text:meta,fs:Math.round(st.fs*0.85),fw:500,ff:docFont(),fill:st.date,align:'left',gid,nw:nw('date')};
       fitText(dt,g.cw-28);dt.x=cx+14+dt.w/2;dt.y=cy+g.ih+14+dt.h/2;out.push(dt);
-      const tt={id:uid(),type:'text',rot:0,text:it.title||'',fs:st.fs,fw:700,ff:'gothic',fill:st.text,align:'left',gid,nw:nw('title')};
+      const tt={id:uid(),type:'text',rot:0,text:it.title||'',fs:st.fs,fw:700,ff:docFont(),fill:st.text,align:'left',gid,nw:nw('title')};
       fitText(tt,g.cw-28);tt.x=cx+14+tt.w/2;tt.y=dt.y+dt.h/2+8+tt.h/2;out.push(tt);
     });
     return out;
@@ -5317,9 +5378,9 @@ function buildNewsShapes(d,cfg,x0,y0,W,box){
   const left=x0+24,dateW=st.fs*6.2;
   newsPreviewItems(d,cfg.count,cfg).forEach((it,i)=>{
     const top=y0+NEWS_PAD+i*NEWS_ROW,cy=top+NEWS_ROW/2;
-    const dt={id:uid(),type:'text',rot:0,text:newsDate(it.date),fs:Math.round(st.fs*0.85),fw:500,ff:'gothic',fill:st.date,align:'left',gid,nw:nw('date')};
+    const dt={id:uid(),type:'text',rot:0,text:newsDate(it.date),fs:Math.round(st.fs*0.85),fw:500,ff:docFont(),fill:st.date,align:'left',gid,nw:nw('date')};
     measureWText(dt);dt.x=left+dt.w/2;dt.y=cy;out.push(dt);
-    const tt={id:uid(),type:'text',rot:0,text:it.title||'',fs:st.fs,fw:500,ff:'gothic',fill:st.text,align:'left',gid,nw:nw('title')};
+    const tt={id:uid(),type:'text',rot:0,text:it.title||'',fs:st.fs,fw:500,ff:docFont(),fill:st.text,align:'left',gid,nw:nw('title')};
     fitText(tt,W-48-dateW);tt.x=left+dateW+tt.w/2;tt.y=cy;out.push(tt);
     out.push({id:uid(),type:'rect',x:x0+W/2,y:top+NEWS_ROW-0.5,w:W-48,h:1,rot:0,fill:st.line,noStroke:true,gid,nw:nw('line')});
   });
@@ -6028,7 +6089,7 @@ function siteMedia(s,o){
     inner=`<svg class="nt-ct" viewBox="0 0 ${cssNum(s.w)} ${cssNum(s.h)}" width="100%" height="100%" role="img" aria-label="${escXml(m.t||'')}">`
       +`<defs><path id="${pid}" d="M${cssNum(cx-R)},${cssNum(cy)}a${cssNum(R)},${cssNum(R)} 0 1,1 ${cssNum(2*R)},0a${cssNum(R)},${cssNum(R)} 0 1,1 ${cssNum(-2*R)},0"/></defs>`
       +`<g class="nt-ct-g" style="transform-origin:${cssNum(cx)}px ${cssNum(cy)}px;animation-duration:${cssNum(m.speed||14)}s${m.dir==='ccw'?';animation-direction:reverse':''}">`
-      +`<text font-size="${cssNum(fs)}" font-weight="${m.fw||700}" fill="${cssCol(m.fc||'#1F2A44')}" font-family='${fontStack('gothic')}'><textPath href="#${pid}" textLength="${cssNum(L-fs*0.3)}" lengthAdjust="spacing">${escXml(m.t||'')}</textPath></text></g></svg>`;
+      +`<text font-size="${cssNum(fs)}" font-weight="${m.fw||700}" fill="${cssCol(m.fc||'#1F2A44')}" font-family='${fontStack(docFont())}'><textPath href="#${pid}" textLength="${cssNum(L-fs*0.3)}" lengthAdjust="spacing">${escXml(m.t||'')}</textPath></text></g></svg>`;
   }else if(m.kind==='swap'){
     /* スクロールで画像が切り替わる: 部品の高さの分だけスクロールする間、画面に留めて順に切り替える */
     cls+=' nt-swap';
@@ -6527,7 +6588,7 @@ ${SITE_RANGES.map(({r,mq})=>`@media ${mq}{.nt-view:not(.nt-r-${r}){display:none}
 .nt-swap .nt-sw-i{opacity:0;transition:opacity .7s ease}
 .nt-swap .nt-sw-i.on{opacity:1}
 .nt-sw-i img,.nt-wv-i img{width:100%;height:100%;object-fit:cover;display:block}
-.nt-sw-c{position:absolute;left:0;right:0;bottom:0;margin:0;padding:32px 36px;background:linear-gradient(transparent,rgba(0,0,0,.55));font-weight:700;line-height:1.6;font-family:system-ui,-apple-system,"Hiragino Sans","Yu Gothic UI","Meiryo",sans-serif}
+.nt-sw-c{position:absolute;left:0;right:0;bottom:0;margin:0;padding:32px 36px;background:linear-gradient(transparent,rgba(0,0,0,.55));font-weight:700;line-height:1.6;font-family:var(--ntf,system-ui,-apple-system,"Hiragino Sans","Yu Gothic UI","Meiryo",sans-serif)}
 .nt-tn{perspective:900px;overflow:hidden}
 .nt-tn-g{position:absolute;inset:0;transform-style:preserve-3d}
 .nt-tn-i{position:absolute;left:50%;top:50%;object-fit:cover;border-radius:10px;box-shadow:0 20px 50px rgba(0,0,0,.35);backface-visibility:hidden}
@@ -6566,13 +6627,13 @@ ${SITE_RANGES.map(({r,mq})=>`@media ${mq}{.nt-view:not(.nt-r-${r}){display:none}
 .nt-menu.on{visibility:visible;transition:none}
 .nt-menu-bg{position:absolute;inset:0;background:rgba(0,0,0,.4);opacity:0;transition:opacity .3s}
 .nt-menu.on .nt-menu-bg{opacity:1}
-.nt-menu-panel{position:absolute;top:0;right:0;bottom:0;width:min(340px,86vw);padding:76px 28px 32px;overflow-y:auto;background:${mBg};color:${mFg};transform:translateX(100%);transition:transform .35s cubic-bezier(.2,.8,.2,1);font-family:system-ui,-apple-system,"Hiragino Sans","Yu Gothic UI","Meiryo",sans-serif}
+.nt-menu-panel{position:absolute;top:0;right:0;bottom:0;width:min(340px,86vw);padding:76px 28px 32px;overflow-y:auto;background:${mBg};color:${mFg};transform:translateX(100%);transition:transform .35s cubic-bezier(.2,.8,.2,1);font-family:var(--ntf,system-ui,-apple-system,"Hiragino Sans","Yu Gothic UI","Meiryo",sans-serif)}
 .nt-menu.on .nt-menu-panel{transform:none}
 .nt-menu ul{list-style:none}
 .nt-menu li a{display:block;padding:15px 4px;font-size:17px;font-weight:600;border-bottom:1px solid color-mix(in srgb,currentColor 18%,transparent)}
 .nt-menu-close{position:absolute;top:14px;right:14px;width:48px;height:48px;border:0;background:none;color:inherit;font-size:32px;line-height:1;cursor:pointer}
 /* お問い合わせフォーム(見た目はデザインのまま、入力欄などを本物にする) */
-.nt-form .nt-fi{font-family:system-ui,-apple-system,"Hiragino Sans","Yu Gothic UI","Meiryo",sans-serif;font-size:16px;color:var(--tx);padding:0 14px;-webkit-appearance:none;appearance:none}
+.nt-form .nt-fi{font-family:var(--ntf,system-ui,-apple-system,"Hiragino Sans","Yu Gothic UI","Meiryo",sans-serif);font-size:16px;color:var(--tx);padding:0 14px;-webkit-appearance:none;appearance:none}
 .nt-form textarea.nt-fi{padding:12px 14px;resize:none;line-height:1.6}
 .nt-form .nt-fi:focus{outline-color:var(--ac)!important;outline-width:2px!important}
 .nt-form .nt-fi::placeholder{color:color-mix(in srgb,var(--tx) 40%,transparent)}
@@ -6585,14 +6646,14 @@ ${SITE_RANGES.map(({r,mq})=>`@media ${mq}{.nt-view:not(.nt-r-${r}){display:none}
 .nt-btn:disabled{opacity:.6;cursor:wait}
 .nt-btxt{pointer-events:none}
 .nt-hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
-.nt-fmsg{display:none;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:28px;text-align:center;white-space:pre-line;font-family:system-ui,-apple-system,"Hiragino Sans","Yu Gothic UI","Meiryo",sans-serif;font-size:18px;font-weight:700;line-height:1.7;color:var(--tx);z-index:2}
+.nt-fmsg{display:none;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:28px;text-align:center;white-space:pre-line;font-family:var(--ntf,system-ui,-apple-system,"Hiragino Sans","Yu Gothic UI","Meiryo",sans-serif);font-size:18px;font-weight:700;line-height:1.7;color:var(--tx);z-index:2}
 .nt-sent .nt-fmsg,.nt-ferr-on .nt-fmsg{display:flex}
 .nt-sent>:not(.nt-fbg):not(.nt-fmsg){visibility:hidden}
 .nt-fmsg-x{display:none;font:inherit;font-size:15px;padding:10px 26px;border:0;border-radius:999px;background:var(--ac);color:#fff;cursor:pointer}
 .nt-ferr .nt-fmsg-x{display:block}
 .nt-ferr .nt-fmsg-t{color:#C62828}
 /* お知らせ */
-.nt-news{padding:${NEWS_PAD}px 24px;overflow:hidden;font-family:system-ui,-apple-system,"Hiragino Sans","Yu Gothic UI","Meiryo",sans-serif}
+.nt-news{padding:${NEWS_PAD}px 24px;overflow:hidden;font-family:var(--ntf,system-ui,-apple-system,"Hiragino Sans","Yu Gothic UI","Meiryo",sans-serif)}
 .nt-news ul{list-style:none}
 .nt-news li{height:var(--nrh);border-bottom:1px solid var(--nl)}
 .nt-news-i{display:flex;align-items:center;gap:0;width:100%;height:100%;padding:0;border:0;background:none;font:inherit;color:var(--nt);text-align:left}
@@ -6617,7 +6678,7 @@ button.nt-news-i:hover span,a.nt-news-i:hover span{text-decoration:underline}
 .nt-nmodal{position:fixed;inset:0;z-index:1001;display:none;align-items:center;justify-content:center;padding:20px}
 .nt-nmodal.on{display:flex}
 .nt-nm-bg{position:absolute;inset:0;background:rgba(0,0,0,.45)}
-.nt-nm-panel{position:relative;width:min(640px,100%);max-height:85vh;overflow-y:auto;padding:40px 28px 28px;border-radius:16px;background:#fff;color:#1F2A44;font-family:system-ui,-apple-system,"Hiragino Sans","Yu Gothic UI","Meiryo",sans-serif;box-shadow:0 10px 40px rgba(0,0,0,.25)}
+.nt-nm-panel{position:relative;width:min(640px,100%);max-height:85vh;overflow-y:auto;padding:40px 28px 28px;border-radius:16px;background:#fff;color:#1F2A44;font-family:var(--ntf,system-ui,-apple-system,"Hiragino Sans","Yu Gothic UI","Meiryo",sans-serif);box-shadow:0 10px 40px rgba(0,0,0,.25)}
 .nt-nm-x{position:absolute;top:8px;right:8px;width:44px;height:44px;border:0;background:none;font-size:28px;line-height:1;color:inherit;cursor:pointer}
 .nt-nm-date{display:block;font-size:14px;color:#8B93A6}
 .nt-nm-title{font-size:20px;line-height:1.5;margin:4px 0 16px}
@@ -6707,6 +6768,8 @@ function siteJs(){
   function fitTexts(){
     document.querySelectorAll('.nt-t').forEach(function(p){
       if(!p.getClientRects().length)return;
+      /* 文字が入れ替わる・散らばる演出は、途中の状態で測ると幅が違うので測らない */
+      if(p.classList.contains('nt-tx-shuffle')||p.classList.contains('nt-tx-scatter')||p.classList.contains('nt-tx-drum'))return;
       var sub=p.querySelectorAll('[style*="font-size"]');
       if(p.__fs0===undefined){p.__fs0=p.style.fontSize;[].forEach.call(sub,function(s){s.__fs0=s.style.fontSize;});}
       p.style.fontSize=p.__fs0;[].forEach.call(sub,function(s){s.style.fontSize=s.__fs0;});
@@ -7352,6 +7415,12 @@ function siteLoaderHtml(c){
   return`<div class="nt-loader nt-ld-${l.t}" style="--lb:${cssCol(l.bg||'#FFFFFF')};--lf:${cssCol(l.fg||'#FF2E5E')}" aria-hidden="true"><div class="nt-ld-in"><i></i><i></i><i></i></div>${(l.txt||'').trim()?`<p>${escXml(l.txt.trim())}</p>`:''}</div>
 `;
 }
+/* Webフォントを読み込むタグ(このデザインで使っているWebフォントだけ。display=swap で、読み込むまでは端末の文字で出す) */
+function siteFontLinks(d){
+  const url=webFontCssUrl(docFontKeys(d));
+  if(!url)return[];
+  return['<link rel="preconnect" href="https://fonts.googleapis.com">','<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>',`<link rel="stylesheet" href="${escXml(url)}">`];
+}
 /* タップした時の動き: hover=ホバーの動きを出す(既定でオン) / replay=登場・文字の動きをもう一度 */
 function siteTapAttr(c){
   const v=[!c.tapHoverOff&&'hover',c.tapReplay&&'replay'].filter(Boolean).join(' ');
@@ -7410,9 +7479,10 @@ function sitePageDoc(d,page,opt){
       opt.icon&&'<link rel="icon" href="favicon.png" type="image/png">',
       opt.icon&&'<link rel="apple-touch-icon" href="apple-touch-icon.png">',
       `<meta name="theme-color" content="${bg}">`,
+      ...siteFontLinks(d),
       '<meta name="generator" content="NT-D">'
     ].filter(Boolean).join('\n');
-    const pageCss=`html,body{background:${bg}}`+(menu.css?'\n'+menu.css:'');
+    const pageCss=`html,body{background:${bg}}\n:root{--ntf:${fontStack(docFont(d))}}`+(menu.css?'\n'+menu.css:'');
     return`<!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -7802,9 +7872,12 @@ function blogDoc(ctx,o){
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 ${head}
-<style>
+${ctx.fontUrl?`<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="${escXml(ctx.fontUrl)}">
+`:''}<style>
 :root{--ac:${ac};--acl:color-mix(in srgb,${ac} 12%,#fff)}
-${BLOG_CSS}</style>
+${BLOG_CSS}${ctx.fontUrl?`body{font-family:${ctx.fontFam}}\n`:''}</style>
 </head>
 <body>
 <header class="bh"><a class="bh-s" href="../${escXml(ctx.top)}">${escXml(ctx.siteName)}</a><nav><a href="${escXml(ctx.listHref)}">${escXml(ctx.btitle)}</a><a href="../${escXml(ctx.top)}">トップ</a></nav></header>
@@ -8243,10 +8316,13 @@ function nt_doc($o) {
   echo '<meta property="og:site_name" content="' . h($NT['site']) . "\">\n";
   echo '<meta name="twitter:card" content="' . ($og !== '' ? 'summary_large_image' : 'summary') . "\">\n";
   if (!empty($NT['icon'])) echo "<link rel=\"icon\" href=\"../favicon.png\" type=\"image/png\">\n<link rel=\"apple-touch-icon\" href=\"../apple-touch-icon.png\">\n";
+  /* Webフォント(サイトのデザインと同じフォント) */
+  if (!empty($NT['fonturl'])) echo "<link rel=\"preconnect\" href=\"https://fonts.googleapis.com\">\n<link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin>\n<link rel=\"stylesheet\" href=\"" . h($NT['fonturl']) . "\">\n";
   echo "<meta name=\"generator\" content=\"NT-D\">\n<style>\n:root{--ac:" . $NT['accent'] . ';--acl:color-mix(in srgb,' . $NT['accent'] . " 12%,#fff)}\n";
   echo <<<'CSS'
 /*@CSS@*/
 CSS;
+  if (!empty($NT['fontfam'])) echo "\nbody{font-family:" . $NT['fontfam'] . "}\n";
   echo "</style>\n</head>\n<body>\n";
   echo '<header class="bh"><a class="bh-s" href="../' . h($NT['top']) . '">' . h($NT['site']) . '</a><nav><a href="./">' . h($NT['btitle']) . '</a><a href="../' . h($NT['top']) . '">トップ</a></nav></header>' . "\n";
   echo "<main class=\"bw\">\n" . $o['main'] . "\n</main>\n";
@@ -8406,7 +8482,7 @@ function newsAdminPhp(siteName,blog){
 }
 function newsBlogLibPhp(ctx){
   const cfg='$NT = array('+[['site',phpStr(ctx.siteName)],['btitle',phpStr(ctx.btitle)],['accent',phpStr(ctx.accentHex)],['top',phpStr(ctx.top)],
-    ['per',String(ctx.per|0)],['base',phpStr(ctx.base||'')],['icon',ctx.icon?'true':'false'],['noindex',ctx.noindex?'true':'false']].map(([k,v])=>"'"+k+"' => "+v).join(', ')+');';
+    ['per',String(ctx.per|0)],['base',phpStr(ctx.base||'')],['icon',ctx.icon?'true':'false'],['noindex',ctx.noindex?'true':'false'],['fonturl',phpStr(ctx.fontUrl||'')],['fontfam',phpStr(ctx.fontUrl?ctx.fontFam:'')]].map(([k,v])=>"'"+k+"' => "+v).join(', ')+');';
   return NEWS_PHP_LIB.replace('/*@CFG@*/',()=>cfg).replace('/*@CSS@*/',()=>BLOG_CSS.trim());
 }
 function newsFeedPhp(feeds){
@@ -8668,7 +8744,8 @@ async function exportSiteZip(){
   /* ブログ形式の記事・一覧のページの設定 */
   const bctx={siteName:(pages[0]&&pages[0].title)||d.name||'ホームページ',btitle:newsBlogTitle(nws),accent:nws.accent||'#1F2A44',
     accentHex:/^#[0-9a-f]{6}$/i.test(nws.accent||'')?nws.accent:'#1F2A44',top:(pages[0]&&pages[0].file)||'index.html',
-    listHref:nws.mode==='web'?'./':'index.html',base,icon:!!icons,noindex:!!c.noindex,per:9};
+    listHref:nws.mode==='web'?'./':'index.html',base,icon:!!icons,noindex:!!c.noindex,per:9,
+    fontUrl:webFontOf(docFont(d))?webFontCssUrl([docFont(d)]):'',fontFam:fontStack(docFont(d))};
   let newsX=null;const blogFiles=[];
   try{
     pages.forEach(p=>files.push({name:p.file,data:sitePageDoc(d,p,{files:true,ogp:!!ogp,icon:!!icons,newsSeen})}));
@@ -10810,6 +10887,7 @@ function openWire(id){
   renderWire();
   fitWire();
   updateHistBtns();
+  wfDoc(dd);   /* 使っているWebフォントを読み込み、読めたら測り直す */
 }
 function wireBBox(shapes){
   let x1=1e9,y1=1e9,x2=-1e9,y2=-1e9;
@@ -10902,7 +10980,26 @@ function wireZoomAt(cx,cy,f){
    (無い端末では代替に化けて名前と見た目が合わなくなるため)。
    単一HTML・オフライン動作を保つため、WebフォントではなくOS搭載フォントを使う */
 const WFONTS=[
-  /* 日本語 */
+  /* Webフォント(Google Fonts): どの端末でも同じ字形になる。編集画面も書き出したサイトも同じフォントを読み込んで使う。
+     web=フォント名、wts=読み込む太さ、dep=日本語の部分に使うフォント(欧文フォントに日本語が無いため) */
+  {g:'Webフォント(どの端末でも同じ見た目・おすすめ)',k:'w-notosans',n:'Noto Sans JP(ゴシック)',web:'Noto Sans JP',wts:[400,500,700,900],f:'"Noto Sans JP",sans-serif'},
+  {g:'Webフォント(どの端末でも同じ見た目・おすすめ)',k:'w-notoserif',n:'Noto Serif JP(明朝)',web:'Noto Serif JP',wts:[400,600,700,900],f:'"Noto Serif JP",serif'},
+  {g:'Webフォント(どの端末でも同じ見た目・おすすめ)',k:'w-zenkaku',n:'Zen Kaku Gothic New(すっきりゴシック)',web:'Zen Kaku Gothic New',wts:[400,500,700,900],f:'"Zen Kaku Gothic New",sans-serif'},
+  {g:'Webフォント(どの端末でも同じ見た目・おすすめ)',k:'w-zenmaru',n:'Zen Maru Gothic(丸ゴシック)',web:'Zen Maru Gothic',wts:[400,500,700,900],f:'"Zen Maru Gothic",sans-serif'},
+  {g:'Webフォント(どの端末でも同じ見た目・おすすめ)',k:'w-mplusr',n:'M PLUS Rounded 1c(やわらか丸ゴシック)',web:'M PLUS Rounded 1c',wts:[400,500,700,800],f:'"M PLUS Rounded 1c",sans-serif'},
+  {g:'Webフォント(どの端末でも同じ見た目・おすすめ)',k:'w-shippori',n:'Shippori Mincho(上品な明朝)',web:'Shippori Mincho',wts:[400,500,700,800],f:'"Shippori Mincho",serif'},
+  {g:'Webフォント(どの端末でも同じ見た目・おすすめ)',k:'w-klee',n:'Klee One(教科書体風)',web:'Klee One',wts:[400,600],f:'"Klee One",serif'},
+  {g:'Webフォント(どの端末でも同じ見た目・おすすめ)',k:'w-rocknroll',n:'RocknRoll One(ポップ)',web:'RocknRoll One',wts:[400],f:'"RocknRoll One",sans-serif'},
+  {g:'Webフォント(どの端末でも同じ見た目・おすすめ)',k:'w-yusei',n:'Yusei Magic(手書き風)',web:'Yusei Magic',wts:[400],f:'"Yusei Magic",sans-serif'},
+  {g:'Webフォント(欧文・日本語はNoto)',k:'w-inter',n:'Inter(すっきり)',web:'Inter',wts:[400,500,700,900],dep:'w-notosans',f:'"Inter","Noto Sans JP",sans-serif'},
+  {g:'Webフォント(欧文・日本語はNoto)',k:'w-montserrat',n:'Montserrat(幾何学)',web:'Montserrat',wts:[400,600,700,900],dep:'w-notosans',f:'"Montserrat","Noto Sans JP",sans-serif'},
+  {g:'Webフォント(欧文・日本語はNoto)',k:'w-poppins',n:'Poppins(丸み)',web:'Poppins',wts:[400,500,700,800],dep:'w-notosans',f:'"Poppins","Noto Sans JP",sans-serif'},
+  {g:'Webフォント(欧文・日本語はNoto)',k:'w-oswald',n:'Oswald(細長・見出し)',web:'Oswald',wts:[400,500,700],dep:'w-notosans',f:'"Oswald","Noto Sans JP",sans-serif'},
+  {g:'Webフォント(欧文・日本語はNoto)',k:'w-playfair',n:'Playfair Display(エレガント)',web:'Playfair Display',wts:[400,600,700,900],dep:'w-notoserif',f:'"Playfair Display","Noto Serif JP",serif'},
+  {g:'Webフォント(欧文・日本語はNoto)',k:'w-robotoslab',n:'Roboto Slab(スラブセリフ)',web:'Roboto Slab',wts:[400,500,700,900],dep:'w-notosans',f:'"Roboto Slab","Noto Sans JP",serif'},
+  {g:'Webフォント(欧文・日本語はNoto)',k:'w-dancing',n:'Dancing Script(筆記体)',web:'Dancing Script',wts:[400,700],dep:'w-notosans',f:'"Dancing Script","Noto Sans JP",cursive'},
+  {g:'Webフォント(欧文・日本語はNoto)',k:'w-caveat',n:'Caveat(手書き)',web:'Caveat',wts:[400,700],dep:'w-notosans',f:'"Caveat","Noto Sans JP",cursive'},
+  /* 日本語(この端末のフォント。端末によって字形・幅が変わる) */
   {g:'日本語',k:'gothic',n:'ゴシック',f:'system-ui,-apple-system,"Segoe UI","Hiragino Sans","Yu Gothic UI","Meiryo",sans-serif'},
   {g:'日本語',k:'mincho',n:'明朝',f:'"Yu Mincho","YuMincho","Hiragino Mincho ProN","MS Mincho",serif'},
   {g:'日本語',k:'meiryo',n:'メイリオ',f:'"Meiryo","メイリオ","Hiragino Sans",sans-serif',probe:['Meiryo','メイリオ']},
@@ -10938,7 +11035,93 @@ const WFONTS=[
   {g:'手書き',k:'crayon',n:'手書き (ラフ)',f:'"Ink Free","Comic Sans MS","Chalkboard SE",cursive',probe:['Ink Free','Comic Sans MS']},
   {g:'手書き',k:'print',n:'手書き (プリント)',f:'"Segoe Print","Comic Sans MS",cursive',probe:['Segoe Print']}
 ];
-const fontStack=k=>(WFONTS.find(f=>f.k===k)||WFONTS[0]).f;
+const fontStack=k=>(WFONTS.find(f=>f.k===k)||WFONTS.find(f=>f.k==='gothic')).f;
+/* ---------- Webフォント ---------- */
+const webFontOf=k=>{const f=WFONTS.find(x=>x.k===k);return f&&f.web?f:null;};
+/* デザインの基本のフォント(フォントを選んでいない文字に使う)。新しいデザインは Noto Sans JP、以前のデザインは端末のゴシック */
+let dfRoot=null,dfId=null,dfDoc=null;   /* 文字ごとに呼ばれるので、今のデザインを覚えておく */
+function docFont(d){
+  if(!d){
+    if(typeof doc==='undefined'||!doc)return'gothic';
+    if(dfRoot!==doc||dfId!==doc.current){dfRoot=doc;dfId=doc.current;dfDoc=curDoc();}
+    d=dfDoc;
+  }
+  return(d&&d.site&&d.site.font)||'gothic';
+}
+/* Google Fonts のCSSのURL(使うフォントと、欧文フォントの日本語に使うフォント) */
+function webFontKeys(keys){
+  const out=new Set();
+  keys.forEach(k=>{const f=webFontOf(k);if(!f)return;out.add(f.k);if(f.dep)out.add(f.dep);});
+  return[...out];
+}
+function webFontCssUrl(keys){
+  const fs=webFontKeys(keys).map(webFontOf);
+  if(!fs.length)return'';
+  return'https://fonts.googleapis.com/css2?'+fs.map(f=>'family='+encodeURIComponent(f.web).replace(/%20/g,'+')+':wght@'+f.wts.join(';')).join('&')+'&display=swap';
+}
+/* このデザインで使っているフォント */
+function docFontKeys(d){
+  const ks=new Set([docFont(d)]);
+  (d.shapes||[]).forEach(s=>{if(s.type!=='text')return;if(s.ff)ks.add(s.ff);(s.cattr||[]).forEach(a=>{if(a&&a.ff)ks.add(a.ff);});});
+  return[...ks];
+}
+/* 編集画面でWebフォントを読み込む。日本語のWebフォントは文字のまとまりごとに分かれているので、
+   使っている文字を指定して読み込み、読み終えたら文字の大きさを測り直す */
+const wfCss=new Map(),wfDone=new Map();
+let wfPend=new Map(),wfTimer=0;
+function wfLink(f){
+  if(wfCss.has(f.web))return wfCss.get(f.web);
+  const pr=new Promise(res=>{
+    const l=document.createElement('link');l.rel='stylesheet';
+    l.href='https://fonts.googleapis.com/css2?family='+encodeURIComponent(f.web).replace(/%20/g,'+')+':wght@'+f.wts.join(';')+'&display=swap';
+    l.onload=()=>res(true);l.onerror=()=>res(false);document.head.appendChild(l);
+    setTimeout(()=>res(false),8000);
+  });
+  wfCss.set(f.web,pr);return pr;
+}
+function wfNeed(s){
+  if(!s||s.type!=='text'||!s.text)return;
+  [...s.text].forEach((ch,i)=>{
+    if(ch==='\n'||ch===' ')return;
+    const a=charAttr(s,i),f=webFontOf(a.ff);if(!f)return;
+    [f,f.dep&&webFontOf(f.dep)].forEach(ff=>{
+      if(!ff)return;
+      const key=ff.k+'|'+a.fw,done=wfDone.get(key);
+      if(done&&done.has(ch))return;
+      if(!wfPend.has(key))wfPend.set(key,new Set());
+      wfPend.get(key).add(ch);
+    });
+  });
+  if(wfPend.size&&!wfTimer)wfTimer=setTimeout(wfFlush,20);
+}
+async function wfFlush(){
+  wfTimer=0;
+  const jobs=[...wfPend];wfPend=new Map();
+  await Promise.all(jobs.map(async([key,set])=>{
+    const[k,w]=key.split('|'),f=webFontOf(k);
+    let done=wfDone.get(key);if(!done)wfDone.set(key,done=new Set());
+    set.forEach(c=>done.add(c));   /* 読めなくても繰り返さない */
+    if(!await wfLink(f))return;
+    try{await document.fonts.load(`${w} 40px "${f.web}"`,[...set].join(''));}catch(e){}
+  }));
+  /* 測り直す(このデザインのWebフォントを使う文字) */
+  const sh=curShapes&&curShapes();
+  if(sh){
+    sh.forEach(s=>{
+      if(s.type!=='text'||!textUsesWeb(s))return;
+      const w0=s.w;measureWText(s);
+      if(!s.vert&&w0&&s.align==='left')s.x+=(s.w-w0)/2;
+      else if(!s.vert&&w0&&s.align==='right')s.x-=(s.w-w0)/2;
+    });
+    if(typeof renderWire==='function'&&isWire())renderWire();
+  }
+}
+function textUsesWeb(s){
+  if(webFontOf(s.ff||docFont()))return true;
+  return(s.cattr||[]).some(a=>a&&a.ff&&webFontOf(a.ff));
+}
+/* デザインを開いた時: 使っている文字のWebフォントを読み込む */
+function wfDoc(d){(d&&d.shapes||[]).forEach(wfNeed);}
 /* そのフォントが端末に入っているか(代替と幅が変わるかで判定する定番の方法) */
 function fontAvailable(fam){
   try{
@@ -10958,7 +11141,7 @@ function charAttr(s,i){
   const p=(k,d)=>c[k]!==undefined?c[k]:(s[k]!==undefined?s[k]:d);
   /* rot(回転)/dx/dy(位置ずらし)は文字ごとの指定のみ有効。
      s.rotは図形全体の回転という別の意味で使われているので、フォールバックしない */
-  return{fs:p('fs',18),fw:p('fw',400),ff:p('ff','gothic'),ls:p('ls',0),it:p('it',0),
+  return{fs:p('fs',18),fw:p('fw',400),ff:p('ff',docFont()),ls:p('ls',0),it:p('it',0),
     rot:c.rot||0,dx:c.dx||0,dy:c.dy||0};
 }
 const fontCss=a=>`${a.fw} ${a.fs}px ${fontStack(a.ff)}`;
@@ -11083,6 +11266,7 @@ function textLayout(s){
   return{lines:L,chars:allChars,w:W,h:H,lean,along,across};
 }
 function measureWText(s){
+  wfNeed(s);   /* Webフォントなら、まだ読み込んでいない文字を読み込む(読み終えたら測り直す) */
   const L=textLayout(s);
   const pad=(olW1(s)+olW2(s))*2;   /* ふちどりは外へはみ出す(2重ぶんまで) */
   s.w=L.w+pad;s.h=L.h+pad;
@@ -13158,7 +13342,7 @@ function beginWireText(s){
   wtInput.style.fontSize=clamp(s.fs*wz,10,80)+'px';
   wtInput.style.fontWeight=s.fw||500;
   /* 図形と同じフォントで編集できるようにする(明朝の文字をゴシックで打つズレを無くす) */
-  wtInput.style.fontFamily=fontStack(s.ff||'gothic');
+  wtInput.style.fontFamily=fontStack(s.ff||docFont());
   fitWtInput();
   wtInput.focus();wtInput.select();
 }
@@ -16295,6 +16479,7 @@ if(isWire()){
   document.body.classList.toggle('rulers',rulersOn);
   renderWire();
   requestAnimationFrame(()=>{fitWire();updateHistBtns();if(rulersOn)drawRulers();});
+  wfDoc(curDoc());
 }else if(isText()){
   document.body.classList.add('text-mode');
   $('#mapTitle').value=curDoc().name;
