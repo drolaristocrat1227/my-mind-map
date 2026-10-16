@@ -1105,6 +1105,27 @@ body.wirebar-off #wireHint{bottom:18px;}
 #formDlg textarea{height:auto;padding:6px 9px;line-height:1.5;resize:vertical;}
 #formDlg input:focus,#formDlg textarea:focus,#formDlg select:focus{outline:none;border-color:var(--accent);}
 .fm-field{border:1px solid var(--panel-border);border-radius:12px;padding:7px 9px;margin-bottom:8px;}
+/* フォントを選ぶ(見本つき) */
+.fontBtn{flex:1;min-width:0;padding:7px 10px;border:1px solid var(--panel-border);border-radius:9px;background:var(--node-bg);color:var(--ink);font-size:15px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+.fontBtn:hover{border-color:var(--accent)}
+#fontPop{position:fixed;inset:0;z-index:1200;display:none}
+#fontPop.on{display:block}
+#fontPopBack{position:absolute;inset:0;background:rgba(0,0,0,.3)}
+#fontPopIn{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(560px,94vw);height:min(680px,88vh);display:flex;flex-direction:column;border-radius:18px;padding:14px 14px 10px}
+.fp-head{display:flex;align-items:center;gap:10px;padding:0 4px 8px}
+.fp-head b{font-size:16px}
+.fp-note{flex:1;font-size:11px;color:var(--ink-soft)}
+#fontPopX{width:32px;height:32px;border:0;background:none;color:var(--ink);font-size:22px;cursor:pointer}
+.fp-tabs{display:flex;flex-wrap:wrap;gap:5px;padding:0 2px 8px}
+.fp-tabs button{padding:4px 10px;border:1px solid var(--panel-border);border-radius:999px;background:none;color:var(--ink);font-size:12px;cursor:pointer}
+.fp-tabs button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+#fontPopList{flex:1;overflow-y:auto;padding:0 2px}
+.fp-g{font-size:12px;font-weight:700;color:var(--ink-soft);margin:12px 4px 6px}
+.fp-i{display:block;width:100%;margin:0 0 6px;padding:9px 12px;border:1px solid var(--panel-border);border-radius:12px;background:var(--node-bg);color:var(--ink);text-align:left;cursor:pointer}
+.fp-i:hover{border-color:var(--accent)}
+.fp-i.on{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 30%,transparent)}
+.fp-s{display:block;font-size:22px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fp-n{display:block;margin-top:2px;font-size:11px;color:var(--ink-soft)}
 .nw-pics{flex-wrap:wrap}
 .nw-pics .seg{flex:none;padding:5px 10px;font-size:12px}
 .nw-th{position:relative;display:inline-flex;flex-direction:column;align-items:center;gap:2px;font-size:10px;color:var(--ink-soft)}
@@ -1580,7 +1601,7 @@ kbd{
     <div class="segRow"><button class="seg" id="txPickBtn">文字を選ぶ</button><button class="seg" id="txAllBtn">選択を解除</button></div>
     <div id="txTargetLabel" class="menu-label">▼ ここから下は<b>テキスト全体</b>に効きます</div>
     <!-- 一番よく触る フォント・サイズ・太さ・揃え・行間 をすぐ届く位置に -->
-    <div class="numRow"><span class="radLbl">フォント</span><select id="txFont"></select></div>
+    <div class="numRow"><span class="radLbl">フォント</span><button type="button" id="txFontBtn" class="fontBtn" title="フォントを選ぶ"></button><select id="txFont" hidden></select></div>
     <div class="radRow"><span class="radLbl">サイズ</span><input type="range" id="textFs" min="8" max="200" step="1" value="18"><input type="number" class="radNum" id="textFsV" min="8" max="200" value="18"></div>
     <div id="txWeightSec">
       <div class="menu-label">太さ(ウェイト)</div>
@@ -2390,6 +2411,15 @@ kbd{
     </div>
   </div>
 </div>
+<!-- フォントを選ぶ(見本つき) -->
+<div id="fontPop">
+  <div id="fontPopBack"></div>
+  <div id="fontPopIn" class="glass">
+    <div class="fp-head"><b>フォント</b><span class="fp-note">どの端末でも同じ見た目になるWebフォントです</span><button type="button" id="fontPopX" aria-label="閉じる">&times;</button></div>
+    <div class="fp-tabs" id="fontPopTabs"></div>
+    <div id="fontPopList"></div>
+  </div>
+</div>
 <!-- お問い合わせフォームの設定 -->
 <div id="formDlgWrap">
   <div id="formDlgBack"></div>
@@ -2433,7 +2463,7 @@ kbd{
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-16.6';
+const APP_VERSION='2026-10-16.7';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -4100,7 +4130,7 @@ async function applyUpdate(){
   try{
     const keys=await caches.keys();
     /* 同じ github.io にある他のアプリのキャッシュは消さない */
-    await Promise.all(keys.filter(k=>k.startsWith('ntd-')).map(k=>caches.delete(k)));
+    await Promise.all(keys.filter(k=>k.startsWith('ntd-')&&k!=='ntd-fonts').map(k=>caches.delete(k)));
   }catch(e){}
   try{
     const reg=navigator.serviceWorker&&await navigator.serviceWorker.getRegistration();
@@ -4593,9 +4623,11 @@ function updateSiteDlg(){
   /* フォント: 基本のフォントと、端末のフォント(Windowsなど)を使っている文字の数 */
   {
     const sel=$('#expFontSel'),d=curDoc();
-    if(!sel.options.length){
-      const groups=[...new Set(WFONTS.map(f=>f.g))];
-      sel.innerHTML=groups.map(g=>'<optgroup label="'+escXml(g)+'">'+WFONTS.filter(f=>f.g===g&&(!f.probe||f.probe.some(fontAvailable))).map(f=>`<option value="${f.k}">${escXml(f.n)}</option>`).join('')+'</optgroup>').join('');
+    {
+      const cur=docFont(d),list=WFONTS.filter(f=>f.web||f.k===cur);
+      const groups=[...new Set(list.map(f=>f.g))];
+      const html=groups.map(g=>'<optgroup label="'+escXml(g)+'">'+list.filter(f=>f.g===g).map(f=>`<option value="${f.k}">${escXml(f.n)}</option>`).join('')+'</optgroup>').join('');
+      if(sel.__h!==html){sel.innerHTML=html;sel.__h=html;}
     }
     sel.value=docFont(d);
     const local=localFontTexts(d);
@@ -4770,10 +4802,10 @@ function localFontTexts(d){
   return out;
 }
 /* 端末のフォント → 近いWebフォント */
-const FONT_TO_WEB={gothic:'w-notosans',meiryo:'w-notosans',bizud:'w-zenkaku',mincho:'w-notoserif',bizmin:'w-notoserif',kaisho:'w-shippori',gyosho:'w-shippori',
-  udkyo:'w-klee',maru:'w-zenmaru',pop:'w-rocknroll',serif:'w-playfair',classic:'w-playfair',elegant:'w-playfair',sans:'w-inter',soft:'w-poppins',geo:'w-montserrat',
-  impact:'w-oswald',din:'w-oswald',narrow:'w-oswald',slab:'w-robotoslab',script:'w-dancing',elegantscript:'w-dancing',hand:'w-caveat',crayon:'w-caveat',print:'w-caveat',
-  stencil:'w-oswald',deco:'w-playfair',retro:'w-oswald',gothic19:'w-playfair',tech:'w-oswald',mono:'w-notosans'};
+const FONT_TO_WEB={gothic:'w-notosans',meiryo:'w-notosans',bizud:'w-bizgothic',mincho:'w-notoserif',bizmin:'w-bizmincho',kaisho:'w-zenold',gyosho:'w-syuku',
+  udkyo:'w-klee',maru:'w-zenmaru',pop:'w-rocknroll',serif:'w-lora',classic:'w-ebgaramond',elegant:'w-playfair',sans:'w-roboto',soft:'w-nunito',geo:'w-montserrat',
+  impact:'w-anton',din:'w-oswald',narrow:'w-oswald',slab:'w-robotoslab',script:'w-dancing',elegantscript:'w-greatvibes',hand:'w-caveat',crayon:'w-caveat',print:'w-caveat',
+  stencil:'w-bebas',deco:'w-cinzel',retro:'w-abril',gothic19:'w-cinzel',tech:'w-spacegrotesk',mono:'w-notosans'};
 $('#expFontSel').addEventListener('change',()=>{
   const d=curDoc(),c=siteCfg(d);
   pushUndo();
@@ -10982,58 +11014,111 @@ function wireZoomAt(cx,cy,f){
 const WFONTS=[
   /* Webフォント(Google Fonts): どの端末でも同じ字形になる。編集画面も書き出したサイトも同じフォントを読み込んで使う。
      web=フォント名、wts=読み込む太さ、dep=日本語の部分に使うフォント(欧文フォントに日本語が無いため) */
-  {g:'Webフォント(どの端末でも同じ見た目・おすすめ)',k:'w-notosans',n:'Noto Sans JP(ゴシック)',web:'Noto Sans JP',wts:[400,500,700,900],f:'"Noto Sans JP",sans-serif'},
-  {g:'Webフォント(どの端末でも同じ見た目・おすすめ)',k:'w-notoserif',n:'Noto Serif JP(明朝)',web:'Noto Serif JP',wts:[400,600,700,900],f:'"Noto Serif JP",serif'},
-  {g:'Webフォント(どの端末でも同じ見た目・おすすめ)',k:'w-zenkaku',n:'Zen Kaku Gothic New(すっきりゴシック)',web:'Zen Kaku Gothic New',wts:[400,500,700,900],f:'"Zen Kaku Gothic New",sans-serif'},
-  {g:'Webフォント(どの端末でも同じ見た目・おすすめ)',k:'w-zenmaru',n:'Zen Maru Gothic(丸ゴシック)',web:'Zen Maru Gothic',wts:[400,500,700,900],f:'"Zen Maru Gothic",sans-serif'},
-  {g:'Webフォント(どの端末でも同じ見た目・おすすめ)',k:'w-mplusr',n:'M PLUS Rounded 1c(やわらか丸ゴシック)',web:'M PLUS Rounded 1c',wts:[400,500,700,800],f:'"M PLUS Rounded 1c",sans-serif'},
-  {g:'Webフォント(どの端末でも同じ見た目・おすすめ)',k:'w-shippori',n:'Shippori Mincho(上品な明朝)',web:'Shippori Mincho',wts:[400,500,700,800],f:'"Shippori Mincho",serif'},
-  {g:'Webフォント(どの端末でも同じ見た目・おすすめ)',k:'w-klee',n:'Klee One(教科書体風)',web:'Klee One',wts:[400,600],f:'"Klee One",serif'},
-  {g:'Webフォント(どの端末でも同じ見た目・おすすめ)',k:'w-rocknroll',n:'RocknRoll One(ポップ)',web:'RocknRoll One',wts:[400],f:'"RocknRoll One",sans-serif'},
-  {g:'Webフォント(どの端末でも同じ見た目・おすすめ)',k:'w-yusei',n:'Yusei Magic(手書き風)',web:'Yusei Magic',wts:[400],f:'"Yusei Magic",sans-serif'},
-  {g:'Webフォント(欧文・日本語はNoto)',k:'w-inter',n:'Inter(すっきり)',web:'Inter',wts:[400,500,700,900],dep:'w-notosans',f:'"Inter","Noto Sans JP",sans-serif'},
-  {g:'Webフォント(欧文・日本語はNoto)',k:'w-montserrat',n:'Montserrat(幾何学)',web:'Montserrat',wts:[400,600,700,900],dep:'w-notosans',f:'"Montserrat","Noto Sans JP",sans-serif'},
-  {g:'Webフォント(欧文・日本語はNoto)',k:'w-poppins',n:'Poppins(丸み)',web:'Poppins',wts:[400,500,700,800],dep:'w-notosans',f:'"Poppins","Noto Sans JP",sans-serif'},
-  {g:'Webフォント(欧文・日本語はNoto)',k:'w-oswald',n:'Oswald(細長・見出し)',web:'Oswald',wts:[400,500,700],dep:'w-notosans',f:'"Oswald","Noto Sans JP",sans-serif'},
-  {g:'Webフォント(欧文・日本語はNoto)',k:'w-playfair',n:'Playfair Display(エレガント)',web:'Playfair Display',wts:[400,600,700,900],dep:'w-notoserif',f:'"Playfair Display","Noto Serif JP",serif'},
-  {g:'Webフォント(欧文・日本語はNoto)',k:'w-robotoslab',n:'Roboto Slab(スラブセリフ)',web:'Roboto Slab',wts:[400,500,700,900],dep:'w-notosans',f:'"Roboto Slab","Noto Sans JP",serif'},
-  {g:'Webフォント(欧文・日本語はNoto)',k:'w-dancing',n:'Dancing Script(筆記体)',web:'Dancing Script',wts:[400,700],dep:'w-notosans',f:'"Dancing Script","Noto Sans JP",cursive'},
-  {g:'Webフォント(欧文・日本語はNoto)',k:'w-caveat',n:'Caveat(手書き)',web:'Caveat',wts:[400,700],dep:'w-notosans',f:'"Caveat","Noto Sans JP",cursive'},
-  /* 日本語(この端末のフォント。端末によって字形・幅が変わる) */
-  {g:'日本語',k:'gothic',n:'ゴシック',f:'system-ui,-apple-system,"Segoe UI","Hiragino Sans","Yu Gothic UI","Meiryo",sans-serif'},
-  {g:'日本語',k:'mincho',n:'明朝',f:'"Yu Mincho","YuMincho","Hiragino Mincho ProN","MS Mincho",serif'},
-  {g:'日本語',k:'meiryo',n:'メイリオ',f:'"Meiryo","メイリオ","Hiragino Sans",sans-serif',probe:['Meiryo','メイリオ']},
-  {g:'日本語',k:'maru',n:'丸ゴシック',f:'"HG丸ｺﾞｼｯｸM-PRO","Hiragino Maru Gothic ProN","ヒラギノ丸ゴ ProN W4","Yu Gothic UI",sans-serif',probe:['HG丸ｺﾞｼｯｸM-PRO','Hiragino Maru Gothic ProN']},
-  {g:'日本語',k:'bizud',n:'BIZ UDゴシック',f:'"BIZ UDPGothic","BIZ UDPゴシック",sans-serif',probe:['BIZ UDPGothic','BIZ UDPゴシック']},
-  {g:'日本語',k:'bizmin',n:'BIZ UD明朝',f:'"BIZ UDPMincho","BIZ UDP明朝",serif',probe:['BIZ UDPMincho','BIZ UDP明朝']},
-  {g:'日本語',k:'udkyo',n:'教科書体',f:'"UD デジタル 教科書体 N-R","UD Digi Kyokasho N-R","Klee",serif',probe:['UD デジタル 教科書体 N-R','UD Digi Kyokasho N-R','Klee']},
-  {g:'日本語',k:'gyosho',n:'行書体',f:'"HGP行書体","HG行書体",serif',probe:['HGP行書体','HG行書体']},
-  {g:'日本語',k:'pop',n:'ポップ体',f:'"HGP創英角ﾎﾟｯﾌﾟ体","HG創英角ﾎﾟｯﾌﾟ体",sans-serif',probe:['HGP創英角ﾎﾟｯﾌﾟ体','HG創英角ﾎﾟｯﾌﾟ体']},
-  {g:'日本語',k:'kaisho',n:'楷書体',f:'"HG正楷書体-PRO","HGS正楷書体-PRO",serif',probe:['HG正楷書体-PRO','HGS正楷書体-PRO']},
+  {g:'ゴシック',k:'w-notosans',n:'Noto Sans JP(標準のゴシック)',web:'Noto Sans JP',wts:[400,500,700,900],f:'"Noto Sans JP",sans-serif'},
+  {g:'ゴシック',k:'w-zenkaku',n:'Zen Kaku Gothic New(すっきり)',web:'Zen Kaku Gothic New',wts:[400,500,700,900],f:'"Zen Kaku Gothic New",sans-serif'},
+  {g:'ゴシック',k:'w-bizgothic',n:'BIZ UDPゴシック(読みやすい)',web:'BIZ UDPGothic',wts:[400,700],f:'"BIZ UDPGothic",sans-serif'},
+  {g:'ゴシック',k:'w-mplus1p',n:'M PLUS 1p(やさしい)',web:'M PLUS 1p',wts:[400,500,700,800],f:'"M PLUS 1p",sans-serif'},
+  {g:'ゴシック',k:'w-murecho',n:'Murecho(モダン)',web:'Murecho',wts:[400,500,700,900],f:'"Murecho",sans-serif'},
+  {g:'ゴシック',k:'w-plexjp',n:'IBM Plex Sans JP(ビジネス)',web:'IBM Plex Sans JP',wts:[400,500,700],f:'"IBM Plex Sans JP",sans-serif'},
+  {g:'ゴシック',k:'w-sawarabig',n:'さわらびゴシック(細め)',web:'Sawarabi Gothic',wts:[400],f:'"Sawarabi Gothic",sans-serif'},
+  {g:'明朝',k:'w-notoserif',n:'Noto Serif JP(標準の明朝)',web:'Noto Serif JP',wts:[400,600,700,900],f:'"Noto Serif JP",serif'},
+  {g:'明朝',k:'w-shippori',n:'しっぽり明朝(上品)',web:'Shippori Mincho',wts:[400,500,700,800],f:'"Shippori Mincho",serif'},
+  {g:'明朝',k:'w-bizmincho',n:'BIZ UDP明朝(読みやすい)',web:'BIZ UDPMincho',wts:[400,700],f:'"BIZ UDPMincho",serif'},
+  {g:'明朝',k:'w-zenold',n:'Zen Old Mincho(古風)',web:'Zen Old Mincho',wts:[400,700,900],f:'"Zen Old Mincho",serif'},
+  {g:'明朝',k:'w-sawarabim',n:'さわらび明朝(細め)',web:'Sawarabi Mincho',wts:[400],f:'"Sawarabi Mincho",serif'},
+  {g:'明朝',k:'w-hina',n:'ひな明朝(繊細)',web:'Hina Mincho',wts:[400],f:'"Hina Mincho",serif'},
+  {g:'明朝',k:'w-tokumin',n:'解星 特ミン(太い明朝)',web:'Kaisei Tokumin',wts:[400,500,700,800],f:'"Kaisei Tokumin",serif'},
+  {g:'明朝',k:'w-antique',n:'しっぽりアンチック(レトロ)',web:'Shippori Antique',wts:[400],f:'"Shippori Antique",serif'},
+  {g:'丸ゴシック',k:'w-zenmaru',n:'Zen Maru Gothic(標準の丸ゴシック)',web:'Zen Maru Gothic',wts:[400,500,700,900],f:'"Zen Maru Gothic",sans-serif'},
+  {g:'丸ゴシック',k:'w-mplusr',n:'M PLUS Rounded 1c(やわらか)',web:'M PLUS Rounded 1c',wts:[400,500,700,800],f:'"M PLUS Rounded 1c",sans-serif'},
+  {g:'丸ゴシック',k:'w-kosugimaru',n:'小杉丸ゴシック(すっきり)',web:'Kosugi Maru',wts:[400],f:'"Kosugi Maru",sans-serif'},
+  {g:'丸ゴシック',k:'w-kiwimaru',n:'キウイ丸(ほんわか)',web:'Kiwi Maru',wts:[400,500],f:'"Kiwi Maru",sans-serif'},
+  {g:'デザイン・見出し',k:'w-rocknroll',n:'ロックンロール(ポップ)',web:'RocknRoll One',wts:[400],f:'"RocknRoll One",sans-serif'},
+  {g:'デザイン・見出し',k:'w-mochiy',n:'もちぃポップ(まんまる)',web:'Mochiy Pop One',wts:[400],f:'"Mochiy Pop One",sans-serif'},
+  {g:'デザイン・見出し',k:'w-dela',n:'デラゴシック(極太)',web:'Dela Gothic One',wts:[400],f:'"Dela Gothic One",sans-serif'},
+  {g:'デザイン・見出し',k:'w-potta',n:'ぽってり(太丸)',web:'Potta One',wts:[400],f:'"Potta One",sans-serif'},
+  {g:'デザイン・見出し',k:'w-reggae',n:'レゲエ(個性的)',web:'Reggae One',wts:[400],f:'"Reggae One",sans-serif'},
+  {g:'デザイン・見出し',k:'w-rampart',n:'ランパート(立体)',web:'Rampart One',wts:[400],f:'"Rampart One",sans-serif'},
+  {g:'デザイン・見出し',k:'w-train',n:'トレイン(線で描いた)',web:'Train One',wts:[400],f:'"Train One",sans-serif'},
+  {g:'デザイン・見出し',k:'w-stick',n:'スティック(細い線)',web:'Stick',wts:[400],f:'"Stick",sans-serif'},
+  {g:'デザイン・見出し',k:'w-dot',n:'ドットゴシック(レトロゲーム)',web:'DotGothic16',wts:[400],f:'"DotGothic16",sans-serif'},
+  {g:'デザイン・見出し',k:'w-decol',n:'解星 デコール(装飾明朝)',web:'Kaisei Decol',wts:[400,500,700],f:'"Kaisei Decol",sans-serif'},
+  {g:'デザイン・見出し',k:'w-zenantique',n:'Zen Antique(大正ロマン)',web:'Zen Antique',wts:[400],f:'"Zen Antique",sans-serif'},
+  {g:'デザイン・見出し',k:'w-tegomin',n:'ニューテゴミン(昭和レトロ)',web:'New Tegomin',wts:[400],f:'"New Tegomin",sans-serif'},
+  {g:'手書き・筆',k:'w-klee',n:'クレー(教科書体風)',web:'Klee One',wts:[400,600],f:'"Klee One",sans-serif'},
+  {g:'手書き・筆',k:'w-yusei',n:'ユーセイマジック(マジック書き)',web:'Yusei Magic',wts:[400],f:'"Yusei Magic",sans-serif'},
+  {g:'手書き・筆',k:'w-kurenaido',n:'Zen 紅道(ペン字)',web:'Zen Kurenaido',wts:[400],f:'"Zen Kurenaido",sans-serif'},
+  {g:'手書き・筆',k:'w-yomogi',n:'よもぎ(手書き)',web:'Yomogi',wts:[400],f:'"Yomogi",sans-serif'},
+  {g:'手書き・筆',k:'w-hachimaru',n:'はちまるポップ(丸文字)',web:'Hachi Maru Pop',wts:[400],f:'"Hachi Maru Pop",sans-serif'},
+  {g:'手書き・筆',k:'w-opti',n:'解星 オプティ(やわらか明朝)',web:'Kaisei Opti',wts:[400,500,700],f:'"Kaisei Opti",sans-serif'},
+  {g:'手書き・筆',k:'w-syuku',n:'佑字 肅(筆文字)',web:'Yuji Syuku',wts:[400],f:'"Yuji Syuku",sans-serif'},
+  {g:'手書き・筆',k:'w-boku',n:'佑字 朴(力強い筆)',web:'Yuji Boku',wts:[400],f:'"Yuji Boku",sans-serif'},
+  {g:'欧文(すっきり)',k:'w-inter',n:'Inter',web:'Inter',wts:[400,500,700,900],dep:'w-notosans',f:'"Inter","Noto Sans JP",sans-serif'},
+  {g:'欧文(すっきり)',k:'w-roboto',n:'Roboto',web:'Roboto',wts:[400,500,700,900],dep:'w-notosans',f:'"Roboto","Noto Sans JP",sans-serif'},
+  {g:'欧文(すっきり)',k:'w-opensans',n:'Open Sans',web:'Open Sans',wts:[400,600,700,800],dep:'w-notosans',f:'"Open Sans","Noto Sans JP",sans-serif'},
+  {g:'欧文(すっきり)',k:'w-lato',n:'Lato',web:'Lato',wts:[400,700,900],dep:'w-notosans',f:'"Lato","Noto Sans JP",sans-serif'},
+  {g:'欧文(すっきり)',k:'w-montserrat',n:'Montserrat(幾何学)',web:'Montserrat',wts:[400,600,700,900],dep:'w-notosans',f:'"Montserrat","Noto Sans JP",sans-serif'},
+  {g:'欧文(すっきり)',k:'w-poppins',n:'Poppins(丸み)',web:'Poppins',wts:[400,500,700,800],dep:'w-notosans',f:'"Poppins","Noto Sans JP",sans-serif'},
+  {g:'欧文(すっきり)',k:'w-raleway',n:'Raleway(細身)',web:'Raleway',wts:[400,500,700,900],dep:'w-notosans',f:'"Raleway","Noto Sans JP",sans-serif'},
+  {g:'欧文(すっきり)',k:'w-nunito',n:'Nunito(やわらか)',web:'Nunito',wts:[400,600,700,900],dep:'w-notosans',f:'"Nunito","Noto Sans JP",sans-serif'},
+  {g:'欧文(すっきり)',k:'w-quicksand',n:'Quicksand(丸く細い)',web:'Quicksand',wts:[400,500,700],dep:'w-notosans',f:'"Quicksand","Noto Sans JP",sans-serif'},
+  {g:'欧文(すっきり)',k:'w-comfortaa',n:'Comfortaa(まるい)',web:'Comfortaa',wts:[400,500,700],dep:'w-notosans',f:'"Comfortaa","Noto Sans JP",sans-serif'},
+  {g:'欧文(すっきり)',k:'w-josefin',n:'Josefin Sans(おしゃれ)',web:'Josefin Sans',wts:[400,600,700],dep:'w-notosans',f:'"Josefin Sans","Noto Sans JP",sans-serif'},
+  {g:'欧文(すっきり)',k:'w-spacegrotesk',n:'Space Grotesk(テック)',web:'Space Grotesk',wts:[400,500,700],dep:'w-notosans',f:'"Space Grotesk","Noto Sans JP",sans-serif'},
+  {g:'欧文(見出し)',k:'w-oswald',n:'Oswald(細長)',web:'Oswald',wts:[400,500,700],dep:'w-notosans',f:'"Oswald","Noto Sans JP",sans-serif'},
+  {g:'欧文(見出し)',k:'w-bebas',n:'Bebas Neue(細長・大文字)',web:'Bebas Neue',wts:[400],dep:'w-notosans',f:'"Bebas Neue","Noto Sans JP",sans-serif'},
+  {g:'欧文(見出し)',k:'w-anton',n:'Anton(太い細長)',web:'Anton',wts:[400],dep:'w-notosans',f:'"Anton","Noto Sans JP",sans-serif'},
+  {g:'欧文(見出し)',k:'w-archivo',n:'Archivo Black(極太)',web:'Archivo Black',wts:[400],dep:'w-notosans',f:'"Archivo Black","Noto Sans JP",sans-serif'},
+  {g:'欧文(見出し)',k:'w-righteous',n:'Righteous(レトロ)',web:'Righteous',wts:[400],dep:'w-notosans',f:'"Righteous","Noto Sans JP",sans-serif'},
+  {g:'欧文(見出し)',k:'w-abril',n:'Abril Fatface(太いセリフ)',web:'Abril Fatface',wts:[400],dep:'w-notoserif',f:'"Abril Fatface","Noto Serif JP",sans-serif'},
+  {g:'欧文(セリフ・上品)',k:'w-playfair',n:'Playfair Display(エレガント)',web:'Playfair Display',wts:[400,600,700,900],dep:'w-notoserif',f:'"Playfair Display","Noto Serif JP",serif'},
+  {g:'欧文(セリフ・上品)',k:'w-cormorant',n:'Cormorant Garamond(繊細)',web:'Cormorant Garamond',wts:[400,500,600,700],dep:'w-notoserif',f:'"Cormorant Garamond","Noto Serif JP",serif'},
+  {g:'欧文(セリフ・上品)',k:'w-ebgaramond',n:'EB Garamond(クラシック)',web:'EB Garamond',wts:[400,500,600,700,800],dep:'w-notoserif',f:'"EB Garamond","Noto Serif JP",serif'},
+  {g:'欧文(セリフ・上品)',k:'w-lora',n:'Lora(読みやすいセリフ)',web:'Lora',wts:[400,500,600,700],dep:'w-notoserif',f:'"Lora","Noto Serif JP",serif'},
+  {g:'欧文(セリフ・上品)',k:'w-cinzel',n:'Cinzel(碑文・大文字)',web:'Cinzel',wts:[400,600,700,900],dep:'w-notoserif',f:'"Cinzel","Noto Serif JP",serif'},
+  {g:'欧文(セリフ・上品)',k:'w-dmserif',n:'DM Serif Display(見出し)',web:'DM Serif Display',wts:[400],dep:'w-notoserif',f:'"DM Serif Display","Noto Serif JP",serif'},
+  {g:'欧文(セリフ・上品)',k:'w-robotoslab',n:'Roboto Slab(スラブ)',web:'Roboto Slab',wts:[400,500,700,900],dep:'w-notosans',f:'"Roboto Slab","Noto Sans JP",serif'},
+  {g:'欧文(手書き)',k:'w-dancing',n:'Dancing Script(筆記体)',web:'Dancing Script',wts:[400,700],dep:'w-notosans',f:'"Dancing Script","Noto Sans JP",cursive'},
+  {g:'欧文(手書き)',k:'w-greatvibes',n:'Great Vibes(優雅な筆記体)',web:'Great Vibes',wts:[400],dep:'w-notosans',f:'"Great Vibes","Noto Sans JP",cursive'},
+  {g:'欧文(手書き)',k:'w-pacifico',n:'Pacifico(ポップな筆記体)',web:'Pacifico',wts:[400],dep:'w-notosans',f:'"Pacifico","Noto Sans JP",cursive'},
+  {g:'欧文(手書き)',k:'w-satisfy',n:'Satisfy(さらっと筆記体)',web:'Satisfy',wts:[400],dep:'w-notosans',f:'"Satisfy","Noto Sans JP",cursive'},
+  {g:'欧文(手書き)',k:'w-lobster',n:'Lobster(太い筆記体)',web:'Lobster',wts:[400],dep:'w-notosans',f:'"Lobster","Noto Sans JP",cursive'},
+  {g:'欧文(手書き)',k:'w-caveat',n:'Caveat(手書き)',web:'Caveat',wts:[400,700],dep:'w-notosans',f:'"Caveat","Noto Sans JP",cursive'},
+  /* 端末のフォント(以前のデザイン用)。端末によって字形・幅が変わるので、一覧には出さない。前に使った文字の表示と、Webフォントへの置き換えのためだけに残す */
+  {g:'端末のフォント(以前のデザイン用)',old:true,k:'gothic',n:'ゴシック',f:'system-ui,-apple-system,"Segoe UI","Hiragino Sans","Yu Gothic UI","Meiryo",sans-serif'},
+  {g:'端末のフォント(以前のデザイン用)',old:true,k:'mincho',n:'明朝',f:'"Yu Mincho","YuMincho","Hiragino Mincho ProN","MS Mincho",serif'},
+  {g:'端末のフォント(以前のデザイン用)',old:true,k:'meiryo',n:'メイリオ',f:'"Meiryo","メイリオ","Hiragino Sans",sans-serif',probe:['Meiryo','メイリオ']},
+  {g:'端末のフォント(以前のデザイン用)',old:true,k:'maru',n:'丸ゴシック',f:'"HG丸ｺﾞｼｯｸM-PRO","Hiragino Maru Gothic ProN","ヒラギノ丸ゴ ProN W4","Yu Gothic UI",sans-serif',probe:['HG丸ｺﾞｼｯｸM-PRO','Hiragino Maru Gothic ProN']},
+  {g:'端末のフォント(以前のデザイン用)',old:true,k:'bizud',n:'BIZ UDゴシック',f:'"BIZ UDPGothic","BIZ UDPゴシック",sans-serif',probe:['BIZ UDPGothic','BIZ UDPゴシック']},
+  {g:'端末のフォント(以前のデザイン用)',old:true,k:'bizmin',n:'BIZ UD明朝',f:'"BIZ UDPMincho","BIZ UDP明朝",serif',probe:['BIZ UDPMincho','BIZ UDP明朝']},
+  {g:'端末のフォント(以前のデザイン用)',old:true,k:'udkyo',n:'教科書体',f:'"UD デジタル 教科書体 N-R","UD Digi Kyokasho N-R","Klee",serif',probe:['UD デジタル 教科書体 N-R','UD Digi Kyokasho N-R','Klee']},
+  {g:'端末のフォント(以前のデザイン用)',old:true,k:'gyosho',n:'行書体',f:'"HGP行書体","HG行書体",serif',probe:['HGP行書体','HG行書体']},
+  {g:'端末のフォント(以前のデザイン用)',old:true,k:'pop',n:'ポップ体',f:'"HGP創英角ﾎﾟｯﾌﾟ体","HG創英角ﾎﾟｯﾌﾟ体",sans-serif',probe:['HGP創英角ﾎﾟｯﾌﾟ体','HG創英角ﾎﾟｯﾌﾟ体']},
+  {g:'端末のフォント(以前のデザイン用)',old:true,k:'kaisho',n:'楷書体',f:'"HG正楷書体-PRO","HGS正楷書体-PRO",serif',probe:['HG正楷書体-PRO','HGS正楷書体-PRO']},
   /* 欧文・見出し */
-  {g:'欧文・見出し',k:'serif',n:'Serif (Georgia)',f:'Georgia,"Times New Roman",serif'},
-  {g:'欧文・見出し',k:'sans',n:'Sans (Arial)',f:'Arial,Helvetica,sans-serif'},
-  {g:'欧文・見出し',k:'mono',n:'等幅 (Consolas)',f:'"SFMono-Regular",Consolas,"MS Gothic",monospace'},
-  {g:'欧文・見出し',k:'impact',n:'インパクト',f:'Impact,"Arial Black","Yu Gothic UI",sans-serif',probe:['Impact','Arial Black']},
-  {g:'欧文・見出し',k:'din',n:'DIN風 (Bahnschrift)',f:'Bahnschrift,"Arial Narrow",sans-serif',probe:['Bahnschrift']},
-  {g:'欧文・見出し',k:'classic',n:'クラシック (Garamond)',f:'Garamond,"Palatino Linotype",Georgia,serif',probe:['Garamond','Palatino Linotype']},
-  {g:'欧文・見出し',k:'geo',n:'幾何学 (Century Gothic)',f:'"Century Gothic",Futura,"Trebuchet MS",sans-serif',probe:['Century Gothic','Futura']},
-  {g:'欧文・見出し',k:'narrow',n:'コンデンス (細長)',f:'"Arial Narrow","Roboto Condensed",sans-serif',probe:['Arial Narrow','Roboto Condensed']},
-  {g:'欧文・見出し',k:'slab',n:'スラブセリフ (Rockwell)',f:'Rockwell,"Courier New",serif',probe:['Rockwell']},
-  {g:'欧文・見出し',k:'elegant',n:'エレガント (Cambria)',f:'Cambria,Georgia,serif',probe:['Cambria']},
-  {g:'欧文・見出し',k:'soft',n:'やわらかサンセリフ (Corbel)',f:'Corbel,"Segoe UI",sans-serif',probe:['Corbel']},
+  {g:'端末のフォント(以前のデザイン用)',old:true,k:'serif',n:'Serif (Georgia)',f:'Georgia,"Times New Roman",serif'},
+  {g:'端末のフォント(以前のデザイン用)',old:true,k:'sans',n:'Sans (Arial)',f:'Arial,Helvetica,sans-serif'},
+  {g:'端末のフォント(以前のデザイン用)',old:true,k:'mono',n:'等幅 (Consolas)',f:'"SFMono-Regular",Consolas,"MS Gothic",monospace'},
+  {g:'端末のフォント(以前のデザイン用)',old:true,k:'impact',n:'インパクト',f:'Impact,"Arial Black","Yu Gothic UI",sans-serif',probe:['Impact','Arial Black']},
+  {g:'端末のフォント(以前のデザイン用)',old:true,k:'din',n:'DIN風 (Bahnschrift)',f:'Bahnschrift,"Arial Narrow",sans-serif',probe:['Bahnschrift']},
+  {g:'端末のフォント(以前のデザイン用)',old:true,k:'classic',n:'クラシック (Garamond)',f:'Garamond,"Palatino Linotype",Georgia,serif',probe:['Garamond','Palatino Linotype']},
+  {g:'端末のフォント(以前のデザイン用)',old:true,k:'geo',n:'幾何学 (Century Gothic)',f:'"Century Gothic",Futura,"Trebuchet MS",sans-serif',probe:['Century Gothic','Futura']},
+  {g:'端末のフォント(以前のデザイン用)',old:true,k:'narrow',n:'コンデンス (細長)',f:'"Arial Narrow","Roboto Condensed",sans-serif',probe:['Arial Narrow','Roboto Condensed']},
+  {g:'端末のフォント(以前のデザイン用)',old:true,k:'slab',n:'スラブセリフ (Rockwell)',f:'Rockwell,"Courier New",serif',probe:['Rockwell']},
+  {g:'端末のフォント(以前のデザイン用)',old:true,k:'elegant',n:'エレガント (Cambria)',f:'Cambria,Georgia,serif',probe:['Cambria']},
+  {g:'端末のフォント(以前のデザイン用)',old:true,k:'soft',n:'やわらかサンセリフ (Corbel)',f:'Corbel,"Segoe UI",sans-serif',probe:['Corbel']},
   /* 装飾・ポスター */
-  {g:'装飾・ポスター',k:'stencil',n:'ステンシル',f:'Stencil,"Arial Black",sans-serif',probe:['Stencil']},
-  {g:'装飾・ポスター',k:'deco',n:'装飾体 (Algerian)',f:'Algerian,Impact,serif',probe:['Algerian']},
-  {g:'装飾・ポスター',k:'retro',n:'レトロポスター (Playbill)',f:'Playbill,Georgia,serif',probe:['Playbill']},
-  {g:'装飾・ポスター',k:'gothic19',n:'クラシック装飾 (Old English)',f:'"Old English Text MT","Blackletter686 BT",serif',probe:['Old English Text MT']},
-  {g:'装飾・ポスター',k:'tech',n:'テック・近未来 (Agency FB)',f:'"Agency FB","Bahnschrift",sans-serif',probe:['Agency FB']},
+  {g:'端末のフォント(以前のデザイン用)',old:true,k:'stencil',n:'ステンシル',f:'Stencil,"Arial Black",sans-serif',probe:['Stencil']},
+  {g:'端末のフォント(以前のデザイン用)',old:true,k:'deco',n:'装飾体 (Algerian)',f:'Algerian,Impact,serif',probe:['Algerian']},
+  {g:'端末のフォント(以前のデザイン用)',old:true,k:'retro',n:'レトロポスター (Playbill)',f:'Playbill,Georgia,serif',probe:['Playbill']},
+  {g:'端末のフォント(以前のデザイン用)',old:true,k:'gothic19',n:'クラシック装飾 (Old English)',f:'"Old English Text MT","Blackletter686 BT",serif',probe:['Old English Text MT']},
+  {g:'端末のフォント(以前のデザイン用)',old:true,k:'tech',n:'テック・近未来 (Agency FB)',f:'"Agency FB","Bahnschrift",sans-serif',probe:['Agency FB']},
   /* 手書き */
-  {g:'手書き',k:'script',n:'筆記体',f:'"Brush Script MT","Snell Roundhand","Segoe Script",cursive',probe:['Brush Script MT','Snell Roundhand']},
-  {g:'手書き',k:'elegantscript',n:'優雅な筆記体 (Monotype Corsiva)',f:'"Monotype Corsiva","Brush Script MT",cursive',probe:['Monotype Corsiva']},
-  {g:'手書き',k:'hand',n:'手書き',f:'"Segoe Script","Bradley Hand",cursive',probe:['Segoe Script','Bradley Hand']},
-  {g:'手書き',k:'crayon',n:'手書き (ラフ)',f:'"Ink Free","Comic Sans MS","Chalkboard SE",cursive',probe:['Ink Free','Comic Sans MS']},
-  {g:'手書き',k:'print',n:'手書き (プリント)',f:'"Segoe Print","Comic Sans MS",cursive',probe:['Segoe Print']}
+  {g:'端末のフォント(以前のデザイン用)',old:true,k:'script',n:'筆記体',f:'"Brush Script MT","Snell Roundhand","Segoe Script",cursive',probe:['Brush Script MT','Snell Roundhand']},
+  {g:'端末のフォント(以前のデザイン用)',old:true,k:'elegantscript',n:'優雅な筆記体 (Monotype Corsiva)',f:'"Monotype Corsiva","Brush Script MT",cursive',probe:['Monotype Corsiva']},
+  {g:'端末のフォント(以前のデザイン用)',old:true,k:'hand',n:'手書き',f:'"Segoe Script","Bradley Hand",cursive',probe:['Segoe Script','Bradley Hand']},
+  {g:'端末のフォント(以前のデザイン用)',old:true,k:'crayon',n:'手書き (ラフ)',f:'"Ink Free","Comic Sans MS","Chalkboard SE",cursive',probe:['Ink Free','Comic Sans MS']},
+  {g:'端末のフォント(以前のデザイン用)',old:true,k:'print',n:'手書き (プリント)',f:'"Segoe Print","Comic Sans MS",cursive',probe:['Segoe Print']}
 ];
 const fontStack=k=>(WFONTS.find(f=>f.k===k)||WFONTS.find(f=>f.k==='gothic')).f;
 /* ---------- Webフォント ---------- */
@@ -11074,7 +11159,7 @@ function wfLink(f){
   const pr=new Promise(res=>{
     const l=document.createElement('link');l.rel='stylesheet';
     l.href='https://fonts.googleapis.com/css2?family='+encodeURIComponent(f.web).replace(/%20/g,'+')+':wght@'+f.wts.join(';')+'&display=swap';
-    l.onload=()=>res(true);l.onerror=()=>res(false);document.head.appendChild(l);
+    l.onload=()=>res(true);l.onerror=()=>{l.remove();res(false);};document.head.appendChild(l);
     setTimeout(()=>res(false),8000);
   });
   wfCss.set(f.web,pr);return pr;
@@ -11100,9 +11185,12 @@ async function wfFlush(){
   await Promise.all(jobs.map(async([key,set])=>{
     const[k,w]=key.split('|'),f=webFontOf(k);
     let done=wfDone.get(key);if(!done)wfDone.set(key,done=new Set());
-    set.forEach(c=>done.add(c));   /* 読めなくても繰り返さない */
-    if(!await wfLink(f))return;
+    set.forEach(c=>done.add(c));
+    /* 読めなかった時(オフラインなど)は覚えず、オンラインに戻った時に読み直す */
+    const fail=()=>{set.forEach(c=>done.delete(c));wfCss.delete(f.web);wfOffline=true;};
+    if(!await wfLink(f)){fail();return;}
     try{await document.fonts.load(`${w} 40px "${f.web}"`,[...set].join(''));}catch(e){}
+    if(!document.fonts.check(`${w} 40px "${f.web}"`,[...set].join('')))fail();
   }));
   /* 測り直す(このデザインのWebフォントを使う文字) */
   const sh=curShapes&&curShapes();
@@ -11122,6 +11210,9 @@ function textUsesWeb(s){
 }
 /* デザインを開いた時: 使っている文字のWebフォントを読み込む */
 function wfDoc(d){(d&&d.shapes||[]).forEach(wfNeed);}
+/* オンラインに戻ったら、読めなかったWebフォントを読み直して、文字の大きさを測り直す */
+let wfOffline=false;
+addEventListener('online',()=>{if(!wfOffline)return;wfOffline=false;const d=curDoc();if(d&&d.shapes)wfDoc(d);});
 /* そのフォントが端末に入っているか(代替と幅が変わるかで判定する定番の方法) */
 function fontAvailable(fam){
   try{
@@ -14367,6 +14458,47 @@ $('#wReset').onclick=resetWidth;
   ).join('');
 }
 $('#txFont').addEventListener('pointerdown',e=>e.stopPropagation());
+/* フォントを選ぶ(見本つき): 押すと一覧が開き、見本はそのフォントで出す(見えた所だけ読み込む) */
+const FP_SAMPLE_JA='あいう 永 デザイン',FP_SAMPLE_EN='Design Aa 123';
+function syncFontBtn(k){
+  const f=WFONTS.find(x=>x.k===k)||WFONTS.find(x=>x.k==='gothic');
+  const b=$('#txFontBtn');
+  b.textContent=f.n+(f.old?'(端末のフォント)':'');
+  b.style.fontFamily=f.f;
+  if(f.web)wfLink(f);
+}
+let fpIO=null;
+function openFontPop(){
+  const cur=$('#txFont').value;
+  const list=WFONTS.filter(f=>f.web);
+  const groups=[...new Set(list.map(f=>f.g))];
+  $('#fontPopTabs').innerHTML=groups.map((g,i)=>`<button type="button" data-g="${i}">${escXml(g)}</button>`).join('');
+  $('#fontPopList').innerHTML=groups.map((g,i)=>`<div class="fp-g" id="fpg${i}">${escXml(g)}</div>`+list.filter(f=>f.g===g).map(f=>{
+    const sample=f.dep?FP_SAMPLE_EN:FP_SAMPLE_JA;
+    return`<button type="button" class="fp-i${f.k===cur?' on':''}" data-k="${f.k}"><span class="fp-s" style="font-family:${escXml(f.f)}">${escXml(sample)}</span><span class="fp-n">${escXml(f.n)}</span></button>`;
+  }).join('')).join('');
+  const old=WFONTS.find(f=>f.k===cur&&f.old);
+  if(old)$('#fontPopList').insertAdjacentHTML('afterbegin',`<div class="fp-g">今のフォント: ${escXml(old.n)}(端末のフォント。スマホなどでは別の字形になります)</div>`);
+  if(fpIO)fpIO.disconnect();
+  fpIO=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){const f=webFontOf(e.target.dataset.k);if(f)wfLink(f);fpIO.unobserve(e.target);}}),{root:$('#fontPopList'),rootMargin:'200px'});
+  document.querySelectorAll('#fontPopList .fp-i').forEach(el=>fpIO.observe(el));
+  $('#fontPop').classList.add('on');
+  const on=$('#fontPopList .fp-i.on');if(on)on.scrollIntoView({block:'center'});
+}
+function closeFontPop(){$('#fontPop').classList.remove('on');if(fpIO){fpIO.disconnect();fpIO=null;}}
+$('#txFontBtn').addEventListener('pointerdown',e=>e.stopPropagation());
+$('#txFontBtn').onclick=openFontPop;
+$('#fontPopBack').onclick=closeFontPop;
+$('#fontPopX').onclick=closeFontPop;
+$('#fontPop').addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Escape')closeFontPop();});
+$('#fontPop').addEventListener('pointerdown',e=>e.stopPropagation());
+$('#fontPopTabs').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const g=$('#fpg'+b.dataset.g);if(g)g.scrollIntoView({block:'start',behavior:'smooth'});});
+$('#fontPopList').addEventListener('click',e=>{
+  const b=e.target.closest('.fp-i');if(!b)return;
+  $('#txFont').value=b.dataset.k;
+  setFont(b.dataset.k);syncFontBtn(b.dataset.k);
+  closeFontPop();
+});
 $('#txFont').addEventListener('change',()=>setFont($('#txFont').value));
 $('#txPickBtn').onclick=toggleTxPick;
 $('#txAllBtn').onclick=clearTxSel;
@@ -15199,7 +15331,7 @@ function updateStyleMenu(){
     $('#txTargetLabel').innerHTML=rng
       ?`▼ ここから下は<b>選んだ ${rng.b-rng.a+1} 文字</b>に効きます`
       :'▼ ここから下は<b>テキスト全体</b>に効きます';
-    $('#txFont').value=a.ff;
+    $('#txFont').value=a.ff;syncFontBtn(a.ff);
     const fs=Math.round(a.fs);
     $('#textFs').value=clamp(fs,8,200);$('#textFsV').value=fs;
     $('#txLs').value=clamp(a.ls,-20,60);$('#txLsV').value=Math.round(a.ls*10)/10;
