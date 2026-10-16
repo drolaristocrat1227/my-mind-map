@@ -2463,7 +2463,7 @@ kbd{
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-16.7';
+const APP_VERSION='2026-10-16.8';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -7448,8 +7448,11 @@ function siteLoaderHtml(c){
 `;
 }
 /* Webフォントを読み込むタグ(このデザインで使っているWebフォントだけ。display=swap で、読み込むまでは端末の文字で出す) */
-function siteFontLinks(d){
-  const url=webFontCssUrl(docFontKeys(d));
+function siteFontLinks(d,page){
+  /* そのページ(スマホ・タブレット・PC用のフレーム)で使っているフォントだけを読み込む */
+  let shapes=null;
+  if(page){const fr=siteViews(d,page).map(v=>v.f).filter(Boolean);shapes=fr.flatMap(f=>[f,...frameDescendants(d.shapes,f)]);}
+  const url=webFontCssUrl(docFontKeys(d,shapes));
   if(!url)return[];
   return['<link rel="preconnect" href="https://fonts.googleapis.com">','<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>',`<link rel="stylesheet" href="${escXml(url)}">`];
 }
@@ -7511,7 +7514,7 @@ function sitePageDoc(d,page,opt){
       opt.icon&&'<link rel="icon" href="favicon.png" type="image/png">',
       opt.icon&&'<link rel="apple-touch-icon" href="apple-touch-icon.png">',
       `<meta name="theme-color" content="${bg}">`,
-      ...siteFontLinks(d),
+      ...siteFontLinks(d,page),
       '<meta name="generator" content="NT-D">'
     ].filter(Boolean).join('\n');
     const pageCss=`html,body{background:${bg}}\n:root{--ntf:${fontStack(docFont(d))}}`+(menu.css?'\n'+menu.css:'');
@@ -11145,9 +11148,9 @@ function webFontCssUrl(keys){
   return'https://fonts.googleapis.com/css2?'+fs.map(f=>'family='+encodeURIComponent(f.web).replace(/%20/g,'+')+':wght@'+f.wts.join(';')).join('&')+'&display=swap';
 }
 /* このデザインで使っているフォント */
-function docFontKeys(d){
+function docFontKeys(d,shapes){
   const ks=new Set([docFont(d)]);
-  (d.shapes||[]).forEach(s=>{if(s.type!=='text')return;if(s.ff)ks.add(s.ff);(s.cattr||[]).forEach(a=>{if(a&&a.ff)ks.add(a.ff);});});
+  (shapes||d.shapes||[]).forEach(s=>{if(s.type!=='text')return;if(s.ff)ks.add(s.ff);(s.cattr||[]).forEach(a=>{if(a&&a.ff)ks.add(a.ff);});});
   return[...ks];
 }
 /* 編集画面でWebフォントを読み込む。日本語のWebフォントは文字のまとまりごとに分かれているので、
