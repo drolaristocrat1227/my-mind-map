@@ -2463,7 +2463,7 @@ kbd{
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-16.8';
+const APP_VERSION='2026-10-19.1';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -6207,7 +6207,8 @@ function siteAnimWrap(members,html,o,anim,extraD,xs){
     ?`<div class="nt-e nt-curtain" style="left:${cssNum(x1)}px;top:${cssNum(y1)}px;width:${cssNum(b.w)}px;height:${cssNum(b.h)}px;background:${cssCol(anim.c||'#1F2A44')}"></div>`:'';
   /* 切り抜く動きは内側の箱(.nt-cl)を切り抜く。画面に入ったかは、切り抜きの外に置いた見えない目印(.nt-sen)で判定する
      (切り抜かれて見えない物は、ブラウザが「画面に入っていない」と扱うため) */
-  if(vars)html=`<div class="nt-u nt-cl">${html}</div>`;
+  /* 切り抜く箱は大きさが0だとブラウザが切り抜きを描かないので、切り抜く範囲を覆う大きさにする(押せるのは中身だけ) */
+  if(vars)html=`<div class="nt-u nt-cl" style="width:${cssNum(Math.max(1,X2))}px;height:${cssNum(Math.max(1,Y2))}px">${html}</div>`;
   const sen=`<i class="nt-sen" style="left:${cssNum(x1)}px;top:${cssNum(y1)}px;width:${cssNum(Math.max(1,b.w))}px;height:${cssNum(Math.max(1,b.h))}px"></i>`;
   return`<div class="nt-u nt-an nt-an-${anim.t}"${anim.rep?' data-rep="1"':''} style="transform-origin:${pt(cx,cy)};--d:${cssNum(d)}s;--t:${cssNum(t)}s${vars}${xs||''}">${sen}${html}${cur}</div>`;
 }
@@ -6453,6 +6454,8 @@ ${SITE_RANGES.map(({r,mq})=>`@media ${mq}{.nt-view:not(.nt-r-${r}){display:none}
 .nt-sen{position:absolute;visibility:hidden;pointer-events:none}
 .nt-js .nt-an-clipup,.nt-js .nt-an-clipleft,.nt-js .nt-an-circle,.nt-js .nt-an-wipe{opacity:1}
 .nt-js .nt-an>.nt-cl{clip-path:var(--c0);transition:clip-path var(--t) cubic-bezier(.7,0,.2,1) var(--d)}
+.nt-an>.nt-cl{pointer-events:none}
+.nt-an>.nt-cl>*{pointer-events:auto}
 .nt-js .nt-an-wipe{scale:1.06}
 .nt-js .nt-an.nt-in{opacity:1;translate:0 0;scale:1;rotate:0deg;transform:none;filter:none}
 .nt-js .nt-an.nt-in>.nt-cl{clip-path:var(--c1)}
@@ -6522,7 +6525,7 @@ ${SITE_RANGES.map(({r,mq})=>`@media ${mq}{.nt-view:not(.nt-r-${r}){display:none}
 .nt-lp-float{animation:nt-float var(--ld) ease-in-out infinite}
 @keyframes nt-float{0%,100%{translate:0 0}25%{translate:8px -10px}50%{translate:-4px -18px}75%{translate:-10px -6px}}
 .nt-lp-sway{animation:nt-sway var(--ld) ease-in-out infinite}
-@keyframes nt-sway{0%,100%{rotate:-3deg}50%{rotate:3deg}}
+@keyframes nt-sway{0%,100%{rotate:-7deg;translate:-6px 0}50%{rotate:7deg;translate:6px 0}}
 .nt-lp-spin{animation:nt-spin var(--ld) linear infinite}
 @keyframes nt-spin{to{rotate:360deg}}
 .nt-lp-blink{animation:nt-blink var(--ld) ease-in-out infinite}
