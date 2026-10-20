@@ -1127,6 +1127,35 @@ body.wirebar-off #wireHint{bottom:18px;}
 .fp-s{display:block;font-size:22px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .fp-n{display:block;margin-top:2px;font-size:11px;color:var(--ink-soft)}
 .nw-pics{flex-wrap:wrap}
+/* アイコン集 */
+#iconPop{position:fixed;inset:0;z-index:1200;display:none}
+#iconPop.on{display:block}
+#iconPopBack{position:absolute;inset:0;background:rgba(0,0,0,.3)}
+#iconPopIn{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(680px,95vw);height:min(720px,90vh);display:flex;flex-direction:column;border-radius:18px;padding:14px 14px 8px}
+.ip-head{display:flex;align-items:center;gap:10px;padding:0 2px 8px}
+.ip-head b{font-size:16px;flex:none}
+#iconQ{flex:1;min-width:0;padding:9px 12px;border:1px solid var(--panel-border);border-radius:10px;background:var(--node-bg);color:var(--ink);font-size:15px}
+#iconPopX{width:32px;height:32px;border:0;background:none;color:var(--ink);font-size:22px;cursor:pointer;flex:none}
+.ip-libs{padding:0 0 6px}
+.ip-cats{display:flex;flex-wrap:wrap;gap:5px;padding:0 0 8px}
+.ip-cats button{padding:4px 10px;border:1px solid var(--panel-border);border-radius:999px;background:none;color:var(--ink);font-size:12px;cursor:pointer}
+.ip-cats button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+#iconList{flex:1;overflow-y:auto;padding:0 2px}
+.ip-h{font-size:12px;font-weight:700;color:var(--ink-soft);margin:10px 2px 6px}
+.ip-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:6px}
+.ip-t{position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px 5px;border:1px solid var(--panel-border);border-radius:10px;background:#fff;cursor:pointer;min-width:0}
+.ip-t:hover{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 25%,transparent)}
+.ip-t img{width:28px;height:28px;display:block}
+.ip-t span{max-width:100%;font-size:9px;color:#6B7385;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ip-t .ip-lib{position:absolute;left:4px;top:3px;font-size:8px;font-weight:700;color:#A0A7B4}
+.ip-t .ip-fav{position:absolute;right:2px;top:0;width:20px;height:20px;border:0;background:none;color:#C9CED8;font-size:13px;line-height:20px;cursor:pointer;opacity:0}
+.ip-t:hover .ip-fav,.ip-t .ip-fav.on{opacity:1}
+.ip-t .ip-fav.on{color:#F5B301}
+.ip-more{display:block;margin:12px auto;padding:8px 18px;border:1px solid var(--panel-border);border-radius:999px;background:none;color:var(--ink);cursor:pointer}
+.ip-none{padding:24px 6px;color:var(--ink-soft);font-size:13px;line-height:1.8}
+.ip-foot{padding:6px 2px 0;font-size:10px;color:var(--ink-soft)}
+/* 置いたアイコンの設定 */
+#icoWtRow .seg{flex:1 1 auto}
 .nw-pics .seg{flex:none;padding:5px 10px;font-size:12px}
 .nw-th{position:relative;display:inline-flex;flex-direction:column;align-items:center;gap:2px;font-size:10px;color:var(--ink-soft)}
 .nw-th img{width:64px;height:44px;object-fit:cover;border-radius:6px;border:1px solid var(--panel-border)}
@@ -1594,6 +1623,13 @@ kbd{
     </div>
     </div>
   </div>
+  <div id="icoPart">
+    <hr>
+    <div class="menu-label">アイコン <span id="icoName" style="font-weight:400"></span></div>
+    <div class="segRow mWrap" id="icoWtRow"></div>
+    <div class="radRow" id="icoLwRow"><span class="radLbl">線の太さ</span><input type="range" id="icoLw" min="0.5" max="3.5" step="0.25" value="2"><span class="radNum" id="icoLwV">2</span></div>
+    <div class="segRow"><button class="seg" id="icoSwap">別のアイコンに替える</button></div>
+  </div>
   <div id="textSec">
     <hr>
     <div class="menu-label">テキスト</div>
@@ -1827,6 +1863,17 @@ kbd{
 </div>
 <div id="frameMenu" class="menu glass">
   <div id="framePresetList"></div>
+</div>
+<!-- アイコン集(検索・分類つき) -->
+<div id="iconPop">
+  <div id="iconPopBack"></div>
+  <div id="iconPopIn" class="glass">
+    <div class="ip-head"><b id="iconPopTitle">アイコン</b><input type="search" id="iconQ" placeholder="日本語で探す(例: 矢印・電話・地図・家)" autocomplete="off" spellcheck="false"><button type="button" id="iconPopX" aria-label="閉じる">&times;</button></div>
+    <div class="ip-libs segRow" id="iconLibRow"><button class="seg" data-lib="">すべて</button><button class="seg" data-lib="ph">Phosphor(太さ6種類)</button><button class="seg" data-lib="tb">Tabler(線・種類が多い)</button></div>
+    <div class="ip-cats" id="iconCats"></div>
+    <div id="iconList"></div>
+    <div class="ip-foot">Phosphor Icons・Tabler Icons(どちらも無料・商用のサイトにも使えます)。置いたあと、右の「アイコン」で太さを変えられます</div>
+  </div>
 </div>
 <div id="iconMenu" class="menu glass">
   <div class="menu-label">アイコンを追加</div>
@@ -2463,7 +2510,7 @@ kbd{
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-19.1';
+const APP_VERSION='2026-10-20.1';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -9260,14 +9307,18 @@ async function makeWireCanvas(w,opt){
       drawImgFill(p2);
       if(!s.noStroke&&strokeW(s)>0)doStroke(spaint,sa,()=>ctx.stroke(p2));
     }else if(s.type==='icon'){
-      const ic=iconById(s.iconId);
+      const ic=iconGeo(s);
       if(ic){
-        const p2=new Path2D(ic.d),isw=s.w/24,ish=s.h/24;
+        const p2=new Path2D(ic.d),isw=s.w/ic.vb,ish=s.h/ic.vb;
         ctx.save();ctx.translate(-s.w/2,-s.h/2);ctx.scale(isw,ish);
-        ctx.globalAlpha=base*fa;ctx.fillStyle=paint||tc.ink;
-        ctx.fill(p2,'evenodd');
+        ctx.globalAlpha=base*fa;ctx.fillStyle=paint||tc.ink;ctx.strokeStyle=paint||tc.ink;
+        if(ic.mode==='stroke'){ctx.lineWidth=ic.lw||2;ctx.lineCap='round';ctx.lineJoin='round';ctx.stroke(p2);}
+        else{
+          if(ic.d2){ctx.globalAlpha=base*fa*0.2;ctx.fill(new Path2D(ic.d2));ctx.globalAlpha=base*fa;}
+          ctx.fill(p2,ic.fr||'evenodd');
+        }
         ctx.restore();shClear();
-        if(!s.noStroke&&strokeW(s)>0){
+        if(ic.mode!=='stroke'&&!s.noStroke&&strokeW(s)>0){
           ctx.save();ctx.translate(-s.w/2,-s.h/2);ctx.scale(isw,ish);
           ctx.globalAlpha=base*sa;ctx.strokeStyle=spaint;ctx.lineWidth=strokeW(s)/((isw+ish)/2||1);
           ctx.stroke(p2);
@@ -10417,6 +10468,47 @@ const ICONS=[
   {id:'image',n:'画像',d:'M4.5 4H19.5A2 2 0 0 1 21.5 6V18A2 2 0 0 1 19.5 20H4.5A2 2 0 0 1 2.5 18V6A2 2 0 0 1 4.5 4ZM6.2 9.5A1.8 1.8 0 1 0 9.8 9.5A1.8 1.8 0 1 0 6.2 9.5ZM4.5 18l5-6 3.5 4 2.5-3 5.5 5Z'}
 ];
 const iconById=id=>ICONS.find(i=>i.id===id);
+/* ---------- アイコン集(Phosphor Icons・Tabler Icons。どちらも MIT ライセンスで、商用のサイトにも使える)
+   一覧と検索の目録は icons-catalog.json(名前・分類・英語のタグ・日本語の辞書)。
+   形は置く時に読み込み、図形(s.ico)に保存する(オフラインでも書き出しでも、そのまま描ける) ---------- */
+const ICO_CDN={ph:'https://cdn.jsdelivr.net/npm/@phosphor-icons/core@2.1.1',tb:'https://cdn.jsdelivr.net/npm/@tabler/icons@3.49.0'};
+const PH_WEIGHTS=[['thin','極細'],['light','細い'],['regular','普通'],['bold','太い'],['fill','塗り'],['duotone','2色']];
+function icoUrl(lib,n,wt){
+  if(lib==='ph')return`${ICO_CDN.ph}/assets/${wt}/${n}${wt==='regular'?'':'-'+wt}.svg`;
+  return`${ICO_CDN.tb}/icons/${wt==='filled'?'filled':'outline'}/${n}.svg`;
+}
+/* 図形の形(以前のアイコンは ICONS、アイコン集のアイコンは図形に保存した形) */
+function iconGeo(s){
+  if(s.ico)return s.ico;
+  const ic=iconById(s.iconId);return ic?{vb:24,d:ic.d,mode:'fill',fr:'evenodd'}:null;
+}
+/* SVGの文字列 → パス(duotone の薄い部分は d2) */
+function parseIconSvg(txt){
+  const svg=new DOMParser().parseFromString(txt,'image/svg+xml').documentElement;
+  const vb=(svg.getAttribute('viewBox')||'0 0 24 24').split(/[\s,]+/).map(Number);
+  const num=(e,k)=>+e.getAttribute(k)||0;
+  const ds=[],ds2=[];
+  svg.querySelectorAll('path,circle,ellipse,rect,line,polyline,polygon').forEach(e=>{
+    if(e.getAttribute('stroke')==='none'&&e.getAttribute('fill')==='none')return;   /* Tabler の外枠(見えない) */
+    const t=e.tagName.toLowerCase();let d='';
+    if(t==='path')d=e.getAttribute('d')||'';
+    else if(t==='circle'||t==='ellipse'){const cx=num(e,'cx'),cy=num(e,'cy'),rx=t==='circle'?num(e,'r'):num(e,'rx'),ry=t==='circle'?rx:num(e,'ry');d=`M${cx-rx} ${cy}a${rx} ${ry} 0 1 0 ${2*rx} 0a${rx} ${ry} 0 1 0 ${-2*rx} 0z`;}
+    else if(t==='rect'){const x=num(e,'x'),y=num(e,'y'),w=num(e,'width'),h=num(e,'height'),q=Math.min(num(e,'rx')||num(e,'ry'),w/2,h/2);
+      d=q?`M${x+q} ${y}h${w-2*q}a${q} ${q} 0 0 1 ${q} ${q}v${h-2*q}a${q} ${q} 0 0 1 ${-q} ${q}h${-(w-2*q)}a${q} ${q} 0 0 1 ${-q} ${-q}v${-(h-2*q)}a${q} ${q} 0 0 1 ${q} ${-q}z`:`M${x} ${y}h${w}v${h}h${-w}z`;}
+    else if(t==='line')d=`M${num(e,'x1')} ${num(e,'y1')}L${num(e,'x2')} ${num(e,'y2')}`;
+    else{const p=(e.getAttribute('points')||'').trim().split(/[\s,]+/).map(Number);for(let i=0;i+1<p.length;i+=2)d+=(i?'L':'M')+p[i]+' '+p[i+1];if(t==='polygon')d+='z';}
+    if(!d)return;
+    const op=e.getAttribute('opacity');
+    (op&&+op<1?ds2:ds).push(d);
+  });
+  return{vb:vb[2]||24,d:ds.join(' '),d2:ds2.join(' ')};
+}
+async function fetchIconGeo(lib,n,wt){
+  const res=await fetch(icoUrl(lib,n,wt));if(!res.ok)throw new Error('http '+res.status);
+  const g=parseIconSvg(await res.text());if(!g.d)throw new Error('empty');
+  const stroke=lib==='tb'&&wt!=='filled';
+  return{lib,n,wt,vb:g.vb,d:g.d,...(g.d2?{d2:g.d2}:{}),mode:stroke?'stroke':'fill',fr:'nonzero',...(stroke?{lw:2}:{})};
+}
 /* ツールバー・パネルで使うモックアップ一覧(端末の実物イメージ。1種ずつ) */
 const DEVICES=[
   {k:'phone', kind:'phone', n:'スマホ',    w:390, h:844, r:44},
@@ -10534,9 +10626,13 @@ function shapeSvg(s){
     return`<g data-id="${s.id}" ${tr}>${el} fill="${fill}" fill-opacity="${fa}"/>${im}${el} fill="none" stroke="${stroke}" stroke-opacity="${sa}" stroke-width="${sw}"/></g>`;
   }
   if(s.type==='icon'){
-    const ic=iconById(s.iconId);
-    const isw=s.w/24,ish=s.h/24,swLocal=sw/((isw+ish)/2||1);
-    return`<g data-id="${s.id}" ${tr}><rect x="${-s.w/2}" y="${-s.h/2}" width="${s.w}" height="${s.h}" fill="transparent"/><g transform="translate(${-s.w/2} ${-s.h/2}) scale(${isw} ${ish})"><path d="${ic?ic.d:''}" fill="${fill}" fill-opacity="${fa}" fill-rule="evenodd" stroke="${stroke}" stroke-opacity="${sa}" stroke-width="${swLocal}"/></g></g>`;
+    const g=iconGeo(s),vb=g?g.vb:24;
+    const isw=s.w/vb,ish=s.h/vb,swLocal=sw/((isw+ish)/2||1);
+    /* 線のアイコン(Tabler)は線で描く。塗りのアイコンは塗り(duotone は薄い部分を先に) */
+    const inner=!g?'':g.mode==='stroke'
+      ?`<path d="${g.d}" fill="none" stroke="${fill}" stroke-opacity="${fa}" stroke-width="${g.lw||2}" stroke-linecap="round" stroke-linejoin="round"/>`
+      :(g.d2?`<path d="${g.d2}" fill="${fill}" fill-opacity="${fa*0.2}"/>`:'')+`<path d="${g.d}" fill="${fill}" fill-opacity="${fa}" fill-rule="${g.fr||'evenodd'}" stroke="${stroke}" stroke-opacity="${sa}" stroke-width="${swLocal}"/>`;
+    return`<g data-id="${s.id}" ${tr}><rect x="${-s.w/2}" y="${-s.h/2}" width="${s.w}" height="${s.h}" fill="transparent"/><g transform="translate(${-s.w/2} ${-s.h/2}) scale(${isw} ${ish})">${inner}</g></g>`;
   }
   if(s.type==='path'){
     const d=pathD(s);
@@ -13569,11 +13665,149 @@ $('#frameMenu').addEventListener('click',e=>{
   else if(mi.dataset.free)addFrame(800,600,'フレーム',false);
   else addFrame(+mi.dataset.fw,+mi.dataset.fh,mi.dataset.fn,true);
 });
-/* ---------- アイコンライブラリ ---------- */
+/* ---------- アイコン集の一覧 ---------- */
+let ICAT=null,icoLib='',icoCat=-1,icoReplace=false,icoLimit=240;
+async function loadIconCatalog(){
+  if(ICAT)return ICAT;
+  const j=await (await fetch('icons-catalog.json')).json();
+  const items=[...j.ph.list.map(x=>({k:'ph:'+x[0],lib:'ph',n:x[0],m:x[1],t:x[2]})),...j.tb.list.map(x=>({k:'tb:'+x[0],lib:'tb',n:x[0],m:x[1],t:x[2],fl:x[3]}))];
+  ICAT={...j,items,byK:new Map(items.map(i=>[i.k,i]))};
+  return ICAT;
+}
+const icoNorm=v=>String(v||'').toLowerCase().replace(/[\u30a1-\u30f6]/g,c=>String.fromCharCode(c.charCodeAt(0)-0x60)).trim();
+const lsList=k=>{try{return JSON.parse(localStorage.getItem(k)||'[]');}catch(e){return[];}};
+const lsSave=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}};
+/* 検索: 英語はそのまま、日本語は辞書で英語の言葉に置き換えて、名前とタグから探す */
+function icoSearch(q){
+  let list=ICAT.items;
+  if(icoLib)list=list.filter(i=>i.lib===icoLib);
+  if(icoCat>=0)list=list.filter(i=>i.m&(1<<icoCat));
+  const nq=icoNorm(q);if(!nq)return list;
+  const terms=new Set();
+  nq.split(/\s+/).forEach(w=>{if(/^[a-z0-9-]+$/.test(w))terms.add(w);});
+  ICAT.ja.forEach(([keys,en])=>{
+    if(keys.some(k=>{const nk=icoNorm(k);return nk&&(nq.includes(nk)||(nq.length>=2&&nk.includes(nq)));}))en.forEach(e=>terms.add(e));
+  });
+  if(!terms.size)return[];
+  const T=[...terms];
+  return list.map(i=>{
+    /* 言葉ごとの点数を足す(「右」「矢印」の両方に合う arrow-right が先に来るように) */
+    let sc=0;const tg=' '+i.t+' ',parts=i.n.split('-');
+    for(const t of T){
+      sc+=i.n===t?6:i.n.startsWith(t+'-')?5:parts.includes(t)?4:i.n.startsWith(t)?3:i.n.includes(t)?2:tg.includes(' '+t+' ')?1.5:i.t.includes(t)?0.5:0;
+    }
+    return[i,sc];
+  }).filter(x=>x[1]>0).sort((a,b)=>b[1]-a[1]||(a[0].lib===b[0].lib?0:a[0].lib==='ph'?-1:1)||a[0].n.length-b[0].n.length).map(x=>x[0]);
+}
+function icoTile(i,fav){
+  const src=icoUrl(i.lib,i.n,i.lib==='ph'?'regular':'outline');
+  return`<button type="button" class="ip-t" data-k="${i.k}" title="${escXml(i.n)}(${i.lib==='ph'?'Phosphor':'Tabler'})"><span class="ip-lib">${i.lib==='ph'?'P':'T'}</span><img src="${src}" alt="" loading="lazy"><span>${escXml(i.n)}</span><i class="ip-fav${fav.has(i.k)?' on':''}" data-fav="${i.k}" title="お気に入り">★</i></button>`;
+}
+function renderIconList(){
+  const box=$('#iconList');
+  if(!ICAT){box.innerHTML='<div class="ip-none">アイコンの一覧を読み込んでいます…</div>';return;}
+  const fav=new Set(lsList('ntd-icon-fav')),q=$('#iconQ').value;
+  document.querySelectorAll('#iconLibRow .seg').forEach(b=>b.classList.toggle('active',b.dataset.lib===icoLib));
+  document.querySelectorAll('#iconCats button').forEach(b=>b.classList.toggle('on',+b.dataset.c===icoCat));
+  const grid=(title,arr)=>arr.length?`<div class="ip-h">${title}</div><div class="ip-g">${arr.map(i=>icoTile(i,fav)).join('')}</div>`:'';
+  const get=ks=>ks.map(k=>ICAT.byK.get(k)).filter(i=>i&&(!icoLib||i.lib===icoLib));
+  if(!icoNorm(q)&&icoCat<0){
+    box.innerHTML=grid('最近使ったアイコン',get(lsList('ntd-icon-recent')))+grid('お気に入り(★)',get([...fav]))+grid('ホームページでよく使うアイコン',get(ICAT.pick))
+      +'<div class="ip-none">上の欄に「矢印」「電話」「地図」「家」などと入れるか、分類を選ぶと、ほかのアイコンが出ます(全部で '+ICAT.items.length.toLocaleString()+' 種類)。</div>';
+    return;
+  }
+  const res=icoSearch(q);
+  if(!res.length){box.innerHTML='<div class="ip-none">見つかりませんでした。ほかの言葉(例: 「やじるし」→「矢印」、英語の arrow など)でも探せます。</div>';return;}
+  box.innerHTML=grid(`${res.length.toLocaleString()} 件`,res.slice(0,icoLimit))+(res.length>icoLimit?`<button type="button" class="ip-more" id="iconMore">さらに表示(残り ${(res.length-icoLimit).toLocaleString()} 件)</button>`:'');
+}
+async function openIconPop(replace){
+  icoReplace=!!replace;icoLimit=240;
+  $('#iconPopTitle').textContent=icoReplace?'別のアイコンに替える':'アイコン';
+  $('#iconPop').classList.add('on');
+  setTimeout(()=>$('#iconQ').focus(),50);
+  renderIconList();
+  try{await loadIconCatalog();}catch(e){$('#iconList').innerHTML='<div class="ip-none">アイコンの一覧を読み込めませんでした。ネットにつながっているか確かめてください。</div>';return;}
+  if(!$('#iconCats').children.length)$('#iconCats').innerHTML=ICAT.cats.map((c,i)=>`<button type="button" data-c="${i}">${escXml(c)}</button>`).join('');
+  renderIconList();
+}
+function closeIconPop(){$('#iconPop').classList.remove('on');}
+/* 置く(または、選んでいるアイコンを替える) */
+async function placeLibIcon(k){
+  const[lib,n]=k.split(':');
+  toast('アイコンを読み込んでいます…');
+  let g;
+  try{g=await fetchIconGeo(lib,n,lib==='ph'?'regular':'outline');}
+  catch(e){toast('アイコンを読み込めませんでした(ネットにつながっているか確かめてください)');return;}
+  const d=curDoc();if(!d||!d.shapes)return;
+  exitPen();exitEraser();exitBrush();
+  pushUndo();
+  const rec=lsList('ntd-icon-recent').filter(x=>x!==k);rec.unshift(k);lsSave('ntd-icon-recent',rec.slice(0,24));
+  const sel=icoReplace?selShapes().filter(s=>s.type==='icon'&&!s.locked):[];
+  if(sel.length){
+    sel.forEach(s=>{s.ico={...g,...(g.mode==='stroke'&&s.ico&&s.ico.lw?{lw:s.ico.lw}:{})};delete s.iconId;});
+    toast('アイコンを替えました');
+  }else{
+    const c=s2w(viewW()/2,viewH()/2);
+    const s={id:uid(),type:'icon',x:c.x,y:c.y,w:40,h:40,rot:0,fill:'#23262D',noStroke:true,ico:g};
+    d.shapes.push(s);wireSel=[s.id];
+    toast('アイコンを置きました。右の「アイコン」で太さを変えられます');
+  }
+  save();renderWire();updateStyleMenu&&updateStyleMenu();
+  closeIconPop();
+}
+$('#iconPopBack').onclick=closeIconPop;
+$('#iconPopX').onclick=closeIconPop;
+$('#iconPop').addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Escape')closeIconPop();});
+$('#iconPop').addEventListener('pointerdown',e=>e.stopPropagation());
+let icoQT=0;
+$('#iconQ').addEventListener('input',()=>{clearTimeout(icoQT);icoQT=setTimeout(()=>{icoLimit=240;renderIconList();},120);});
+$('#iconLibRow').addEventListener('click',e=>{const b=e.target.closest('.seg');if(!b)return;icoLib=b.dataset.lib;icoLimit=240;renderIconList();});
+$('#iconCats').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;icoCat=icoCat===+b.dataset.c?-1:+b.dataset.c;icoLimit=240;renderIconList();});
+$('#iconList').addEventListener('click',e=>{
+  const f=e.target.closest('[data-fav]');
+  if(f){e.stopPropagation();const fav=lsList('ntd-icon-fav'),k=f.dataset.fav,i=fav.indexOf(k);if(i>=0)fav.splice(i,1);else fav.unshift(k);lsSave('ntd-icon-fav',fav);f.classList.toggle('on',i<0);return;}
+  if(e.target.id==='iconMore'){icoLimit+=480;renderIconList();return;}
+  const t=e.target.closest('.ip-t');if(t)placeLibIcon(t.dataset.k);
+});
+/* ---------- 置いたアイコンの設定: 太さ(Phosphor)・線の太さと塗り(Tabler)・別のアイコンに替える ---------- */
+function libIcons(){return selShapes().filter(s=>s.type==='icon'&&s.ico&&!s.locked);}
+function renderIcoPart(){
+  const ss=selShapes().filter(s=>s.type==='icon'),li=ss.filter(s=>s.ico);
+  $('#icoPart').style.display=ss.length?'block':'none';
+  if(!ss.length)return;
+  const g=li[0]&&li[0].ico;
+  $('#icoName').textContent=g?`${g.n}(${g.lib==='ph'?'Phosphor':'Tabler'})`:'(以前のアイコン)';
+  const row=$('#icoWtRow');
+  if(g&&g.lib==='ph')row.innerHTML=PH_WEIGHTS.map(([k,l])=>`<button class="seg${g.wt===k?' active':''}" data-wt="${k}">${l}</button>`).join('');
+  else if(g&&g.lib==='tb'){const it=ICAT&&ICAT.byK.get('tb:'+g.n);row.innerHTML=`<button class="seg${g.wt!=='filled'?' active':''}" data-wt="outline">線</button>`+(!ICAT||(it&&it.fl)?`<button class="seg${g.wt==='filled'?' active':''}" data-wt="filled">塗り</button>`:'');}
+  else row.innerHTML='';
+  $('#icoLwRow').style.display=g&&g.mode==='stroke'?'flex':'none';
+  if(g&&g.mode==='stroke'&&document.activeElement!==$('#icoLw')){$('#icoLw').value=g.lw||2;$('#icoLwV').textContent=(g.lw||2).toFixed(2).replace(/0$/,'');}
+}
+$('#icoWtRow').addEventListener('click',async e=>{
+  const b=e.target.closest('.seg');if(!b)return;
+  const ss=libIcons();if(!ss.length)return;
+  toast('読み込んでいます…');
+  try{
+    const geos=await Promise.all(ss.map(s=>fetchIconGeo(s.ico.lib,s.ico.n,b.dataset.wt)));
+    pushUndo();
+    ss.forEach((s,i)=>{const lw=s.ico.lw;s.ico=geos[i];if(s.ico.mode==='stroke'&&lw)s.ico.lw=lw;});
+    save();renderWire();updateStyleMenu();
+    toast('太さを変えました');
+  }catch(err){toast('読み込めませんでした(このアイコンには、その太さが無いか、ネットにつながっていません)');}
+});
+$('#icoLw').addEventListener('pointerdown',e=>{e.stopPropagation();pushUndo();});
+$('#icoLw').addEventListener('input',()=>{
+  const v=+$('#icoLw').value;$('#icoLwV').textContent=String(v);
+  libIcons().forEach(s=>{if(s.ico.mode==='stroke')s.ico={...s.ico,lw:v};});
+  save();renderWire();
+});
+$('#icoSwap').onclick=()=>openIconPop(true);
+/* ---------- アイコンライブラリ(以前のアイコン。UIパーツで使う) ---------- */
 $('#iconGrid').innerHTML=ICONS.map(ic=>
   `<button class="iconBtn" data-icon="${ic.id}" title="${escXml(ic.n)}"><svg viewBox="0 0 24 24" fill-rule="evenodd"><path d="${ic.d}"/></svg></button>`
 ).join('');
-$('#wireIconBtn').onclick=e=>openBarMenu($('#iconMenu'),e.currentTarget);
+$('#wireIconBtn').onclick=()=>{hideMenus();openIconPop(false);};
 $('#iconGrid').addEventListener('click',e=>{
   const b=e.target.closest('.iconBtn');if(!b)return;
   hideMenus();
@@ -14839,7 +15073,7 @@ function wireAction(act,x,y){
     case'pen':
       document.querySelectorAll('#penMenu .mi').forEach(b=>b.classList.toggle('active',b.dataset.pen===penKind));
       openMenuAt($('#penMenu'),x,y);break;
-    case'icon':openMenuAt($('#iconMenu'),x,y);break;
+    case'icon':openIconPop(false);break;
     case'parts':openMenuAt($('#partsMenu'),x,y);break;
     case'fill':openStyleMenu();break;
     case'front':layerExtreme(1);break;
@@ -15304,6 +15538,7 @@ function updateStyleMenu(){
     if(document.activeElement!==$('#blurAmt'))$('#blurAmt').value=b0;
     if(document.activeElement!==$('#blurAmtV'))$('#blurAmtV').value=b0;
   }
+  renderIcoPart();
   $('#textSec').style.display=texts.length?'block':'none';
   if(texts.length){
     const t0=texts[0];
