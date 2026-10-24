@@ -1588,6 +1588,13 @@ kbd{
         <button class="seg" data-vh="bottom" role="radio">する・中身は下</button>
       </div>
     </div>
+    <div id="webGrowRow">
+      <div class="menu-label">中身に合わせて縦に伸ばす(ページ直下の区画)</div>
+      <div class="segRow" id="webGrow" role="radiogroup">
+        <button class="seg" data-fit="" role="radio">しない</button>
+        <button class="seg" data-fit="1" role="radio">する(文章が長くなったら下へ広げる)</button>
+      </div>
+    </div>
     <div id="webSceneRow">
       <div class="menu-label">スクロールの演出(区画)</div>
       <div class="segRow mWrap" id="webScene" role="radiogroup">
@@ -2313,6 +2320,16 @@ kbd{
         <button class="seg" data-pfx="fade" role="radio">フェード</button>
       </div>
       <div class="numRow" id="expPfxEdit"><span class="radLbl expHl">幕の色</span><input type="color" id="expPfxC"></div>
+      <div class="menu-label">広い画面での表示(PC用のデザイン)</div>
+      <div class="segRow mWrap" id="expWideRow" role="radiogroup">
+        <button class="seg" data-w="0" role="radio">デザインの幅のまま</button>
+        <button class="seg" data-w="1440" role="radio">1440pxまで拡大</button>
+        <button class="seg" data-w="1920" role="radio">1920pxまで拡大</button>
+      </div>
+      <div class="segRow mWrap" id="expBleedRow" role="radiogroup">
+        <button class="seg" data-b="1" role="radio">横幅いっぱいの背景は画面の端まで</button>
+        <button class="seg" data-b="0" role="radio">左右は余白(背景の色)</button>
+      </div>
       <div class="menu-label">タップした時の動き(押すたびに切り替え)</div>
       <div class="segRow mWrap" id="expTapRow">
         <button class="seg" data-tap="hover">スマホ: ホバーの動きを出す</button>
@@ -2510,7 +2527,7 @@ kbd{
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-24.1';
+const APP_VERSION='2026-10-25.1';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -4697,6 +4714,8 @@ function updateSiteDlg(){
   $('#expPfxEdit').style.display=pf.t?'flex':'none';
   $('#expPfxC').value=hex6(pf.c||'#1F2A44');
   document.querySelectorAll('#expTapRow .seg').forEach(b=>{const on=b.dataset.tap==='hover'?!c.tapHoverOff:!!c.tapReplay;b.classList.toggle('active',on);b.setAttribute('aria-pressed',on?'true':'false');});
+  document.querySelectorAll('#expWideRow .seg').forEach(b=>{const on=+b.dataset.w===siteMaxW(c);b.classList.toggle('active',on);b.setAttribute('aria-checked',on?'true':'false');});
+  document.querySelectorAll('#expBleedRow .seg').forEach(b=>{const on=(b.dataset.b==='1')===(c.bleed!==false);b.classList.toggle('active',on);b.setAttribute('aria-checked',on?'true':'false');});
   document.querySelectorAll('#expImgOptRow .seg').forEach(b=>{
     const on=(b.dataset.v==='1')===siteImgOptOn(c);
     b.classList.toggle('active',on);b.setAttribute('aria-checked',on?'true':'false');
@@ -4880,6 +4899,18 @@ $('#expFontFix').onclick=()=>{
   save();renderWire();updateSiteDlg();
   toast(`Webフォントに置き換えました(${n}か所＋基本のフォント)。文字の幅が少し変わるので、見た目を確かめてください`);
 };
+$('#expWideRow').addEventListener('click',e=>{
+  const b=e.target.closest('.seg');if(!b)return;
+  const c=siteCfg(),v=+b.dataset.w;
+  if(v===1440)delete c.maxW;else c.maxW=v;
+  save();updateExportDlg();
+});
+$('#expBleedRow').addEventListener('click',e=>{
+  const b=e.target.closest('.seg');if(!b)return;
+  const c=siteCfg();
+  if(b.dataset.b==='1')delete c.bleed;else c.bleed=false;
+  save();updateExportDlg();
+});
 $('#expTapRow').addEventListener('click',e=>{
   const b=e.target.closest('.seg');if(!b)return;
   const c=siteCfg();
@@ -5096,6 +5127,8 @@ function siteTextOk(s){
   if(s.type!=='text'||s.vert||s.imgFill||s.grad||olW1(s)||olW2(s))return false;
   return![...(s.text||'')].some((ch,i)=>{const a=charAttr(s,i);return a.rot||a.dx||a.dy||a.it;});
 }
+/* 中身に合わせて伸ばす区画を書き出している間だけ true(その中の文字を折り返せるようにする) */
+let siteFlow=false;
 /* テキスト → h1/h2/p。改行位置はアプリで組んだとおりに固定する(端末で折り返しが変わらないように) */
 function siteText(s,o,tag,attrs,cls){
   const L=textLayout(s);
@@ -5116,6 +5149,10 @@ function siteText(s,o,tag,attrs,cls){
   /* 一文字ずつ動かす種類は、文字ごとに span(.nt-ch)。ドラムロールは数字だけを回る帯にする(本当の数字は残す) */
   const perChar=fx&&['chars','scatter','shuffle','sfill'].includes(fx.t);
   const rnd=(i,k)=>{const x=Math.sin((i+1)*(12.9898+k*7.233)+(s.x||0)*0.01)*43758.5453;return x-Math.floor(x);};
+  /* 伸ばす区画の中の文字: 行の位置を固定せず、1つの段落として書き出す(幅を超えたら折り返し、高さが増える)。
+     行の高さがそろっている・文字の演出が無い・回していない時だけ */
+  const flow=siteFlow&&attrs===undefined&&cls===undefined&&!fx&&!wrapLi&&!s.rot&&L.lines.every(l=>Math.abs(l.lineH-L.lines[0].lineH)<0.01);
+  const inners=[];
   const lines=L.lines.map((l,li)=>{
     /* 書式が同じ文字の並びを1つのspanにまとめる */
     const runs=[];
@@ -5136,8 +5173,16 @@ function siteText(s,o,tag,attrs,cls){
       else t=escXml(r.t);
       return d.length?`<span style="${d.join(';')}">${t}</span>`:t;
     }).join('');
+    inners.push(inner);
     return`<span class="nt-l" style="top:${cssNum(l.top)}px;width:${cssNum(L.along)}px;height:${cssNum(l.lineH)}px;line-height:${cssNum(l.lineH)}px;text-align:${align}${wrapLi?';--li:'+li:''}">${wrapLi?'<span class="nt-li">'+inner+'</span>':inner}</span>`;
   }).join('');
+  if(flow){
+    /* 端末で文字がわずかに広い時に、1文字だけ次の行へ落ちないよう、半文字ぶんの余裕をとる */
+    const sl=Math.ceil(base.fs*0.5),x0=align==='left'?0:align==='right'?sl:sl/2;
+    st[0]=`left:${cssNum(s.x-o.x-L.w/2-x0)}px;top:${cssNum(s.y-o.y-L.h/2)}px;width:${cssNum(L.along+sl)}px`;
+    st.push(`line-height:${cssNum(L.lines[0].lineH)}px`,`text-align:${align}`);
+    return`<${tag} class="nt-e nt-t nt-flow" data-fh="${cssNum(L.h)}" style="${st.join(';')}">${inners.join('\n')}</${tag}>`;
+  }
   if(fx){
     const stat=(fx.t==='marker'&&fx.draw===false)||fx.t==='sfill';
     cls=[cls,'nt-tx nt-tx-'+fx.t,stat?'':'nt-txr',fx.t==='marker'&&!stat?'nt-draw':''].filter(Boolean).join(' ');
@@ -6330,7 +6375,12 @@ function sitePageHtml(f,ranges,top){
   const hoisted=[];
   const pageWide=x=>x.pin==='top'||x.pin==='bottom';
   /* 区画(中のフレーム) → section など。o=入れ物の左上 / top=ページ直下の区画か */
-  const section=(u,o,top)=>{const done=siteMarkUnit(u.m);try{return section0(u,o,top);}finally{done();}};
+  /* 中身に合わせて伸ばす区画(ページ直下だけ)の中の文字は、折り返せる文字(.nt-flow)にする */
+  const section=(u,o,top)=>{
+    const done=siteMarkUnit(u.m),pf=siteFlow,x=u.m[0];
+    siteFlow=!!(top&&x.grow&&!x.vh&&!x.scene&&!pageWide(x));
+    try{return section0(u,o,top);}finally{done();siteFlow=pf;}
+  };
   const section0=(u,o,top)=>{
     const a0=u.m[0].anim;
     const mm=a0&&(a0.stg||a0.t==='assemble')?u.m.map(x=>({...x,anim:undefined})):u.m;
@@ -6371,7 +6421,8 @@ function sitePageHtml(f,ranges,top){
       return siteWrapUnit(mm,siteAttrs(`<${tg} class="nt-e"${sec}${vh} style="${st}">`,s)
         +`\n${fillCls(siteFrameBg(s,io))}\n${fillCls(inner(s,io,isFill))}\n<div class="nt-vhin" style="height:${cssNum(s.h)}px">\n${inner(s,io,k=>!isFill(k))}\n</div>\n</${tg}>`,o);
     }
-    return siteWrapUnit(mm,siteAttrs(`<${tg} class="nt-e"${sec}${pin} style="${st}">`,s)+`\n${siteFrameBg(s,io)}\n${inner(s,io)}${spot}\n</${tg}>`,o);
+    const grow=siteFlow?` data-grow="1" data-gh="${cssNum(s.h)}"`:'';
+    return siteWrapUnit(mm,siteAttrs(`<${tg} class="nt-e"${sec}${pin}${grow} style="${st}">`,s)+`\n${siteFrameBg(s,io)}\n${inner(s,io)}${spot}\n</${tg}>`,o);
   };
   /* frの直接の中身を、frの左上(o)を原点にして並べる */
   const inner=(fr,o,pick)=>{
@@ -6513,6 +6564,8 @@ img{display:block;max-width:none}
 .nt-t{white-space:pre;font-style:normal}
 .nt-l{display:block;position:absolute;left:0;white-space:pre}
 .nt-svg{overflow:visible}
+/* 中身に合わせて伸ばす区画の文字(幅を超えたら折り返す) */
+.nt-flow{white-space:pre-wrap;overflow-wrap:anywhere}
 /* 高さを画面いっぱいにする区画(js/main.js が高さを決める) */
 .nt-vhin{position:absolute;left:0;top:0;width:100%}
 .nt-vhfill img{object-fit:cover}
@@ -6815,7 +6868,7 @@ function siteJs(){
   function screenH(){return probe.offsetHeight||innerHeight;}
   function topIn(el,page){var t=0;while(el&&el!==page){t+=el.offsetTop;el=el.offsetParent;}return t;}
   function vhPrep(v){
-    var page=v.firstElementChild,list=[].slice.call(page.querySelectorAll('[data-vh]'));
+    var page=v.firstElementChild,list=[].slice.call(page.querySelectorAll('[data-vh],[data-grow]'));
     if(!list.length)return null;
     /* ずらす前の位置を覚えておく(ページ直下の物ごと) */
     var items=[];
@@ -6825,6 +6878,7 @@ function siteJs(){
       items.push({el:c,top:e?topIn(e,page):0});
     });
     var secs=list.map(function(s){
+      if(s.dataset.grow)return{el:s,top:topIn(s,page),h:+s.dataset.gh,grow:1};
       return{el:s,top:topIn(s,page),h:+s.dataset.vhH,ct:+s.dataset.vhCt,cb:+s.dataset.vhCb,al:s.dataset.vh,
         inn:s.querySelector('.nt-vhin'),
         fills:[].slice.call(s.querySelectorAll('.nt-vhfill')).map(function(f){return{el:f,top:f.offsetTop,h:f.offsetHeight};})};
@@ -6836,6 +6890,7 @@ function siteJs(){
     var vh=v.__vh;if(!vh)return h;
     var H=screenH()/k,add=0,m=24;
     vh.secs.forEach(function(s){
+      if(s.grow){s.d=growApply(s);add+=s.d;return;}
       /* 中身が切れない高さより低くはしない */
       var T=Math.max(H,s.cb-s.ct+m*2);
       if(s.al==='top')T=Math.max(T,s.cb+m);
@@ -6857,6 +6912,101 @@ function siteJs(){
     if(vh.bg)vh.bg.style.height=h+'px';
     return h;
   }
+  function offTo(el,anc){var x=0,y=0;while(el&&el!==anc){x+=el.offsetLeft;y+=el.offsetTop;el=el.offsetParent;}return{x:x,y:y};}
+  /* 中身に合わせて伸ばす区画(data-grow)。折り返せる文字(.nt-flow)がデザインより高くなった分だけ、
+     その下にある物(横に重なる物だけ)を下へずらし、それを囲む箱(カードの背景など)と区画を伸ばす。
+     区画の下の余白(区画いっぱいの背景を除いた中身の下端から、区画の下端まで)はデザインのまま保つ */
+  function growPrep(s){
+    var sec=s.el,items=[];
+    [].forEach.call(sec.querySelectorAll('.nt-e'),function(e){
+      if(e.parentElement.closest('.nt-e')!==sec)return;
+      var pe=e.closest('[data-pin]');if(pe&&pe!==sec)return;   /* 固定する物は動かさない */
+      var o=offTo(e,sec),fh=+(e.dataset.fh||0),h0=fh||e.offsetHeight;
+      items.push({el:e,x1:o.x,x2:o.x+e.offsetWidth,y1:o.y,y2:o.y+h0,fh:fh,h0:h0,
+        box:!fh&&e.tagName==='DIV'&&!e.querySelector('img,svg,video,iframe,canvas,.nt-e'),
+        img:e.children.length===1&&e.firstElementChild.tagName==='IMG'&&e.firstElementChild.style.width==='100%'?e.firstElementChild:null});
+    });
+    items.sort(function(a,b){return a.y1-b.y1;});
+    var bottom=0;
+    items.forEach(function(a){a.full=a.y1<=1&&a.y2>=s.h-1;if(!a.full)bottom=Math.max(bottom,a.y2);});
+    s.items=items;s.bottom=bottom;
+  }
+  function growApply(s){
+    if(!s.items)growPrep(s);
+    var it=s.items,D=0;
+    /* 端数の丸め(1〜2px)では伸ばさない。行が増えた時だけ */
+    it.forEach(function(a){var g=a.fh?a.el.offsetHeight-a.fh:0;a.g=g>=4?g:0;a.s=0;});
+    it.forEach(function(a,i){
+      for(var j=0;j<i;j++){var b=it[j];if(b.y2<=a.y1+2&&b.x1<a.x2-1&&a.x1<b.x2-1)a.s=Math.max(a.s,b.s+b.g);}
+    });
+    it.forEach(function(a){
+      a.el.style.marginTop=a.s?a.s+'px':'';
+      var ext=0;
+      if(a.box&&!a.full){
+        it.forEach(function(b){if(b!==a&&b.x1>=a.x1-1&&b.x2<=a.x2+1&&b.y1>=a.y1-1&&b.y2<=a.y2+1)ext=Math.max(ext,b.s+b.g-a.s);});
+        a.el.style.height=(a.h0+ext)+'px';
+      }
+      if(!a.full)D=Math.max(D,a.y2+a.s+a.g+ext-s.bottom);
+    });
+    s.el.style.height=(s.h+D)+'px';
+    /* 区画いっぱいの背景も一緒に伸ばす */
+    it.forEach(function(a){
+      if(!a.full||!(a.box||a.img))return;
+      a.el.style.height=(a.h0+D)+'px';
+      if(a.img)a.img.style.objectFit=D?'cover':'';
+    });
+    return D;
+  }
+  /* 広い画面: 横幅いっぱいの背景(四角・区画の背景・画像)を、左右の余白の分だけ広げて画面の端まで伸ばす。
+     途中の入れ物の「はみ出しを隠す」は上下だけにし、ページ全体(.nt-view)は画面の端で切る(overflow:clip)。
+     横にスクロールできてしまわないよう、overflow-clip-margin が使えない画面では伸ばさない(左右は背景の色) */
+  var MAXW=+(document.body.dataset.maxw||0),
+    BLEED=document.body.dataset.bleed!=='0'&&!!(window.CSS&&CSS.supports&&CSS.supports('overflow-clip-margin','1px'));
+  function bleedPrep(v){
+    var page=v.firstElementChild,w=+v.dataset.w,list=[],clips=[v,page];
+    [].forEach.call(page.querySelectorAll('.nt-e'),function(e){
+      if(e.tagName!=='DIV'||e.classList.contains('nt-pagebg')||/rotate/.test(e.style.transform))return;
+      var ks=e.children,img=ks.length===1&&ks[0].tagName==='IMG'?ks[0]:null;
+      if(ks.length&&!img)return;
+      if(img&&img.style.width!=='100%')return;   /* トリミングした画像は伸ばさない */
+      if(e.closest('.nt-stage,.nt-cl'))return;
+      var o=offTo(e,page);
+      if(o.x>1||o.x+e.offsetWidth<w-1)return;
+      var cs=getComputedStyle(e);
+      var bc=cs.backgroundColor.replace(/ /g,'');
+      if(!img&&cs.backgroundImage==='none'&&(bc==='transparent'||bc.slice(-3)===',0)'))return;
+      if(parseFloat(cs.borderTopLeftRadius)||parseFloat(cs.borderTopRightRadius))return;
+      var ok=true,anc=[];
+      for(var p=e.parentElement;p&&p!==page;p=p.parentElement){
+        var pc=getComputedStyle(p);
+        if(pc.clipPath!=='none'||pc.overflowX==='auto'||pc.overflowX==='scroll'){ok=false;break;}
+        if(pc.overflowX!=='visible')anc.push(p);
+      }
+      if(!ok)return;
+      anc.forEach(function(p){if(clips.indexOf(p)<0)clips.push(p);});
+      list.push({el:e,l:parseFloat(e.style.left)||0,w:parseFloat(e.style.width)||e.offsetWidth,img:img});
+    });
+    return{list:list,clips:clips.map(function(c){return{el:c,ov:c.style.overflow};})};
+  }
+  function bleedApply(v,k,W){
+    var w=+v.dataset.w,G=Math.max(0,(W-w*k)/2/k);
+    if(G<1)G=0;
+    /* 左右の余白は、ページの背景の色にする */
+    document.body.style.backgroundColor=G?getComputedStyle(v).backgroundColor:'';
+    if(!BLEED)return;
+    if(!v.__bl){if(!G)return;v.__bl=bleedPrep(v);}
+    var bl=v.__bl;
+    bl.list.forEach(function(b){
+      b.el.style.left=(b.l-G)+'px';b.el.style.width=(b.w+2*G)+'px';
+      if(b.img)b.img.style.objectFit=G?'cover':'';
+    });
+    if(!bl.list.length)return;
+    bl.clips.forEach(function(c){
+      if(!G){c.el.style.overflow=c.ov;c.el.style.overflowClipMargin='';}
+      else if(c.el===v){c.el.style.overflow='clip';c.el.style.overflowClipMargin=G*k+'px';}
+      else{c.el.style.overflowX='visible';c.el.style.overflowY='clip';}
+    });
+  }
   /* 拡大縮小は、使える画面では zoom で行う(transform と違い、position:fixed が効くので、
      固定するヘッダーや画面に留める演出を、ブラウザ自身に滑らかに動かしてもらえる) */
   var useZoom=!!(window.CSS&&CSS.supports&&CSS.supports('zoom','2'));
@@ -6869,11 +7019,13 @@ function siteJs(){
     document.querySelectorAll('.nt-view').forEach(function(v){
       if(getComputedStyle(v).display==='none')return;
       var w=+v.dataset.w,h=+v.dataset.h,k=W/w;
-      if(k>1&&W>=${SITE_BP}&&(w<${SITE_BP}||v.dataset.top))k=1;
+      /* 広い画面: スマホ用のデザインは等倍のまま。PC用のデザインは上限の幅(data-maxw)まで拡大して中央に置く */
+      if(k>1&&W>=${SITE_BP}&&(w<${SITE_BP}||v.dataset.top))k=w<${SITE_BP}?1:Math.max(1,Math.min(k,MAXW/w));
       h=vhApply(v,k,h);
       v.style.width=w*k+'px';v.style.height=h*k+'px';
       if(useZoom){v.firstElementChild.style.zoom=k;v.firstElementChild.style.transform='';}
       else v.firstElementChild.style.transform='scale('+k+')';
+      bleedApply(v,k,W);
     });
     return true;
   }
@@ -6989,6 +7141,12 @@ function siteJs(){
   var pinQ=0,pinReq=function(){if(pins.length&&!pinQ){pinQ=1;requestAnimationFrame(function(){pinQ=0;pinUpdate();});}};
   /* 画面の大きさが変わった時: 幅が変わった時だけ組み直す(アドレスバーの出入りでは組み直さない) */
   addEventListener('resize',function(){if(fit()){fitTexts();if(pins.length)pinMeasure();}pinReq();});
+  /* 伸ばす区画は、フォントを読み込み終えてから(文字の高さが決まってから)組み直す */
+  if(document.querySelector('[data-grow]')){
+    var regrow=function(){fit(true);if(pins.length)pinMeasure();pinReq();};
+    if(document.fonts&&document.fonts.ready)document.fonts.ready.then(regrow);
+    addEventListener('load',regrow);
+  }
   if(pins.length){
     pinMeasure();
     addEventListener('scroll',pinReq,{passive:true});
@@ -7544,6 +7702,11 @@ function siteTapAttr(c){
   const v=[!c.tapHoverOff&&'hover',c.tapReplay&&'replay'].filter(Boolean).join(' ');
   return v?` data-tap="${v}"`:'';
 }
+/* 広い画面: PC用のデザインを拡大する上限(0=デザインの幅のまま。既定は1440px)と、背景を画面の端まで伸ばすか */
+const siteMaxW=c=>c.maxW===undefined?1440:c.maxW;
+function siteWideAttr(c){
+  return` data-maxw="${siteMaxW(c)}"`+(c.bleed===false?' data-bleed="0"':'');
+}
 /* ページの切り替え演出(サイト内の別ページへ移る時の幕) */
 function sitePfxHtml(c){
   const p=c.pfx;if(!p||!p.t)return'';
@@ -7612,7 +7775,7 @@ ${opt.files?'<link rel="stylesheet" href="css/style.css">\n':''}<style>
 ${opt.files?'':siteCss(c)}${pageCss}
 </style>${siteCustomCss(c,opt.files)}
 </head>
-<body${siteTapAttr(c)}>
+<body${siteTapAttr(c)}${siteWideAttr(c)}>
 ${siteLoaderHtml(c)}${body}
 ${menu.html}${siteCursorHtml(c)}${sitePfxHtml(c)}${body.includes('nt-h-wave')?'\n<svg width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="nt-wavef"><feTurbulence type="fractalNoise" baseFrequency="0.012 0.03" numOctaves="2" seed="3"><animate attributeName="baseFrequency" dur="6s" values="0.012 0.03;0.02 0.05;0.012 0.03" repeatCount="indefinite"/></feTurbulence><feDisplacementMap in="SourceGraphic" scale="18"/></filter></svg>':''}${newsData?'\n'+newsData:''}
 ${opt.files?'<script src="js/main.js"><\/script>':`<script>\n${siteJs()}<\/script>`}
@@ -14465,6 +14628,15 @@ function updateWebSec(ss){
       b.classList.toggle('active',on);b.setAttribute('aria-checked',on?'true':'false');
     });
   }
+  $('#webGrowRow').style.display=$('#webVhRow').style.display;
+  if(topSecs.length){
+    const g0=!!topSecs[0].grow;
+    const same=topSecs.every(x=>!!x.grow===g0);
+    document.querySelectorAll('#webGrow .seg').forEach(b=>{
+      const on=same&&!!b.dataset.fit===g0;
+      b.classList.toggle('active',on);b.setAttribute('aria-checked',on?'true':'false');
+    });
+  }
   /* 固定: 中に置いたフレーム(区画)を選んでいる時 */
   const secs=ss.filter(x=>isFrame(x)&&parentFrameAt(curShapes(),curShapes().indexOf(x)));
   $('#webPinRow').style.display=secs.length&&secs.length===ss.length?'block':'none';
@@ -14558,6 +14730,14 @@ $('#webVh').addEventListener('click',e=>{
   if(v&&list.some(x=>x.pin==='top'||x.pin==='bottom')){toast('ページ全体に固定した区画は、画面いっぱいにできません');return;}
   setWebProp(list,x=>{if(v)x.vh=v;else delete x.vh;},
     v?'書き出したページで、この区画の高さを画面の高さに合わせます(編集画面ではデザインどおりの高さです)':'画面いっぱいをやめました');
+});
+$('#webGrow').addEventListener('click',e=>{
+  const b=e.target.closest('.seg');if(!b)return;
+  const v=!!b.dataset.fit,sh=curShapes();
+  const list=webTargets().filter(x=>{if(!isFrame(x))return false;const p=parentFrameAt(sh,sh.indexOf(x));return p&&!parentFrameAt(sh,sh.indexOf(p));});
+  if(v&&list.some(x=>x.vh||x.scene||x.pin==='top'||x.pin==='bottom')){toast('画面いっぱい・スクロールの演出・ページ全体に固定の区画は、伸ばす設定と一緒に使えません');return;}
+  setWebProp(list,x=>{if(v)x.grow=true;else delete x.grow;},
+    v?'書き出したページで、文章が長くなった時(文字を書き足した・端末で文字が広い)に、この区画を下へ広げ、下の物をずらします(編集画面ではデザインどおりの高さです)':'伸ばすのをやめました');
 });
 $('#webScene').addEventListener('click',e=>{
   const b=e.target.closest('.seg');if(!b)return;
