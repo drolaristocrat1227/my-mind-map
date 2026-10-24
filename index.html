@@ -2510,7 +2510,7 @@ kbd{
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-20.1';
+const APP_VERSION='2026-10-24.1';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -6189,7 +6189,13 @@ function siteMedia(s,o){
 function siteShapeEl(s,o,tagOf){
   if(s.media)return siteAttrs(siteMedia(s,o),s);
   if(s.type==='text'&&siteTextOk(s))return siteAttrs(siteText(s,o,tagOf(s)),s);
-  return siteAttrs((s.type==='image'?siteImage(s,o):siteCssBox(s,o))||siteSvg(s,o),s);
+  const el=siteAttrs((s.type==='image'?siteImage(s,o):siteCssBox(s,o))||siteSvg(s,o),s);
+  /* 図として描いた文字は、検索エンジン・読み上げソフト向けに、見えない本物の文字(見出しなら見出し)を添える */
+  if(s.type==='text'&&(s.text||'').trim()){
+    const tg=tagOf(s);
+    return el+`<${tg} class="nt-sr">${escXml(s.text.replace(/\n/g,' '))}</${tg}>`;
+  }
+  return el;
 }
 /* リンク・動き・ホバーを付ける。グループ(ボタン=四角+文字など)はまとめて1つにする */
 /* ---------- 動きの一覧(ホームページ → 動き) ----------
@@ -6391,7 +6397,7 @@ function sitePageHtml(f,ranges,top){
     /* 区画に「中身を順番に出す」がある時は、中身のまとまりを上から(同じ高さなら左から)順に登場させる */
     const stgA=fr!==f&&fr.anim&&fr.anim.t&&(fr.anim.stg||fr.anim.t==='assemble')?fr.anim:null;
     const order=stgA?units.slice().sort((a,b)=>{const p=unionWorldBox(a.m),q=unionWorldBox(b.m);return(Math.round(p.y/8)-Math.round(q.y/8))||(p.x-q.x);}):null;
-    return units.map(u=>{
+    const htmls=units.map(u=>{
       const one=(()=>{
       if(u.news){
         const m=u.m.map(x=>({...x,href:undefined}));
@@ -6423,7 +6429,10 @@ function sitePageHtml(f,ranges,top){
       }finally{done();}
       })();
       return one&&stgA?siteAnimWrap(u.m,one,o,stgA,order.indexOf(u)*(stgA.stg||0.04)):one;
-    }).filter(Boolean).join('\n');
+    });
+    /* HTMLの中は「読む順番」(上から下・同じ高さなら左から右)に並べる。検索エンジンや読み上げソフトはこの順番で読むため。
+       ただし、重なっている物どうしは重なり順(後に書いた物が手前)を変えない(見た目はそのまま) */
+    return siteReadingOrder(units).map(i=>htmls[i]).filter(Boolean).join('\n');
   };
   const o={x:f.x-f.w/2,y:f.y-f.h/2};
   const bg=(!f.grad&&f.fill)?cssCol(f.fill,alphaOf(f,'fill')):'#FFFFFF';
@@ -6434,6 +6443,29 @@ ${siteFrameBg(f,o).replace('class="nt-e"','class="nt-e nt-pagebg"')}
 ${inner(f,o)}${hoisted.length?'\n'+hoisted.map(u=>section(u,o,false)).join('\n'):''}
 </div>
 </div>`;
+}
+/* まとまりを並べる順番: 重なる物は前後を保ち、それ以外は上から下・左から右 */
+function siteReadingOrder(units){
+  const n=units.length;
+  if(n<2)return units.map((_,i)=>i);
+  /* 動く物(スクロール連動・ずっと動く)は動く分だけ広めに見て、重なりを判定する */
+  const bx=units.map(u=>{
+    const b=unionWorldBox(u.m),M=u.m.some(x=>x.scr||x.loop)?140:40;
+    return{x1:b.x-M,y1:b.y-M,x2:b.x+b.w+M,y2:b.y+b.h+M,ry:Math.round(b.y/16),rx:b.x};
+  });
+  const after=Array.from({length:n},()=>[]),need=new Array(n).fill(0);
+  for(let i=0;i<n;i++)for(let j=i+1;j<n;j++){
+    const a=bx[i],b=bx[j];
+    if(a.x1<b.x2&&b.x1<a.x2&&a.y1<b.y2&&b.y1<a.y2){after[i].push(j);need[j]++;}
+  }
+  const ready=[],out=[];
+  for(let i=0;i<n;i++)if(!need[i])ready.push(i);
+  while(ready.length){
+    ready.sort((a,b)=>bx[a].ry-bx[b].ry||bx[a].rx-bx[b].rx||a-b);
+    const i=ready.shift();out.push(i);
+    after[i].forEach(j=>{if(--need[j]===0)ready.push(j);});
+  }
+  return out.length===n?out:units.map((_,i)=>i);
 }
 /* フレームの中に「メニューを開く」図形を自分で置いているか */
 const hasOwnMenuBtn=f=>frameDescendants(curDoc().shapes,f).some(s=>!s.hidden&&s.href==='#nt-menu');
@@ -6499,6 +6531,7 @@ ${SITE_RANGES.map(({r,mq})=>`@media ${mq}{.nt-view:not(.nt-r-${r}){display:none}
 .nt-js .nt-an-rotate{rotate:-8deg;translate:0 24px}
 .nt-js .nt-an-flip{transform:perspective(900px) rotateX(75deg)}
 .nt-sen{position:absolute;visibility:hidden;pointer-events:none}
+.nt-sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;border:0;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap}
 .nt-js .nt-an-clipup,.nt-js .nt-an-clipleft,.nt-js .nt-an-circle,.nt-js .nt-an-wipe{opacity:1}
 .nt-js .nt-an>.nt-cl{clip-path:var(--c0);transition:clip-path var(--t) cubic-bezier(.7,0,.2,1) var(--d)}
 .nt-an>.nt-cl{pointer-events:none}
