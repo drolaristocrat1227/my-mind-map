@@ -2022,6 +2022,9 @@ kbd{
 .st-prog .row{display:flex;justify-content:space-between;font-size:12px;color:var(--st-muted);margin-bottom:8px}
 .st-del{margin-top:14px;border:0;background:transparent;color:var(--st-muted);font-size:12px;text-align:left;padding:6px 10px;text-decoration:underline}
 .st-main{flex:999 1 560px;min-width:0;padding:32px 40px 60px;display:flex;flex-direction:column;gap:24px}
+/* 中身は中央に寄せる(入力の工程は幅を狭く、ルール・キャンバスは広く) */
+.st-main>*{width:100%;max-width:1100px;margin-left:auto;margin-right:auto}
+.st-main.narrow>*{max-width:800px}
 .st-mhead{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:16px}
 .st-mhead .stepno{font-family:var(--st-num);font-size:12px;letter-spacing:.12em;color:var(--st-doing)}
 #studio[data-theme="light"] .st-mhead .stepno{color:var(--st-accent)}
@@ -2031,7 +2034,7 @@ kbd{
 .st-in{animation:stIn .35s ease both}
 @keyframes stIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 /* 入力欄は1列に縦に並べる(広げすぎると読みにくいので、幅はほどほどに) */
-.st-fields{display:flex;flex-direction:column;gap:var(--st-gap);max-width:760px}
+.st-fields{display:flex;flex-direction:column;gap:var(--st-gap)}
 #studio[data-theme="light"] .st-fields{border-top:1px solid var(--st-ink)}
 .st-f{display:flex;flex-direction:column;gap:8px;padding:16px 18px;border:1px solid var(--st-line);border-radius:var(--st-r);background:var(--st-panel);position:relative}
 #studio[data-theme="light"] .st-f{border-width:0 0 1px;background:transparent;padding:20px 18px 20px 0}
@@ -2680,7 +2683,7 @@ kbd{
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-25.3';
+const APP_VERSION='2026-10-25.4';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -17363,7 +17366,7 @@ function stClientHtml(){
     </header>
     <div class="st-body">
       <nav class="st-nav" id="stNav" aria-label="工程">${stNavHtml(c)}</nav>
-      <main class="st-main">
+      <main class="st-main${['info','hearing','persona','content'].includes(s.k)?' narrow':''}">
         <div class="st-mhead st-in">
           <div><div class="stepno">STEP ${String(stStepI+1).padStart(2,'0')}${st?' ・ '+ST_STATUS[st]:''}</div>
             <h1 class="st-h1">${s.n}</h1><p>${s.desc}</p></div>
