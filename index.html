@@ -195,7 +195,21 @@ body.wire-mode .menu .map-only{display:none;}
 .mapItem[data-depth="2"]{margin-left:40px;}
 .mapItem[data-depth="3"]{margin-left:60px;}
 .mapItem[data-depth="4"]{margin-left:78px;}
-#fillMenu{max-height:82vh;overflow-y:auto;width:270px;cursor:move;}
+#fillMenu{max-height:84vh;overflow-y:auto;width:320px;cursor:move;}
+/* 色とスタイル: 読みやすい大きさ・押しやすい間隔 */
+#fillMenu .menu-label{font-size:12px;padding:6px 14px 0}
+#fillMenu .radLbl{font-size:12.5px;width:48px}
+#fillMenu .radRow,#fillMenu .numRow{padding:4px 14px;gap:10px}
+#fillMenu .segRow{padding:6px 14px}
+#fillMenu .seg{font-size:13px;padding:8px 8px}
+#fillMenu .radNum,#fillMenu input.radNum{font-size:12.5px}
+#fillMenu .numRow input[type=number],#fillMenu .numRow input[type=text],#fillMenu select{height:32px;font-size:14px}
+#fillMenu .collHead{font-size:13px}
+#fillMenu .btnChk{font-size:12px}
+#fillMenu .btnNum{font-size:13px;height:30px}
+#fillMenu .ctxN{font-size:16px}
+#fillMenu .ctxSub{font-size:12px}
+#menuGrip{font-size:13px!important}
 #fillMenu.dragging{opacity:.92;box-shadow:0 16px 44px rgba(0,0,0,.3);}
 #fillMenu .sw{border:1px solid var(--panel-border);}
 #fillMenu button,#fillMenu input{cursor:pointer;}
@@ -2874,7 +2888,7 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-27.3';
+const APP_VERSION='2026-10-27.5';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -14303,7 +14317,8 @@ function wireKeydown(e){
   if(txPick&&e.key==='Escape'){e.preventDefault();txPick=false;txSel=null;renderWire();updateStyleMenu();return;}
   if((measureMode||measure)&&e.key==='Escape'){e.preventDefault();measureMode=false;measure=null;wireView.style.cursor='';renderWire();updateWireBtns();return;}
   switch(e.key){
-    case 'Delete':case 'Backspace':e.preventDefault();delSel();break;
+    /* 要素を消すのは Delete キーだけ(数字を直している時の Backspace で、うっかり消えないように) */
+    case 'Delete':e.preventDefault();delSel();break;
     case 'Escape':wireSel=[];selAnchor=null;renderWire();break;
     case 'F2':if(s&&s.type==='text'&&!s.locked){e.preventDefault();beginWireText(s);}break;
     case 'ArrowUp':case 'ArrowDown':case 'ArrowLeft':case 'ArrowRight':{
@@ -18120,12 +18135,15 @@ function btnFieldHtml(f,b){
   const base=opt.base?btnGet(b,opt.base):undefined,val=on?v:(base!==undefined?base:(opt.base0!==undefined?opt.base0:f[3]));
   return`<div class="radRow btnRow"><span class="radLbl">${label}</span><input type="range" data-bk="${k}" min="${f[3]}" max="${f[4]}" step="${f[5]}" value="${val}"${opt.same&&!on?' disabled':''}><input type="number" class="btnNum" data-bkn="${k}" min="${f[3]}" max="${f[4]}" step="${f[5]}" value="${val}"${opt.same&&!on?' disabled':''} aria-label="${escXml(label)}(数値)">${sameBox}</div>`;
 }
+/* 設定の欄で、数字や文字を入れている途中か */
+const panelTyping=sel=>{const a=document.activeElement,b=$(sel);return!!(a&&b&&b.contains(a)&&a.matches('input[type=number],input[type=text],textarea'));};
 function renderBtnPart(){
   const ss=selShapes().filter(s=>s.type==='btn');
   $('#btnPart').style.display=ss.length===1?'block':'none';
   if(ss.length!==1)return;
   const b=ss[0].btn;
   document.querySelectorAll('#btnTabs .seg').forEach(x=>x.classList.toggle('active',x.dataset.st===btnTab));
+  if(panelTyping('#btnFields'))return;   /* 数字や文字を入れている途中は描き直さない(入力欄から外れないように) */
   $('#btnFields').innerHTML=(btnTab==='h'?'<p class="btnHint">「変える」に印を付けた項目だけ、ホバー(スマホはタップ)した時に変わります</p>':'')+BTN_FIELDS[btnTab].map(f=>btnFieldHtml(f,b)).join('');
   $('#btnPrev').classList.toggle('active',btnHoverPrev===ss[0].id);
 }
@@ -18673,6 +18691,7 @@ function renderUiPart(){
   if(ss.length!==1)return;
   const u=ss[0].ui;
   $('#uiPartName').textContent=(UI_KINDS[u.kind]||{}).n||'UIパーツ';
+  if(panelTyping('#uiFields'))return;   /* 数字や文字を入れている途中は描き直さない(入力欄から外れないように) */
   $('#uiFields').innerHTML=(UI_FIELDS[u.kind]||[]).map(f=>{
     const [k,label,type]=f,v=u[k];
     if(type==='text')return`<div class="numRow"><span class="radLbl">${label}</span><input type="text" data-uk="${k}" value="${escXml(v==null?'':v)}" spellcheck="false" autocomplete="off"></div>`;
@@ -19206,9 +19225,10 @@ function ctxArrange(){
   }
   const order=CTX_ORDER[k]||CTX_ORDER.multi,body=$('#moreBody');
   let after=head;
-  order.forEach(id=>{const el=$('#'+id);if(el){after.after(el);after=el;}});
-  after.after(more);
-  CTX_ALL.filter(id=>!order.includes(id)).forEach(id=>{const el=$('#'+id);if(el)body.appendChild(el);});
+  /* 入れ直すと入力中の欄から外れてしまうので、場所が変わる時だけ動かす */
+  order.forEach(id=>{const el=$('#'+id);if(el){if(after.nextElementSibling!==el)after.after(el);after=el;}});
+  if(after.nextElementSibling!==more)after.after(more);
+  CTX_ALL.filter(id=>!order.includes(id)).forEach(id=>{const el=$('#'+id);if(el&&el.parentElement!==body)body.appendChild(el);});
   /* 効かない物を隠す(前に隠した物は元に戻してから) */
   const hide=CTX_HIDE[k]||[];
   Object.keys(ctxHidden).forEach(id=>{if(!hide.includes(id)){const el=$('#'+id);if(el&&el.style.display==='none')el.style.display=ctxHidden[id];delete ctxHidden[id];}});
