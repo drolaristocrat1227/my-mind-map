@@ -196,6 +196,32 @@ body.wire-mode .menu .map-only{display:none;}
 .mapItem[data-depth="3"]{margin-left:60px;}
 .mapItem[data-depth="4"]{margin-left:78px;}
 #fillMenu{max-height:84vh;overflow-y:auto;width:320px;cursor:move;}
+/* 操作の見直し(第1段階)
+   ・広い画面では、設定(色とスタイル)は右端、レイヤーは左端に固定する(浮いた窓にしない。下のツールバーには重ねない)
+   ・スライダーは隠し、見出しを左右にドラッグして値を変える(Figmaと同じ)。数値は欄に直接入れられる
+   ・位置と大きさは2列に並べる */
+@media (min-width:900px){
+  #fillMenu{left:auto!important;right:12px!important;top:76px!important;bottom:84px!important;max-height:none!important;cursor:default}
+  #layerPanel{left:12px!important;top:76px!important;bottom:84px!important;max-height:none!important}
+  #menuGrip span{display:none}
+}
+#fillMenu input[type=range].scrubbed{display:none}
+#fillMenu .scrub{cursor:ew-resize;user-select:none;-webkit-user-select:none;touch-action:none;border-radius:5px;padding:2px 4px;margin:-2px -4px}
+#fillMenu .scrub:hover{background:var(--btn-hover);color:var(--ink)}
+#fillMenu .scrub.on{background:color-mix(in srgb,var(--accent) 18%,transparent);color:var(--accent)}
+#fillMenu .scrubNum{flex:1;min-width:0;height:32px;padding:0 10px;border:1px solid var(--panel-border);border-radius:7px;background:var(--node-bg);color:var(--ink);font:inherit;font-size:14px;text-align:right}
+#fillMenu .scrubNum:focus{outline:none;border-color:var(--accent)}
+#fillMenu .radRow .radNum.scrubHide{display:none}
+#fillMenu .btnRow .btnNum{flex:1;width:auto;height:32px;font-size:14px}
+#fillMenu .radRow:has(.scrubbed) input.radNum{flex:1;width:auto;height:32px;padding:0 10px;border:1px solid var(--panel-border);border-radius:7px;background:var(--node-bg);color:var(--ink);font-size:14px;text-align:right}
+#fillMenu .radRow:has(.scrubbed) .radLbl{width:auto;min-width:48px}
+/* 位置と大きさを2列に */
+#sizeSec:not([style*="none"]){display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))}
+#sizeSec>.menu-label,#sizeSec>.segRow,#sizeSec>hr{grid-column:1/-1}
+#posSec:not(.closed)>.collBody{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+#posSec>.collBody>.menu-label{grid-column:1/-1}
+#sizeSec .numRow,#posSec .numRow{padding:4px 6px 4px 14px;gap:6px}
+#sizeSec .numRow .radLbl,#posSec .numRow .radLbl{min-width:0;width:auto}
 /* 色とスタイル: 読みやすい大きさ・押しやすい間隔 */
 #fillMenu .menu-label{font-size:12px;padding:6px 14px 0}
 #fillMenu .radLbl{font-size:12.5px;width:48px}
@@ -866,8 +892,8 @@ body:not(.wire-mode) #layerPanel{display:none;}
 #btnFields .numRow input[type=text]{flex:1;min-width:0}
 #btnFields .radLbl,#uiFields .radLbl{flex:none;width:7.2em;white-space:normal;line-height:1.3}
 /* スライダーは見出しを上の行にして、横幅いっぱいに使う(細かく、滑らかに動かせる) */
-#btnFields .radRow.btnRow,#uiFields .radRow.btnRow{flex-wrap:wrap;row-gap:2px}
-#btnFields .radRow.btnRow>.radLbl,#uiFields .radRow.btnRow>.radLbl{width:100%}
+/* スライダーは隠したので、見出しと数値の欄を1行に */
+#btnFields .radRow.btnRow>.radLbl,#uiFields .radRow.btnRow>.radLbl{width:8.5em}
 #fillMenu input[type=range]{touch-action:none;cursor:pointer}
 #uiFields .numRow input[type=text],#uiFields textarea{flex:1;min-width:0}
 #uiFields .btnNum{width:58px;flex:none;padding:4px 6px;border-radius:8px;border:1px solid var(--panel-border);background:var(--node-bg);color:var(--ink);font:inherit;font-size:12px;text-align:right}
@@ -2888,7 +2914,7 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-27.5';
+const APP_VERSION='2026-10-27.6';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -19245,6 +19271,69 @@ function ctxArrange(){
   more.style.display=vis?'block':'none';
   more.querySelector('.mCnt').textContent=vis?'('+vis+')':'';
 }
+/* ---- 操作の見直し(第1段階): スライダーの代わりに「見出しを左右にドラッグ」と数値の欄 ----
+   元のスライダーはそのまま(隠して)使い、値を変えたら元のスライダーの input / change を起こす。
+   なので、それぞれの設定の処理(元に戻す・描き直しなど)はこれまでと同じに動く */
+function scrubEnhance(root){
+  root.querySelectorAll('input[type=range]:not(.scrubbed)').forEach(rg=>{
+    const row=rg.closest('.radRow,.numRow');if(!row)return;
+    rg.classList.add('scrubbed');
+    const lbl=row.querySelector('.radLbl');
+    /* 数値の欄: すでにある数値の欄(ボタン・UIパーツの設定)を使い、無ければ作る(表示だけの数字は隠す) */
+    let num=row.querySelector('input[type=number].btnNum,input[type=number].radNum,input[type=number].scrubNum');
+    if(!num){
+      num=document.createElement('input');num.type='number';num.className='scrubNum';
+      num.min=rg.min;num.max=rg.max;num.step=rg.step||1;num.value=rg.value;
+      if(lbl)num.setAttribute('aria-label',lbl.textContent);
+      const span=row.querySelector('span.radNum');
+      if(span){span.classList.add('scrubHide');span.after(num);}else rg.after(num);
+      num.addEventListener('pointerdown',e=>e.stopPropagation());
+      num.addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter')num.blur();});
+      num.addEventListener('input',()=>{
+        if(num.value==='')return;
+        const v=clamp(+num.value,+rg.min,+rg.max);if(isNaN(v))return;
+        rg.value=v;rg.dispatchEvent(new Event('input',{bubbles:true}));
+      });
+      num.addEventListener('change',()=>rg.dispatchEvent(new Event('change',{bubbles:true})));
+      rg.addEventListener('input',()=>{if(document.activeElement!==num)num.value=rg.value;});
+    }
+    rg.__num=num;
+    /* 見出しを左右にドラッグ: 1px で1目盛り(Shift で10倍・Alt で1/10) */
+    if(lbl&&!lbl.classList.contains('scrub')){
+      lbl.classList.add('scrub');lbl.title='左右にドラッグして値を変えます(Shift で大きく、Alt で細かく)';
+      lbl.addEventListener('pointerdown',e=>{
+        e.preventDefault();e.stopPropagation();
+        const step=+rg.step||1,min=+rg.min,max=+rg.max,start=+rg.value,x0=e.clientX;
+        lbl.classList.add('on');lbl.setPointerCapture(e.pointerId);
+        /* 元のスライダーを押した時と同じ処理(元に戻すの記録・描き直しをまとめる) */
+        rg.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,pointerId:e.pointerId}));
+        const move=ev=>{
+          const k=ev.shiftKey?10:ev.altKey?0.1:1;
+          let v=start+Math.round((ev.clientX-x0)*k)*step;
+          v=Math.round(clamp(v,min,max)/step)*step;
+          if(String(v)===rg.value)return;
+          rg.value=v;num.value=+(+rg.value).toFixed(3);
+          rg.dispatchEvent(new Event('input',{bubbles:true}));
+        };
+        const up=()=>{
+          lbl.classList.remove('on');
+          lbl.removeEventListener('pointermove',move);lbl.removeEventListener('pointerup',up);lbl.removeEventListener('pointercancel',up);
+          rg.dispatchEvent(new Event('change',{bubbles:true}));
+          dispatchEvent(new PointerEvent('pointerup'));
+        };
+        lbl.addEventListener('pointermove',move);lbl.addEventListener('pointerup',up);lbl.addEventListener('pointercancel',up);
+      });
+    }
+  });
+}
+/* 設定を描き直した後: 数値の欄を、元のスライダーの値に合わせる */
+function scrubSync(root){
+  root.querySelectorAll('input[type=range].scrubbed').forEach(rg=>{
+    const n=rg.__num;if(n&&document.activeElement!==n&&n.classList.contains('scrubNum'))n.value=rg.value;
+  });
+}
+new MutationObserver(()=>scrubEnhance($('#fillMenu'))).observe($('#fillMenu'),{childList:true,subtree:true});
+scrubEnhance($('#fillMenu'));
 /* スライダーを動かしている間は、キャンバスと「色とスタイル」の描き直しを1コマに1回にまとめる(引っかからずに滑らかに動く) */
 let rngDrag=false;
 {
@@ -19253,7 +19342,7 @@ let rngDrag=false;
     if(rngDrag){if(!rwQ)rwQ=requestAnimationFrame(()=>{rwQ=0;_rw();});return;}
     return _rw.apply(this,arguments);
   };
-  document.addEventListener('pointerdown',e=>{if(e.target.matches&&e.target.matches('#fillMenu input[type=range]'))rngDrag=true;},true);
+  document.addEventListener('pointerdown',e=>{if(e.target.matches&&(e.target.matches('#fillMenu input[type=range]')||e.target.matches('#fillMenu .scrub')))rngDrag=true;},true);
   const end=()=>{if(!rngDrag)return;rngDrag=false;requestAnimationFrame(()=>{_rw();});};
   addEventListener('pointerup',end,true);addEventListener('pointercancel',end,true);
 }
@@ -19261,7 +19350,7 @@ let rngDrag=false;
 {
   const _usm=updateStyleMenu;
   let usmQ=0;
-  const run=()=>{const r=_usm();try{ctxArrange();}catch(e){console.error(e);}return r;};
+  const run=()=>{const r=_usm();try{ctxArrange();scrubSync($('#fillMenu'));}catch(e){console.error(e);}return r;};
   updateStyleMenu=function(){
     if(rngDrag){if(!usmQ)usmQ=requestAnimationFrame(()=>{usmQ=0;run();});return;}
     return run();
