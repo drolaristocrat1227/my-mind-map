@@ -2799,7 +2799,7 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-26.4';
+const APP_VERSION='2026-10-26.5';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -4801,6 +4801,25 @@ function closeExportDlg(){
   $('#expPageBox').innerHTML='';
   $('#expSave').disabled=false;$('#expPrint').disabled=false;
 }
+/* 書き出しで選ぶフレームの一覧。ページ・セクション・コンテナは種類を付け、入れ子は字下げする。
+   pagesOnly=ホームページのページを選ぶ欄(いちばん外のフレームだけ。いま選んでいる物は中のフレームでも残す) */
+function expFrameOptions(sh,pagesOnly,keep){
+  const par=layParents(sh),depth=f=>{let k=0,p=par[sh.indexOf(f)];while(p&&k<20){k++;p=par[sh.indexOf(p)];}return k;};
+  return sh.filter(isFrame).filter(f=>!pagesOnly||!par[sh.indexOf(f)]||f.id===keep).map(f=>{
+    const dp=pagesOnly?0:depth(f);
+    return`<option value="${f.id}">${'　'.repeat(dp)}${escXml(frameLabelText(f))} (${Math.round(f.w)}×${Math.round(f.h)})</option>`;
+  }).join('');
+}
+/* 「＋ ページ」で作ったページが、ホームページのページ一覧に無ければ足す */
+function siteAutoPages(d){
+  const c=siteCfg(d),used=new Set(c.pages.flatMap(p=>[p.pc,p.tab,p.sp]).filter(Boolean));
+  d.shapes.filter(f=>isFrame(f)&&f.role==='page'&&!used.has(f.id)).forEach(f=>{
+    const empty=c.pages.find(p=>!p.pc&&!p.tab&&!p.sp);
+    if(empty){empty.pc=f.id;if(!empty.title)empty.title=f.name||'';return;}
+    const files=new Set(c.pages.map(p=>p.file));let n=c.pages.length+1;while(files.has(`page${n}.html`))n++;
+    c.pages.push({id:uid(),file:files.has('index.html')?`page${n}.html`:'index.html',title:f.name||'',desc:'',pc:f.id,tab:null,sp:null});
+  });
+}
 function updateExportDlg(){
   const wire=isWire();
   /* フレームの選択肢 */
@@ -4809,8 +4828,7 @@ function updateExportDlg(){
     $('#expRangeRow').querySelector('[data-range="frame"]').disabled=!frames.length;
     $('#expRangeRow').querySelector('[data-range="sel"]').disabled=!selShapes().length;
     $('#expFrameRow').style.display=(expRange==='frame'&&frames.length>1)?'block':'none';
-    $('#expFrameSel').innerHTML=frames.map(f=>
-      `<option value="${f.id}">${escXml(f.name||'フレーム')} (${Math.round(f.w)}×${Math.round(f.h)})</option>`).join('');
+    $('#expFrameSel').innerHTML=expFrameOptions(curDoc().shapes,false);
     if(expFrameId)$('#expFrameSel').value=expFrameId;
   }
   document.querySelectorAll('#expRangeRow .seg').forEach(b=>b.classList.toggle('active',b.dataset.range===expRange));
@@ -4937,14 +4955,13 @@ function siteSyncPreview(){
 }
 function updateSiteDlg(){
   const d=curDoc(),c=siteCfg(d),page=curSitePage();
-  const frames=d.shapes.filter(isFrame);
-  const opt=f=>`<option value="${f.id}">${escXml(f.name||'フレーム')} (${Math.round(f.w)}×${Math.round(f.h)})</option>`;
+  siteAutoPages(d);
   document.querySelectorAll('#expSiteModeRow .seg').forEach(b=>b.classList.toggle('active',b.dataset.mode===expSiteMode));
   $('#expPageSel').innerHTML=c.pages.map((p,i)=>`<option value="${i}">${escXml(p.file)}${p.title?' ― '+escXml(p.title):''}</option>`).join('');
   $('#expPageSel').value=String(expSitePage);
   $('#expPageDel').disabled=c.pages.length<=1;
   [['pc','#expPcSel','なし'],['tab','#expTabSel','なし(PCかスマホで代用)'],['sp','#expSpSel','なし(PCかタブレットで代用)']].forEach(([k,q,none])=>{
-    $(q).innerHTML=`<option value="">${none}</option>`+frames.map(opt).join('');
+    $(q).innerHTML=`<option value="">${none}</option>`+expFrameOptions(d.shapes,true,page[k]);
     $(q).value=page[k]||'';
   });
   const setVal=(q,v)=>{if(document.activeElement!==$(q))$(q).value=v||'';};
@@ -4996,9 +5013,9 @@ function updateSiteDlg(){
     const on=(b.dataset.v==='1')===siteImgOptOn(c);
     b.classList.toggle('active',on);b.setAttribute('aria-checked',on?'true':'false');
   });
-  $('#expOgpSel').innerHTML='<option value="auto">自動(トップページの上の部分)</option><option value="">なし</option>'+frames.map(opt).join('');
+  $('#expOgpSel').innerHTML='<option value="auto">自動(トップページの上の部分)</option><option value="">なし</option>'+expFrameOptions(d.shapes,false);
   $('#expOgpSel').value=c.ogp||'';
-  $('#expIconSel').innerHTML='<option value="">なし</option>'+frames.map(opt).join('');
+  $('#expIconSel').innerHTML='<option value="">なし</option>'+expFrameOptions(d.shapes,false);
   $('#expIconSel').value=c.icon||'';
   document.querySelectorAll('#expMenuOnRow .seg').forEach(b=>b.classList.toggle('active',!!c.menu.on[b.dataset.r]));
   $('#expMenuBg').value=/^#[0-9a-f]{6}$/i.test(c.menu.bg)?c.menu.bg:'#ffffff';
