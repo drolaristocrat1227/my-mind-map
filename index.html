@@ -1151,6 +1151,8 @@ body.wirebar-off #wireHint{bottom:18px;}
 .fp-tabs button.on{background:var(--accent);border-color:var(--accent);color:#fff}
 #fontPopList{flex:1;overflow-y:auto;padding:0 2px}
 .ruleEdit{border:0;background:none;padding:0;cursor:pointer;text-decoration:underline}
+.nwTxRow select{flex:1;min-width:0}
+.nwTxRow input[type=number]{width:64px}
 .fp-g{font-size:12px;font-weight:700;color:var(--ink-soft);margin:12px 4px 6px}
 .fp-i{display:block;width:100%;margin:0 0 6px;padding:9px 12px;border:1px solid var(--panel-border);border-radius:12px;background:var(--node-bg);color:var(--ink);text-align:left;cursor:pointer}
 .fp-i:hover{border-color:var(--accent)}
@@ -1690,6 +1692,15 @@ kbd{
     </div>
     </div>
   </div>
+  <div id="mapPart">
+    <hr>
+    <div class="menu-label">Googleマップ</div>
+    <div class="numRow"><span class="radLbl">場所</span><input type="text" id="mapQ" spellcheck="false" autocomplete="off" placeholder="住所か、お店・会社の名前" style="flex:1;min-width:0"></div>
+    <div class="radRow" id="mapZRow"><span class="radLbl">ズーム</span><input type="range" id="mapZ" min="3" max="20" step="1"><span class="radNum" id="mapZV"></span></div>
+    <div class="numRow"><span class="radLbl">埋め込み</span><input type="text" id="mapSrc" spellcheck="false" autocomplete="off" placeholder="「地図を埋め込む」のコード(省略可)" style="flex:1;min-width:0"></div>
+    <p class="btnHint">「場所」を入れるだけで、書き出したページに本物の地図が出ます。ピンの位置を細かく決めたい時は、Googleマップの「共有」→「地図を埋め込む」のコードを貼ります。</p>
+    <div class="segRow"><button class="seg" id="mapOpen">Googleマップで場所を確かめる</button></div>
+  </div>
   <div id="btnPart">
     <hr>
     <div class="menu-label">ボタン</div>
@@ -1975,6 +1986,9 @@ kbd{
   <button class="mi" data-add="page"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>ページを足す(トップ・会社概要など)</button>
   <button class="mi" data-add="section"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M3 15h18"/></svg>セクションを足す(about・menuなど)</button>
   <button class="mi" data-add="box"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" stroke-dasharray="3 2"/><rect x="7" y="7" width="10" height="4" rx="1"/><rect x="7" y="13" width="10" height="4" rx="1"/></svg>コンテナ(選んだ物を囲む / 空で足す)</button>
+  <button class="mi" data-add="news"><svg viewBox="0 0 24 24"><path d="M4 6h3M4 12h3M4 18h3M10 6h10M10 12h10M10 18h10"/></svg>お知らせを足す(日付とタイトル)</button>
+  <button class="mi" data-add="blog"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="8" height="7" rx="1.5"/><rect x="13" y="4" width="8" height="7" rx="1.5"/><path d="M3 15h8M3 19h6M13 15h8M13 19h6"/></svg>ブログを足す(アイキャッチ画像つき)</button>
+  <button class="mi" data-add="gmap"><svg viewBox="0 0 24 24"><path d="M12 21s-6-5.6-6-11a6 6 0 0 1 12 0c0 5.4-6 11-6 11z"/><circle cx="12" cy="10" r="2.2"/></svg>Googleマップを足す</button>
   <button class="mi" data-add="btn"><svg viewBox="0 0 24 24"><rect x="2.5" y="7" width="19" height="10" rx="5"/><path d="M13 12h5M16 10l2 2-2 2"/></svg>ボタンを足す(形・色・矢印・ホバー)</button>
 </div>
 <div id="partsMenu" class="menu glass">
@@ -2710,7 +2724,11 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
         <div class="fm-note">note: https://note.com/(ユーザー名)/rss ／ アメブロ: https://rssblog.ameba.jp/(アメーバID)/rss20.xml ／ WordPress: https://(ブログのURL)/feed/ ／ はてなブログ: https://(ブログのURL)/rss<br>サイトに最新の記事が自動で並び、押すとそのブログの記事が開きます。PHPが使えるサーバーが必要です(news/feed.php が30分ごとに読み直します)。</div>
       </div>
       <div class="fm-row"><span class="fm-lbl">並べ方</span><div class="segRow" id="nwLayoutRow" style="flex:1"><button class="seg" data-layout="list">1行ずつ</button><button class="seg" data-layout="card">写真つきのカード</button></div></div>
-      <div class="fm-row"><span class="fm-lbl">表示する件数</span><input type="number" id="nwCount" min="1" max="20" step="1"><span class="fm-lbl" style="width:auto">文字の大きさ</span><input type="number" id="nwFs" min="10" max="32" step="1"></div>
+      <div class="fm-row"><span class="fm-lbl">日付とタイトル</span><div class="segRow" id="nwArrRow" style="flex:1"><button class="seg" data-arr="row">左右に並べる</button><button class="seg" data-arr="col">上下に並べる</button></div></div>
+      <div class="fm-row"><span class="fm-lbl">順番</span><div class="segRow" id="nwOrdRow" style="flex:1"><button class="seg" data-ord="dt">日付が先</button><button class="seg" data-ord="td">タイトルが先</button></div></div>
+      <div class="fm-row nwTxRow"><span class="fm-lbl">日付の文字</span><select id="nwDff" aria-label="日付のフォント"></select><input type="number" id="nwDfs" min="8" max="48" step="1" aria-label="日付の大きさ" title="大きさ(px)"><select id="nwDfw" aria-label="日付の太さ"><option value="400">ふつう</option><option value="500">中</option><option value="700">太字</option><option value="900">極太</option></select></div>
+      <div class="fm-row nwTxRow"><span class="fm-lbl">タイトルの文字</span><select id="nwTff" aria-label="タイトルのフォント"></select><input type="number" id="nwTfs" min="8" max="48" step="1" aria-label="タイトルの大きさ" title="大きさ(px)"><select id="nwTfw" aria-label="タイトルの太さ"><option value="400">ふつう</option><option value="500">中</option><option value="700">太字</option><option value="900">極太</option></select></div>
+      <div class="fm-row"><span class="fm-lbl">表示する件数</span><input type="number" id="nwCount" min="1" max="20" step="1"><input type="number" id="nwFs" min="10" max="32" step="1" hidden></div>
       <div class="fm-colors">
         <label>日付<input type="color" id="nwcDate"></label>
         <label>タイトル<input type="color" id="nwcText"></label>
@@ -2781,7 +2799,7 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-26.2';
+const APP_VERSION='2026-10-26.4';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -5684,10 +5702,23 @@ const newsBlogTitle=n=>(n.btitle||'').trim()||'お知らせ';
 /* 記事・一覧のURL(pre=そのページからサイトの一番上までの道。トップのページなら '') */
 const newsArticleUrl=(n,it,pre)=>(pre||'')+(n.mode==='web'?'news/article.php?id='+encodeURIComponent(it.id):'news/'+it.id+'.html');
 const newsListUrl=(n,pre)=>(pre||'')+'news/';
+/* 日付とタイトルの並び・文字(指定が無ければ、これまでの見た目)。arr: row=左右 / col=上下、ord: dt=日付が先 / td=タイトルが先 */
+function newsTx(cfg){
+  const st=cfg.style,card=cfg.layout==='card';
+  return{arr:cfg.arr||(card?'col':'row'),ord:cfg.ord||'dt',
+    d:{ff:st.dff||null,fs:st.dfs||Math.round(st.fs*0.85),fw:st.dfw||500,c:st.date},
+    t:{ff:st.tff||null,fs:st.tfs||st.fs,fw:st.tfw||(card?700:500),c:st.text}};
+}
+/* 1行ずつ並べる時の1件の高さ(上下に並べると2行ぶん) */
+function newsRowH(cfg){
+  const x=newsTx(cfg);
+  return x.arr==='col'?Math.round(x.d.fs*1.4+x.t.fs*1.45+28):Math.max(NEWS_ROW,Math.round(Math.max(x.d.fs,x.t.fs)*1.4+24));
+}
 /* カードの並べ方(欄の幅から列の数を決める。編集画面の見本と書き出しで同じ計算) */
 function newsGrid(cfg,W){
-  const fs=cfg.style.fs,cols=clamp(Math.round((W-48)/300),1,4),gap=20;
-  const cw=(W-48-(cols-1)*gap)/cols,ih=Math.round(cw*0.62),th=Math.round(28+fs*0.85*1.4+fs*1.5*2+16);
+  const x=newsTx(cfg),cols=clamp(Math.round((W-48)/300),1,4),gap=20;
+  const cw=(W-48-(cols-1)*gap)/cols,ih=Math.round(cw*0.62);
+  const th=x.arr==='row'?Math.round(28+Math.max(x.d.fs*1.4,x.t.fs*1.5*2)+16):Math.round(28+x.d.fs*1.4+x.t.fs*1.5*2+16);
   const rows=Math.ceil(cfg.count/cols),ch=ih+th;
   return{cols,gap,cw,ih,th,ch,rows};
 }
@@ -5695,7 +5726,7 @@ function newsGrid(cfg,W){
 const newsHasMore=(cfg,n)=>cfg.src==='rss'||(cfg.src!=='rss'&&!!n.blog);
 function newsBoxH(cfg,W,n){
   const more=newsHasMore(cfg,n)?NEWS_MORE:0;
-  if(cfg.layout!=='card')return NEWS_PAD*2+cfg.count*NEWS_ROW+more;
+  if(cfg.layout!=='card')return NEWS_PAD*2+cfg.count*newsRowH(cfg)+more;
   const g=newsGrid(cfg,W);
   return 24*2+g.rows*g.ch+(g.rows-1)*g.gap+more;
 }
@@ -5739,8 +5770,11 @@ function buildNewsShapes(d,cfg,x0,y0,W,box){
     const mt={id:uid(),type:'text',rot:0,text:cfg.src==='rss'?'ブログを見る →':'一覧を見る →',fs:Math.round(st.fs*0.9),fw:700,ff:docFont(),fill:st.text,align:'right',gid,nw:nw('more')};
     measureWText(mt);mt.x=x0+W-24-mt.w/2;mt.y=y0+H-NEWS_MORE/2-4;out.push(mt);
   }
+  const x=newsTx(cfg);
+  const dtOf=(text,extra)=>({id:uid(),type:'text',rot:0,text,fs:x.d.fs,fw:x.d.fw,ff:x.d.ff||docFont(),fill:x.d.c,align:'left',gid,nw:nw('date'),...(extra||{})});
+  const ttOf=text=>({id:uid(),type:'text',rot:0,text:text||'',fs:x.t.fs,fw:x.t.fw,ff:x.t.ff||docFont(),fill:x.t.c,align:'left',gid,nw:nw('title')});
   if(cfg.layout==='card'){
-    /* カード: 写真・日付(とカテゴリ)・タイトル */
+    /* カード: 写真・日付(とカテゴリ)・タイトル。上下か左右、どちらを先にするか */
     const g=newsGrid(cfg,W);
     newsPreviewItems(d,cfg.count,cfg).forEach((it,i)=>{
       const col=i%g.cols,row=Math.floor(i/g.cols);
@@ -5749,39 +5783,69 @@ function buildNewsShapes(d,cfg,x0,y0,W,box){
       const im={id:uid(),type:'rect',x:cx+g.cw/2,y:cy+g.ih/2,w:g.cw,h:g.ih,rot:0,fill:'#D9DEE7',noStroke:true,r:10,gid,nw:nw('img')};
       if(it.img)im.imgFill={src:it.img,iw:1600,ih:1000,ox:0,oy:0,scale:1};
       out.push(im);
-      const meta=newsDate(it.date)+(it.cat?'　'+it.cat:'');
-      const dt={id:uid(),type:'text',rot:0,text:meta,fs:Math.round(st.fs*0.85),fw:500,ff:docFont(),fill:st.date,align:'left',gid,nw:nw('date')};
-      fitText(dt,g.cw-28);dt.x=cx+14+dt.w/2;dt.y=cy+g.ih+14+dt.h/2;out.push(dt);
-      const tt={id:uid(),type:'text',rot:0,text:it.title||'',fs:st.fs,fw:700,ff:docFont(),fill:st.text,align:'left',gid,nw:nw('title')};
-      fitText(tt,g.cw-28);tt.x=cx+14+tt.w/2;tt.y=dt.y+dt.h/2+8+tt.h/2;out.push(tt);
+      const dt=dtOf(newsDate(it.date)+(it.cat?'　'+it.cat:'')),tt=ttOf(it.title);
+      measureWText(dt);
+      const top=cy+g.ih+14;
+      if(x.arr==='row'){
+        fitText(dt,g.cw/2-14);fitText(tt,g.cw-28-dt.w-10);
+        const a=x.ord==='dt'?dt:tt,b=x.ord==='dt'?tt:dt;
+        a.x=cx+14+a.w/2;b.x=cx+14+a.w+10+b.w/2;a.y=top+a.h/2;b.y=top+b.h/2;
+      }else{
+        fitText(dt,g.cw-28);fitText(tt,g.cw-28);
+        const a=x.ord==='dt'?dt:tt,b=x.ord==='dt'?tt:dt;
+        a.x=cx+14+a.w/2;a.y=top+a.h/2;b.x=cx+14+b.w/2;b.y=a.y+a.h/2+8+b.h/2;
+      }
+      out.push(dt,tt);
     });
     return out;
   }
-  const left=x0+24,dateW=st.fs*6.2;
+  const rh=newsRowH(cfg),left=x0+24,right=x0+W-24,dateW=x.d.fs*7.3;
   newsPreviewItems(d,cfg.count,cfg).forEach((it,i)=>{
-    const top=y0+NEWS_PAD+i*NEWS_ROW,cy=top+NEWS_ROW/2;
-    const dt={id:uid(),type:'text',rot:0,text:newsDate(it.date),fs:Math.round(st.fs*0.85),fw:500,ff:docFont(),fill:st.date,align:'left',gid,nw:nw('date')};
-    measureWText(dt);dt.x=left+dt.w/2;dt.y=cy;out.push(dt);
-    const tt={id:uid(),type:'text',rot:0,text:it.title||'',fs:st.fs,fw:500,ff:docFont(),fill:st.text,align:'left',gid,nw:nw('title')};
-    fitText(tt,W-48-dateW);tt.x=left+dateW+tt.w/2;tt.y=cy;out.push(tt);
-    out.push({id:uid(),type:'rect',x:x0+W/2,y:top+NEWS_ROW-0.5,w:W-48,h:1,rot:0,fill:st.line,noStroke:true,gid,nw:nw('line')});
+    const top=y0+NEWS_PAD+i*rh,cy=top+rh/2;
+    const dt=dtOf(newsDate(it.date)),tt=ttOf(it.title);
+    measureWText(dt);
+    if(x.arr==='col'){
+      fitText(tt,W-48);
+      const a=x.ord==='dt'?dt:tt,b=x.ord==='dt'?tt:dt,y1=cy-(a.h+4+b.h)/2;
+      a.x=left+a.w/2;a.y=y1+a.h/2;b.x=left+b.w/2;b.y=y1+a.h+4+b.h/2;
+    }else if(x.ord==='dt'){
+      fitText(tt,W-48-dateW);
+      dt.x=left+dt.w/2;dt.y=cy;tt.x=left+dateW+tt.w/2;tt.y=cy;
+    }else{
+      fitText(tt,W-48-dt.w-16);
+      tt.x=left+tt.w/2;tt.y=cy;dt.x=right-dt.w/2;dt.y=cy;
+    }
+    out.push(dt,tt);
+    out.push({id:uid(),type:'rect',x:x0+W/2,y:top+rh-0.5,w:W-48,h:1,rot:0,fill:st.line,noStroke:true,gid,nw:nw('line')});
   });
   return out;
 }
 const newsIdOf=s=>s&&s.nw?s.nw.box:null;
 function newsBoxById(id){return(curShapes()||[]).find(s=>s.nw&&s.nw.box===id&&s.nw.role==='box'&&s.news);}
-function addNewsBox(){
+function addNewsBox(kind){
   const d=curDoc();if(!d.shapes)return;
-  exitPen();exitEraser();exitBrush();
+  exitPen();exitEraser();exitBrush();hideMenus();
   pushUndo();
-  const cfg=defaultNewsBox(),W=720;
-  const c=s2w(viewW()/2,viewH()/2);
-  const H=newsBoxH(cfg,W,siteNews(d));
-  const shapes=buildNewsShapes(d,cfg,c.x-W/2,c.y-H/2,W);
-  d.shapes.push(...shapes);
+  const cfg=defaultNewsBox(),blog=kind==='blog';
+  if(blog){cfg.layout='card';cfg.count=3;}
+  const sh=d.shapes,sel=selShapes(),p=sel.length===1&&isFrame(sel[0])?sel[0]:null;
+  /* ブログは記事ごとのページを作る(押すと記事が開く)。ほかのお知らせ欄にも「一覧を見る」が付くので、先に並べ直す */
+  const n=siteNews(d);
+  if(blog&&!n.blog){n.blog=true;sh.filter(x=>x.nw&&x.nw.role==='box'&&x.news).forEach(x=>rebuildNewsBox(x.news));}
+  let W=blog?1000:720,x0,y0,at=-1;
+  if(p){
+    W=Math.min(W,p.w-48);
+    const its=layItems(sh,p,layParents(sh));
+    const bottom=its.length?Math.max(...its.map(it=>{const b=layBox(it);return b.y+b.h;})):p.y-p.h/2+24;
+    x0=p.x-W/2;y0=bottom+16;at=layAfterLast(sh,p);
+  }else{const c=s2w(viewW()/2,viewH()/2);x0=c.x-W/2;y0=c.y-200;}
+  const H=newsBoxH(cfg,W,n);
+  if(p){const need=y0+H+24-(p.y-p.h/2);if(need>p.h){p.y=p.y-p.h/2+need/2;p.h=need;}}
+  const shapes=buildNewsShapes(d,cfg,x0,y0,W);
+  if(at>=0)sh.splice(at,0,...shapes);else sh.push(...shapes);
   wireSel=shapes.map(s=>s.id);selAnchor=null;
-  save();renderWire();
-  toast('お知らせ欄を追加しました');
+  save();renderWire();renderLayerPanel();
+  toast(blog?'ブログ欄を追加しました(記事ごとのページを作ります。押すと記事が開きます)':'お知らせ欄を追加しました');
   openNewsDlg(cfg.id);
 }
 /* お知らせ欄を並べ直す(中身・件数・色を変えた時)。位置・幅・箱の見た目はそのまま */
@@ -5837,6 +5901,14 @@ function renderNewsDlg(){
     const bd=newsBoxDraft,st=bd.style;
     $('#nwCount').value=bd.count;$('#nwFs').value=st.fs;
     [['nwcDate','date'],['nwcText','text'],['nwcLine','line']].forEach(([id,k])=>{$('#'+id).value=/^#[0-9a-f]{6}$/i.test(st[k])?st[k]:'#000000';});
+    const tx=newsTx(bd);
+    document.querySelectorAll('#nwArrRow .seg').forEach(b=>b.classList.toggle('active',b.dataset.arr===tx.arr));
+    document.querySelectorAll('#nwOrdRow .seg').forEach(b=>b.classList.toggle('active',b.dataset.ord===tx.ord));
+    const fopts=sel=>'<option value="">サイトの基本の文字</option>'+WFONTS.filter(f=>f.web&&!f.old).map(f=>`<option value="${f.k}"${f.k===sel?' selected':''}>${escXml(f.n)}</option>`).join('');
+    $('#nwDff').innerHTML=fopts(st.dff||'');$('#nwTff').innerHTML=fopts(st.tff||'');
+    if(document.activeElement!==$('#nwDfs'))$('#nwDfs').value=tx.d.fs;
+    if(document.activeElement!==$('#nwTfs'))$('#nwTfs').value=tx.t.fs;
+    $('#nwDfw').value=String(tx.d.fw);$('#nwTfw').value=String(tx.t.fw);
     document.querySelectorAll('#nwSrcRow .seg').forEach(b=>b.classList.toggle('active',b.dataset.src===(bd.src||'site')));
     document.querySelectorAll('#nwLayoutRow .seg').forEach(b=>b.classList.toggle('active',b.dataset.layout===(bd.layout||'list')));
     $('#nwFeedPart').style.display=bd.src==='rss'?'block':'none';
@@ -5910,6 +5982,12 @@ $('#nwItems').addEventListener('click',e=>{
 });
 $('#nwCount').addEventListener('input',()=>{if(newsBoxDraft)newsBoxDraft.count=clamp(Math.round(+$('#nwCount').value||5),1,20);});
 $('#nwFs').addEventListener('input',()=>{if(newsBoxDraft)newsBoxDraft.style.fs=clamp(Math.round(+$('#nwFs').value||16),10,32);});
+/* 日付とタイトルの並び・文字 */
+$('#nwArrRow').addEventListener('click',e=>{const b=e.target.closest('.seg');if(b&&newsBoxDraft){newsBoxDraft.arr=b.dataset.arr;renderNewsDlg();}});
+$('#nwOrdRow').addEventListener('click',e=>{const b=e.target.closest('.seg');if(b&&newsBoxDraft){newsBoxDraft.ord=b.dataset.ord;renderNewsDlg();}});
+[['nwDff','dff'],['nwTff','tff']].forEach(([id,k])=>$('#'+id).addEventListener('change',()=>{if(!newsBoxDraft)return;const v=$('#'+id).value;if(v)newsBoxDraft.style[k]=v;else delete newsBoxDraft.style[k];}));
+[['nwDfs','dfs'],['nwTfs','tfs']].forEach(([id,k])=>$('#'+id).addEventListener('input',()=>{if(newsBoxDraft)newsBoxDraft.style[k]=clamp(Math.round(+$('#'+id).value||16),8,48);}));
+[['nwDfw','dfw'],['nwTfw','tfw']].forEach(([id,k])=>$('#'+id).addEventListener('change',()=>{if(newsBoxDraft)newsBoxDraft.style[k]=+$('#'+id).value;}));
 [['nwcDate','date'],['nwcText','text'],['nwcLine','line']].forEach(([id,k])=>{
   $('#'+id).addEventListener('input',()=>{if(newsBoxDraft)newsBoxDraft.style[k]=$('#'+id).value;});
 });
@@ -6493,6 +6571,7 @@ function siteMedia(s,o){
 function siteShapeEl(s,o,tagOf){
   if(s.media)return siteAttrs(siteMedia(s,o),s);
   if(s.type==='btn')return siteAttrs(siteBtn(s,o),s);
+  if(s.type==='gmap')return siteAttrs(siteMap(s,o),s);
   if(s.type==='text'&&siteTextOk(s))return siteAttrs(siteText(s,o,tagOf(s)),s);
   const el=siteAttrs((s.type==='image'?siteImage(s,o):siteCssBox(s,o))||siteSvg(s,o),s);
   /* 図として描いた文字は、検索エンジン・読み上げソフト向けに、見えない本物の文字(見出しなら見出し)を添える */
@@ -6826,6 +6905,8 @@ img{display:block;max-width:none}
 .nt-svg{overflow:visible}
 /* 中身に合わせて伸ばす区画の文字(幅を超えたら折り返す) */
 .nt-flow{white-space:pre-wrap;overflow-wrap:anywhere}
+/* Googleマップ */
+.nt-map{display:block;background:#E5EBEE}
 /* ボタン(ふだん/ホバー。スマホはタップで .nt-hov が付く) */
 .nt-button{display:flex;align-items:center;justify-content:center;box-sizing:border-box;background:var(--bg);border:var(--bw) solid var(--bc);border-radius:var(--r);color:var(--tc);cursor:pointer;white-space:nowrap;overflow:hidden;line-height:1.2;transition:background-color var(--d),border-color var(--d),border-width var(--d),border-radius var(--d),color var(--d)}
 .nt-button:hover,.nt-button.nt-hov{background:var(--bgh,var(--bg));border-color:var(--bch,var(--bc));border-width:var(--bwh,var(--bw));border-radius:var(--rh,var(--r));color:var(--tch,var(--tc))}
@@ -7102,8 +7183,14 @@ ${SITE_RANGES.map(({r,mq})=>`@media ${mq}{.nt-view:not(.nt-r-${r}){display:none}
 .nt-news li{height:var(--nrh);border-bottom:1px solid var(--nl)}
 .nt-news-i{display:flex;align-items:center;gap:0;width:100%;height:100%;padding:0;border:0;background:none;font:inherit;color:var(--nt);text-align:left}
 button.nt-news-i,a.nt-news-i{cursor:pointer}
-.nt-news-i time{flex:none;width:calc(var(--nfs) * 6.2);font-size:calc(var(--nfs) * .85);font-weight:500;color:var(--nd)}
-.nt-news-i span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--nfs);font-weight:500}
+.nt-news-i time{flex:none;width:calc(var(--ndfs) * 7.3);font-size:var(--ndfs);font-weight:var(--ndfw);font-family:var(--ndff,inherit);color:var(--nd)}
+.nt-news-i span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--ntfs);font-weight:var(--ntfw);font-family:var(--ntff,inherit)}
+/* 日付とタイトル: 上下に並べる / タイトルを先にする */
+.nt-arr-col .nt-news-i{flex-direction:column;align-items:flex-start;justify-content:center;gap:4px}
+.nt-arr-col .nt-news-i time{width:auto}
+.nt-arr-col .nt-news-i span{flex:none;width:100%}
+.nt-ord-td .nt-news-i time{order:2}
+.nt-arr-row.nt-ord-td .nt-news-i time{width:auto;margin-left:16px;text-align:right}
 button.nt-news-i:hover span,a.nt-news-i:hover span{text-decoration:underline}
 .nt-news-none{display:flex;align-items:center;color:var(--nd);font-size:var(--nfs)}
 .nt-news.nt-card{padding:24px}
@@ -7114,9 +7201,19 @@ button.nt-news-i:hover span,a.nt-news-i:hover span{text-decoration:underline}
 .nt-nc-im{display:block;flex:none;height:var(--nih);background:#D9DEE7;overflow:hidden}
 .nt-nc-im img{display:block;width:100%;height:100%;object-fit:cover;transition:scale .4s ease}
 .nt-news-c:hover .nt-nc-im img{scale:1.05}
-.nt-nc-m{display:flex;align-items:center;gap:10px;padding:14px 14px 0;font-size:calc(var(--nfs) * .85);color:var(--nd);white-space:nowrap;overflow:hidden}
+.nt-nc-m{display:flex;align-items:center;gap:10px;padding:14px 14px 0;font-size:var(--ndfs);font-weight:var(--ndfw);font-family:var(--ndff,inherit);color:var(--nd);white-space:nowrap;overflow:hidden}
 .nt-nc-m em{font-style:normal;padding:0 8px;border-radius:999px;background:var(--nl);color:var(--nt);font-size:.9em}
-.nt-nc-t{padding:6px 14px 0;font-size:var(--nfs);font-weight:700;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.nt-nc-t{padding:6px 14px 0;font-size:var(--ntfs);font-weight:var(--ntfw);font-family:var(--ntff,inherit);line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+/* カード: タイトルを先に(上下) / 左右に並べる */
+.nt-card.nt-ord-td .nt-nc-t{order:2;padding-top:14px}
+.nt-card.nt-ord-td .nt-nc-m{order:3;padding-top:6px}
+.nt-card.nt-arr-row .nt-news-c{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:var(--nih) auto;align-content:start}
+.nt-card.nt-arr-row .nt-nc-im{grid-column:1/-1}
+.nt-card.nt-arr-row .nt-nc-t{grid-column:1;grid-row:2;padding:14px 10px 0 14px;order:0}
+.nt-card.nt-arr-row .nt-nc-m{grid-column:2;grid-row:2;padding:14px 14px 0 0;order:0}
+.nt-card.nt-arr-row.nt-ord-dt .nt-news-c{grid-template-columns:auto minmax(0,1fr)}
+.nt-card.nt-arr-row.nt-ord-dt .nt-nc-m{grid-column:1;padding:14px 0 0 14px}
+.nt-card.nt-arr-row.nt-ord-dt .nt-nc-t{grid-column:2;padding:14px 14px 0 10px}
 .nt-news-more{position:absolute;right:24px;bottom:12px;font-size:calc(var(--nfs) * .9);font-weight:700;color:var(--nt);text-decoration:none}
 .nt-news-more:hover{text-decoration:underline}
 .nt-nmodal{position:fixed;inset:0;z-index:1001;display:none;align-items:center;justify-content:center;padding:20px}
@@ -8269,7 +8366,10 @@ function siteNewsUnit(members,o){
   if(rss&&siteNewsFeeds)siteNewsFeeds.set(cfg.id,cfg.feed);
   const items=rss?[]:newsExportItems(n).slice(0,cfg.count);
   const bgEl=siteShapeEl(box,o,()=>'p');
-  let vars=`--nd:${cssCol(st.date)};--nt:${cssCol(st.text)};--nl:${cssCol(st.line)};--nfs:${st.fs}px;--nrh:${NEWS_ROW}px`;
+  const tx=newsTx(cfg);
+  let vars=`--nd:${cssCol(st.date)};--nt:${cssCol(st.text)};--nl:${cssCol(st.line)};--nfs:${st.fs}px;--nrh:${newsRowH(cfg)}px`
+    +`;--ndfs:${tx.d.fs}px;--ndfw:${tx.d.fw};--ntfs:${tx.t.fs}px;--ntfw:${tx.t.fw}`
+    +(tx.d.ff?`;--ndff:${cssFont(tx.d.ff)}`:'')+(tx.t.ff?`;--ntff:${cssFont(tx.t.ff)}`:'');
   if(card){const g=newsGrid(cfg,box.w);vars+=`;--ncols:${g.cols};--nih:${g.ih}px;--nch:${g.ch}px;--nc:${cssCol(st.card||'#F6F7FA')}`;}
   /* 「一覧を見る →」: ブログ形式なら記事の一覧、外部のブログならそのブログ(読み込んだ後に正しいURLへ直す) */
   let more='';
@@ -8280,7 +8380,7 @@ function siteNewsUnit(members,o){
   }
   const none=rss?'読み込んでいます…':'お知らせはまだありません';
   return`${bgEl}
-<div class="nt-e nt-news${card?' nt-card':''}" data-count="${cfg.count}"${card?' data-layout="card"':''}${rss?` data-feed="${escXml(cfg.id)}"`:''} style="${siteBox(box,o,box.w,box.h)};${vars}">
+<div class="nt-e nt-news${card?' nt-card':''} nt-arr-${tx.arr} nt-ord-${tx.ord}" data-count="${cfg.count}"${card?' data-layout="card"':''}${rss?` data-feed="${escXml(cfg.id)}"`:''} style="${siteBox(box,o,box.w,box.h)};${vars}">
 <ul>${items.length?items.map(it=>siteNewsLi(it,cfg,n)).join(''):`<li class="nt-news-none">${none}</li>`}</ul>${more}
 </div>`;
 }
@@ -9778,6 +9878,8 @@ async function makeWireCanvas(w,opt){
       doFill(()=>ctx.fill(p2));
       drawImgFill(p2);
       if(!s.noStroke&&strokeW(s)>0)doStroke(spaint,sa,()=>ctx.stroke(p2));
+    }else if(s.type==='gmap'){
+      gmapCanvas(ctx,s);
     }else if(s.type==='btn'){
       btnCanvas(ctx,s);
     }else if(s.type==='icon'){
@@ -11080,6 +11182,7 @@ function devPartsCanvas(ctx,parts){
 
 function shapeSvg(s){
   if(s.type==='btn')return btnSvg(s);
+  if(s.type==='gmap')return gmapSvg(s);
   const tr=`transform="translate(${s.x} ${s.y}) rotate(${s.rot||0})"`;
   const paint=paintOf(s);
   const fill=paint||'transparent';
@@ -12101,7 +12204,7 @@ function addDeviceFrame(k){
   addFrame(d.w,d.h,d.n,true,{device:{kind:d.kind},r:d.r});
 }
 /* ---------- 大きさ(px)をパネルから指定 ---------- */
-const sizeableShape=s=>['rect','ellipse','path','line','image','icon','btn'].includes(s.type);
+const sizeableShape=s=>['rect','ellipse','path','line','image','icon','btn','gmap'].includes(s.type);
 let szLink=true;   /* 縦横比を保つ(既定ON) */
 /* 中心を保ったまま大きさを変える。パスは点も比率で拡縮 */
 function resizeShapeTo(s,nw,nh){
@@ -15346,7 +15449,7 @@ $('#wireBarToggleBtn').onclick=toggleWireBar;
 applyWireBar();
 
 /* ---------- レイヤーパネル ---------- */
-const SHAPE_TYPE_LABEL={btn:'ボタン',rect:'四角',ellipse:'丸',line:'線',text:'テキスト',image:'画像',path:'パス',frame:'フレーム',icon:'アイコン'};
+const SHAPE_TYPE_LABEL={gmap:'地図',btn:'ボタン',rect:'四角',ellipse:'丸',line:'線',text:'テキスト',image:'画像',path:'パス',frame:'フレーム',icon:'アイコン'};
 function shapeLabel(s){
   if(s.name)return s.name;
   if(s.role&&LAY_KIND[s.role])return LAY_KIND[s.role];
@@ -16086,6 +16189,7 @@ function updateStyleMenu(){
   }
   renderIcoPart();
   renderBtnPart();
+  renderMapPart();
   $('#textSec').style.display=texts.length?'block':'none';
   if(texts.length){
     const t0=texts[0];
@@ -17440,7 +17544,7 @@ function layFrame(sh,f,par){
     const s=it.m[0],m=q4(s.mg);
     if(v){
       const W=Math.max(1,layR(f.w-pad[1]-pad[3]-m[1]-m[3]));
-      if(s.type==='rect'||isFrame(s)){if(Math.abs(s.w-W)>.01){s.x=layR(s.x-s.w/2+W/2);s.w=W;}}
+      if(s.type==='rect'||s.type==='gmap'||isFrame(s)){if(Math.abs(s.w-W)>.01){s.x=layR(s.x-s.w/2+W/2);s.w=W;}}
       else if(s.type==='text'&&s.wrapW&&!s.vert)s.wrapW=W;
     }else if(s.type==='rect'||isFrame(s)){
       const H=Math.max(1,layR(f.h-pad[0]-pad[2]-m[0]-m[2]));
@@ -17552,9 +17656,10 @@ const LAY_ICONS={
   page:'<svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8.5 8h7M8.5 12h7M8.5 16h4"/></svg>',
   section:'<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M3 15h18"/></svg>',
   box:'<svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="2" stroke-dasharray="3 2.4"/><rect x="7.5" y="7.5" width="9" height="3.5" rx="1"/><rect x="7.5" y="13" width="9" height="3.5" rx="1"/></svg>',
-  btn:'<svg viewBox="0 0 24 24"><rect x="2.5" y="7" width="19" height="10" rx="5"/><path d="M13 12h5M16 10l2 2-2 2"/></svg>'
+  btn:'<svg viewBox="0 0 24 24"><rect x="2.5" y="7" width="19" height="10" rx="5"/><path d="M13 12h5M16 10l2 2-2 2"/></svg>',
+  gmap:'<svg viewBox="0 0 24 24"><path d="M12 21s-6-5.6-6-11a6 6 0 0 1 12 0c0 5.4-6 11-6 11z"/><circle cx="12" cy="10" r="2.2"/></svg>'
 };
-function layIcon(s,k){return LAY_ICONS[s.type==='btn'?'btn':k]||layerIconFor(s);}
+function layIcon(s,k){return LAY_ICONS[s.type==='btn'||s.type==='gmap'?s.type:k]||layerIconFor(s);}
 /* ---- ページ・セクション・コンテナを足す ---- */
 function layTopFrames(sh){const par=layParents(sh);return sh.filter((s,i)=>isFrame(s)&&!par[i]);}
 function layAddPage(){
@@ -17959,8 +18064,112 @@ $('#btnFields').addEventListener('change',e=>{
     save();renderWire();renderBtnPart();
   }
 });
-$('#boxMenu').addEventListener('click',e=>{if(e.target.closest('[data-add="btn"]'))btnAdd();});
+$('#boxMenu').addEventListener('click',e=>{
+  if(e.target.closest('[data-add="btn"]'))btnAdd();
+  else if(e.target.closest('[data-add="news"]'))addNewsBox('news');
+  else if(e.target.closest('[data-add="blog"]'))addNewsBox('blog');
+});
 
+/* ============================================================
+   Googleマップ(type:'gmap')。s.gmap={q:場所(住所・お店の名前),z:ズーム,src:埋め込みのURL(Googleマップの「地図を埋め込む」から。省略可)}
+   編集画面では見本の地図を描き、書き出したページで本物の地図(iframe)を出す
+   ============================================================ */
+/* 書き出す地図のURL。埋め込みのURLがあればそれ、無ければ場所から作る */
+function gmapSrc(g){
+  g=g||{};
+  if(g.src&&/^https:\/\/www\.google\.com\/maps\/embed\?/.test(g.src))return g.src;
+  const q=(g.q||'').trim();
+  return q?'https://maps.google.com/maps?q='+encodeURIComponent(q)+'&z='+(g.z||15)+'&hl=ja&output=embed':'';
+}
+/* 貼った文字(iframe のコードかURL)から、埋め込みのURLだけを取り出す */
+function gmapParse(v){
+  v=String(v||'').trim();
+  const m=v.match(/src=["']([^"']+)["']/);if(m)v=m[1];
+  v=v.replace(/&amp;/g,'&');
+  return /^https:\/\/www\.google\.com\/maps\/embed\?/.test(v)?v:'';
+}
+function gmapSvg(s){
+  const g=s.gmap||{},w=s.w,h=s.h,x=-w/2,y=-h/2,r=Math.min(s.r||0,w/2,h/2);
+  const tr=`transform="translate(${s.x} ${s.y}) rotate(${s.rot||0})"`,cid='gmc_'+s.id;
+  /* 見本の道(大きさに合わせて伸びる)とピン */
+  const roads=[[0,.32,1,.42],[0,.78,1,.62],[.22,0,.36,1],[.7,0,.62,1]].map(([a,b,c,d])=>`<line x1="${x+a*w}" y1="${y+b*h}" x2="${x+c*w}" y2="${y+d*h}" stroke="#FFFFFF" stroke-width="${Math.max(4,Math.min(w,h)*.035)}"/>`).join('');
+  const pr=Math.max(10,Math.min(w,h)*.06);
+  const label=(g.q||'').trim()?'Googleマップ: '+g.q:'Googleマップ(「色とスタイル」で場所を入れます)';
+  const fs=Math.max(11,Math.min(15,w/28));
+  return`<g data-id="${s.id}" ${tr}><clipPath id="${cid}"><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}"/></clipPath>
+<g clip-path="url(#${cid})"><rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#E5EBEE"/><rect x="${x+w*.45}" y="${y+h*.08}" width="${w*.18}" height="${h*.2}" fill="#CFE6CF"/><rect x="${x+w*.05}" y="${y+h*.5}" width="${w*.12}" height="${h*.16}" fill="#CFE6CF"/>${roads}
+<path d="M0 ${-pr*.2}c0 ${-pr*1.1} ${-pr} ${-pr*1.1} ${-pr} ${-pr*1.9}a${pr} ${pr} 0 1 1 ${pr*2} 0c0 ${pr*.8} ${-pr} ${pr*.8} ${-pr} ${pr*1.9}z" transform="translate(0 ${pr*.6})" fill="#EA4335"/><circle cx="0" cy="${-pr*1.3+pr*.6}" r="${pr*.35}" fill="#FFFFFF"/>
+<rect x="${x+10}" y="${y+h-fs*2-14}" width="${Math.min(w-20,fs*label.length*1.05+24)}" height="${fs*2+4}" rx="6" fill="#FFFFFF" fill-opacity=".92"/><text x="${x+22}" y="${y+h-fs-12}" dominant-baseline="central" font-size="${fs}" font-weight="600" fill="#3C4043">${escXml(label)}</text></g></g>`;
+}
+function gmapCanvas(ctx,s){
+  const w=s.w,h=s.h,p=new Path2D();p.roundRect(-w/2,-h/2,w,h,Math.min(s.r||0,w/2,h/2));
+  ctx.save();ctx.clip(p);ctx.fillStyle='#E5EBEE';ctx.fillRect(-w/2,-h/2,w,h);
+  ctx.strokeStyle='#FFFFFF';ctx.lineWidth=Math.max(4,Math.min(w,h)*.035);
+  [[0,.32,1,.42],[0,.78,1,.62],[.22,0,.36,1],[.7,0,.62,1]].forEach(([a,b,c,d])=>{ctx.beginPath();ctx.moveTo(-w/2+a*w,-h/2+b*h);ctx.lineTo(-w/2+c*w,-h/2+d*h);ctx.stroke();});
+  const pr=Math.max(10,Math.min(w,h)*.06);ctx.fillStyle='#EA4335';ctx.beginPath();ctx.arc(0,-pr*.7,pr,0,Math.PI*2);ctx.fill();
+  ctx.restore();
+}
+function siteMap(s,o){
+  const g=s.gmap||{},src=gmapSrc(g),r=s.r?`;border-radius:${cssNum(s.r)}px`:'';
+  if(!src)return`<div class="nt-e nt-map" style="${siteBox(s,o,s.w,s.h)}${r}"></div>`;
+  return`<iframe class="nt-e nt-map" src="${escXml(src)}" title="${escXml('地図: '+(g.q||'所在地'))}" style="${siteBox(s,o,s.w,s.h)};border:0${r}" loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade"></iframe>`;
+}
+function gmapAdd(){
+  const d=curDoc();if(!d||!d.shapes)return;
+  hideMenus();
+  const q=prompt('地図に出す場所(住所か、お店・会社の名前)','');
+  if(q===null)return;
+  const sh=d.shapes,sel=selShapes();
+  pushUndo();
+  const s={id:uid(),type:'gmap',x:0,y:0,w:640,h:400,rot:0,r:12,gmap:{q:q.trim(),z:15}};
+  const p=sel.length===1&&isFrame(sel[0])?sel[0]:null;
+  if(p){
+    s.w=Math.min(640,p.w-48);
+    const its=layItems(sh,p,layParents(sh));
+    const bottom=its.length?Math.max(...its.map(it=>{const b=layBox(it);return b.y+b.h;})):p.y-p.h/2+24;
+    s.x=p.x;s.y=bottom+16+s.h/2;
+    const need=bottom+16+s.h+24-(p.y-p.h/2);
+    if(need>p.h){p.y=p.y-p.h/2+need/2;p.h=need;}
+    sh.splice(layAfterLast(sh,p),0,s);
+  }else{const c=s2w(viewW()/2,viewH()/2);s.x=c.x;s.y=c.y;sh.push(s);}
+  wireSel=[s.id];selAnchor=null;
+  save();renderWire();openStyleMenu();updateStyleMenu();renderLayerPanel();
+  toast(s.gmap.q?'地図を置きました(書き出したページで本物のGoogleマップになります)':'地図を置きました。「色とスタイル」の「Googleマップ」で場所を入れます');
+}
+/* ---- パネル ---- */
+function renderMapPart(){
+  const ss=selShapes().filter(x=>x.type==='gmap');
+  $('#mapPart').style.display=ss.length===1?'block':'none';
+  if(ss.length!==1)return;
+  const g=ss[0].gmap||(ss[0].gmap={});
+  if(document.activeElement!==$('#mapQ'))$('#mapQ').value=g.q||'';
+  $('#mapZ').value=g.z||15;$('#mapZV').textContent=g.z||15;
+  if(document.activeElement!==$('#mapSrc'))$('#mapSrc').value=g.src||'';
+  $('#mapZRow').style.display=g.src?'none':'flex';
+}
+const gmapSel=()=>selShapes().find(x=>x.type==='gmap');
+['#mapQ','#mapZ','#mapSrc'].forEach(id=>{
+  $(id).addEventListener('pointerdown',e=>e.stopPropagation());
+  $(id).addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter')e.target.blur();});
+  $(id).addEventListener('focus',()=>pushUndo());
+});
+$('#mapQ').addEventListener('input',()=>{const s=gmapSel();if(!s)return;s.gmap.q=$('#mapQ').value;save();renderWire();});
+$('#mapZ').addEventListener('input',()=>{const s=gmapSel();if(!s)return;s.gmap.z=+$('#mapZ').value;$('#mapZV').textContent=s.gmap.z;save();});
+$('#mapSrc').addEventListener('change',()=>{
+  const s=gmapSel();if(!s)return;
+  const v=$('#mapSrc').value.trim();
+  if(!v){delete s.gmap.src;save();renderMapPart();return;}
+  const u=gmapParse(v);
+  if(!u){toast('Googleマップの「地図を埋め込む」のコード(https://www.google.com/maps/embed?… )を貼ってください');return;}
+  s.gmap.src=u;save();renderMapPart();toast('埋め込みのコードを使います(場所の文字は、地図の名前として使います)');
+});
+$('#mapOpen').onclick=()=>{
+  const s=gmapSel();if(!s)return;
+  const q=(s.gmap.q||'').trim();
+  if(!q){toast('先に「場所」を入れてください');return;}
+  window.open('https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(q),'_blank','noopener');
+};
+$('#boxMenu').addEventListener('click',e=>{if(e.target.closest('[data-add="gmap"]'))gmapAdd();});
 /* ============================================================
    クライアント(制作の工程)
    クライアントごとに、クライアント情報 → ヒアリング → ペルソナ → デザインルール → 掲載内容 →
