@@ -2080,6 +2080,24 @@ kbd{
 .st-cvside .sws{display:flex;gap:6px;flex-wrap:wrap}
 .st-cvside .sws i{width:28px;height:28px;border-radius:var(--st-r);border:1px solid var(--st-line)}
 .st-note{font-size:13px;color:var(--st-muted);margin:0}
+/* 印刷・PDF(ヒアリングシートなど。A4縦。空欄は手書きできる罫線) */
+@media print{html:has(body.printing),body.printing{background:#fff!important}}
+.st-sheet{background:#fff;font-family:"Zen Kaku Gothic New","Noto Sans JP",sans-serif;color:#1F1D1A;font-size:10.5pt;line-height:1.7;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.ss-head{display:flex;justify-content:space-between;align-items:flex-end;gap:12pt;border-bottom:1.5pt solid #1F1D1A;padding-bottom:6pt;margin-bottom:14pt}
+.ss-title{font-family:"Shippori Mincho B1",serif;font-size:20pt;line-height:1.3}
+.ss-meta{font-size:9pt;color:#555;text-align:right}
+.ss-meta b{display:block;font-size:12pt;color:#1F1D1A}
+.ss-sec{margin-bottom:16pt}
+.ss-sec h2{font-family:"Shippori Mincho B1",serif;font-size:13pt;font-weight:500;margin:0 0 4pt;padding-left:8pt;border-left:3pt solid #2E5B4F;break-after:avoid}
+.ss-row{display:grid;grid-template-columns:40mm 1fr;gap:6mm;padding:7pt 0;border-bottom:.5pt solid #CCC;break-inside:avoid}
+.ss-q{font-size:9pt;color:#444;font-weight:700}
+.ss-a{white-space:pre-wrap;word-break:break-word}
+.ss-blank{height:44pt;background:repeating-linear-gradient(transparent 0 14pt,#D0D0D0 14pt 14.6pt)}
+.ss-sw{display:grid;grid-template-columns:repeat(4,1fr);gap:8pt;margin-top:6pt}
+.ss-sw div{border:.5pt solid #CCC;break-inside:avoid}
+.ss-sw i{display:block;height:16mm}
+.ss-sw span{display:block;padding:4pt 6pt;font-size:9pt}
+.ss-sw code{display:block;font-size:8pt;color:#666}
 /* キャンバスから工程の画面へ戻るボタン */
 #stCanvasBar{position:fixed;left:12px;bottom:84px;z-index:45;display:none;align-items:center;gap:8px}
 #stCanvasBar.on{display:flex}
@@ -2692,7 +2710,7 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-25.7';
+const APP_VERSION='2026-10-25.8';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -17372,12 +17390,14 @@ function stNavHtml(c){
   }).join('');
   return`<div class="st-cl"><div class="st-kick">CLIENT</div><b id="stNavName">${escXml(c.name)}</b></div>${steps}
     <div class="st-prog"><div class="row"><span>進み具合</span><span>${stDoneN(c)} / ${ST_STEPS.length}</span></div>${stBars(c)}</div>
-    <button type="button" class="st-del" data-act="delete">このクライアントを削除</button>`;
+    <button type="button" class="st-del" data-act="print-all">資料をまとめてPDF・印刷</button>
+    <button type="button" class="st-del" data-act="delete" style="margin-top:4px">このクライアントを削除</button>`;
 }
 function stClientHtml(){
   const c=stClient(),s=ST_STEPS[stStepI],st=stStat(c,stStepI);
   const last=stStepI===ST_STEPS.length-1;
   const acts=`<span class="st-saved" id="stSaved">自動で保存します</span>
+    ${ST_PRINTABLE.includes(s.k)?'<button type="button" class="st-btn ghost" data-act="print">PDF・印刷</button>':''}
     <button type="button" class="st-btn ghost" data-act="skip">${st==='skip'?'スキップを取り消す':'スキップ'}</button>
     ${st==='done'
       ?`<button type="button" class="st-btn ghost" data-act="undone">完了を取り消す</button>${last?'':'<button type="button" class="st-btn pri" data-act="next">次の工程へ</button>'}`
@@ -17481,6 +17501,41 @@ async function stAfterRender(){
       if(box&&box.isConnected)box.innerHTML=src?`<img alt="デザインの見本" src="${src}"${k==='wire'?' style="filter:grayscale(1)"':''}>`:'<span class="ph">まだ何も置いていません</span>';
     }catch(e){if(box)box.innerHTML='<span class="ph">見本を表示できませんでした</span>';}
   }
+}
+/* ---- 印刷・PDF ---- */
+const ST_PRINTABLE=['info','hearing','persona','rules','content'];
+function stSheetSec(c,k){
+  const row=(q,a)=>`<div class="ss-row"><div class="ss-q">${escXml(q)}</div>${(a||'').trim()?`<div class="ss-a">${escXml(a.trim())}</div>`:'<div class="ss-blank"></div>'}</div>`;
+  let body='';
+  if(k==='info')body=ST_INFO.map(([f,l])=>row(l,f==='name'?c.name:c.info[f])).join('');
+  else if(k==='persona')body=ST_PERSONA.map(([f,l])=>row(l,c.persona[f])).join('');
+  else if(k==='hearing'||k==='content')body=c[k].map(x=>row(x.q,x.a)).join('');
+  else if(k==='rules'){
+    const fn=k2=>{const f=WFONTS.find(x=>x.k===k2);return f?f.n:'';};
+    body=`<div class="ss-sw">${c.rules.colors.map(x=>`<div><i style="background:${escXml(x.c)}"></i><span>${escXml(x.n)}<code>${escXml(x.c.toUpperCase())}</code></span></div>`).join('')}</div>`
+      +row('見出しの文字',fn(c.rules.head))+row('本文の文字',fn(c.rules.body))+row('余白の単位',(c.rules.space||8)+'px');
+  }
+  return`<section class="ss-sec"><h2>${ST_STEPS.find(x=>x.k===k).n}</h2>${body}</section>`;
+}
+async function stPrint(keys,title){
+  const c=stClient();if(!c)return;
+  /* 印刷の文字(明朝の見出し・ゴシックの本文)を読み込んでから出す */
+  if(!document.getElementById('stFont-light')){
+    const l=document.createElement('link');l.rel='stylesheet';l.id='stFont-light';
+    l.href='https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap';
+    document.head.appendChild(l);
+  }
+  const layer=$('#printLayer');
+  layer.innerHTML=`<div class="st-sheet"><header class="ss-head"><div class="ss-title">${escXml(title)}</div><div class="ss-meta"><b>${escXml(c.name)}</b>${stDate(Date.now())}</div></header>${keys.map(k=>stSheetSec(c,k)).join('')}</div>`;
+  $('#printStyle').textContent='@media print{@page{size:A4 portrait;margin:14mm 16mm;}}';
+  try{await Promise.race([Promise.all([document.fonts.load('20px "Shippori Mincho B1"'),document.fonts.load('14px "Zen Kaku Gothic New"')]),new Promise(r=>setTimeout(r,2500))]);}catch(e){}
+  document.body.classList.add('printing');
+  setTimeout(()=>{
+    window.print();
+    document.body.classList.remove('printing');
+    layer.innerHTML='<img id="printImg" alt="">';
+  },150);
+  toast('印刷の画面で「PDFに保存」を選ぶと、PDFになります');
 }
 /* 書いている途中の工程は「作業中」にする(並びの表示だけ描き直す。入力欄はそのまま) */
 function stTouch(c){
@@ -17586,6 +17641,8 @@ stEl().addEventListener('click',e=>{
   if(act==='color-del'){c.rules.colors.splice(+b.dataset.i,1);stTouch(c);stRender();return;}
   if(act==='space'){c.rules.space=+b.dataset.v;stTouch(c);stRender();return;}
   if(act==='canvas'){stOpenCanvas();return;}
+  if(act==='print'){const k=ST_STEPS[stStepI].k;stPrint([k],k==='hearing'?'ヒアリングシート':ST_STEPS[stStepI].n);return;}
+  if(act==='print-all'){stPrint(ST_PRINTABLE,'制作資料');return;}
 });
 stEl().addEventListener('input',e=>{
   const t=e.target;
