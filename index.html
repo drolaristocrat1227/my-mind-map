@@ -1120,6 +1120,7 @@ body.wirebar-off #wireHint{bottom:18px;}
 .fp-tabs button{padding:4px 10px;border:1px solid var(--panel-border);border-radius:999px;background:none;color:var(--ink);font-size:12px;cursor:pointer}
 .fp-tabs button.on{background:var(--accent);border-color:var(--accent);color:#fff}
 #fontPopList{flex:1;overflow-y:auto;padding:0 2px}
+.ruleEdit{border:0;background:none;padding:0;cursor:pointer;text-decoration:underline}
 .fp-g{font-size:12px;font-weight:700;color:var(--ink-soft);margin:12px 4px 6px}
 .fp-i{display:block;width:100%;margin:0 0 6px;padding:9px 12px;border:1px solid var(--panel-border);border-radius:12px;background:var(--node-bg);color:var(--ink);text-align:left;cursor:pointer}
 .fp-i:hover{border-color:var(--accent)}
@@ -1731,6 +1732,7 @@ kbd{
   </div>
   <div class="menu-label" id="fillLabel">塗り / 文字色</div>
   <div class="swatches" id="fillSwatches"></div>
+  <div id="ruleBox"></div>
   <div class="brandHead"><span>ブランドカラー</span><span class="brandHint">＋で保存 / 右クリックで削除</span></div>
   <div id="brandBox"></div>
   <input type="color" id="brandPick" style="position:absolute;width:0;height:0;opacity:0;pointer-events:none">
@@ -2684,7 +2686,7 @@ kbd{
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-25.5';
+const APP_VERSION='2026-10-25.6';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -12331,6 +12333,13 @@ function setBrandColorName(gid,idx,name){const g=brandGroupById(gid);if(g&&g.col
 /* パネル・マップ・文書のブランド表示を描き直す */
 function renderBrandColors(){
   const groups=brandGroups();
+  /* クライアントのデザインを開いている時は、そのデザインルールの色を先頭に出す */
+  const rb=$('#ruleBox'),rc=typeof stRuleClient==='function'?stRuleClient():null;
+  if(rb){
+    rb.style.display=rc?'block':'none';
+    rb.innerHTML=rc?`<div class="brandHead"><span>デザインルール</span><button type="button" class="brandHint ruleEdit" data-rule-edit="${rc.id}">ルールを編集</button></div>`
+      +`<div class="swatches">${rc.rules.colors.map(x=>{const h=normHex(x.c)||x.c;return`<button class="sw" data-fill="${escXml(h)}" style="background:${escXml(h)}" title="${escXml((x.n?x.n+' ':'')+h)}"></button>`;}).join('')}</div>`:'';
+  }
   /* ワイヤーの塗りパネル(グループ表示・管理あり) */
   const box=$('#brandBox');
   if(box){
@@ -15088,6 +15097,15 @@ function openFontPop(){
     const sample=f.dep?FP_SAMPLE_EN:FP_SAMPLE_JA;
     return`<button type="button" class="fp-i${f.k===cur?' on':''}" data-k="${f.k}"><span class="fp-s" style="font-family:${escXml(f.f)}">${escXml(sample)}</span><span class="fp-n">${escXml(f.n)}</span></button>`;
   }).join('')).join('');
+  /* クライアントのデザインを開いている時は、デザインルールの見出し・本文の文字を先頭に出す */
+  const rc=typeof stRuleClient==='function'?stRuleClient():null;
+  if(rc){
+    const rf=[['見出し',rc.rules.head],['本文',rc.rules.body]].map(([l,k])=>({l,f:WFONTS.find(x=>x.k===k&&x.web)})).filter(x=>x.f);
+    if(rf.length){
+      $('#fontPopTabs').insertAdjacentHTML('afterbegin','<button type="button" data-g="r">ルール</button>');
+      $('#fontPopList').insertAdjacentHTML('afterbegin','<div class="fp-g" id="fpgr">デザインルール</div>'+rf.map(({l,f})=>`<button type="button" class="fp-i${f.k===cur?' on':''}" data-k="${f.k}"><span class="fp-s" style="font-family:${escXml(f.f)}">${escXml(f.dep?FP_SAMPLE_EN:FP_SAMPLE_JA)}</span><span class="fp-n">${l}: ${escXml(f.n)}</span></button>`).join(''));
+    }
+  }
   const old=WFONTS.find(f=>f.k===cur&&f.old);
   if(old)$('#fontPopList').insertAdjacentHTML('afterbegin',`<div class="fp-g">今のフォント: ${escXml(old.n)}(端末のフォント。スマホなどでは別の字形になります)</div>`);
   if(fpIO)fpIO.disconnect();
@@ -17489,13 +17507,21 @@ function stOpenCanvas(){
   openWire(w.id);
   stSyncBack();
 }
+/* いま開いているキャンバスが、どのクライアントのデザインか */
+function stRuleClient(){return doc&&isWire()?stClients().find(x=>x.design===doc.current)||null:null;}
 /* キャンバスがクライアントのデザインの時は、工程の画面へ戻るボタンを出す */
 function stSyncBack(){
   const chip=$('#stBackChip');if(!chip||!doc)return;
   const c=!stEl().classList.contains('on')&&isWire()&&stClients().find(x=>x.design===doc.current);
   chip.classList.toggle('on',!!c);
+  renderBrandColors();
   if(c){chip.querySelector('span').textContent=c.name+' の工程へ';chip.dataset.id=c.id;}
 }
+$('#ruleBox').addEventListener('click',e=>{
+  const b=e.target.closest('[data-rule-edit]');if(!b)return;
+  e.stopPropagation();hideMenus();
+  stView='client';stCid=b.dataset.ruleEdit;stStepI=3;stOpen();
+});
 $('#stBackChip').addEventListener('click',()=>{
   const id=$('#stBackChip').dataset.id,c=stClients().find(x=>x.id===id);
   if(!c)return;
