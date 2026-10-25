@@ -2081,9 +2081,15 @@ kbd{
 .st-cvside .sws i{width:28px;height:28px;border-radius:var(--st-r);border:1px solid var(--st-line)}
 .st-note{font-size:13px;color:var(--st-muted);margin:0}
 /* キャンバスから工程の画面へ戻るボタン */
-#stBackChip{position:fixed;left:12px;bottom:84px;z-index:45;display:none;align-items:center;gap:6px;padding:9px 14px;border:0;border-radius:999px;
+#stCanvasBar{position:fixed;left:12px;bottom:84px;z-index:45;display:none;align-items:center;gap:8px}
+#stCanvasBar.on{display:flex}
+#stVm{display:flex;padding:3px;border-radius:999px;background:#15171D;box-shadow:0 6px 20px rgba(0,0,0,.25)}
+#stVm button{border:0;border-radius:999px;padding:7px 12px;background:transparent;color:#9097A6;font:600 12px/1.2 system-ui,-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif;cursor:pointer}
+#stVm button.on{background:#FF2E5E;color:#0D0E12}
+/* ワイヤー表示: 図形の色を消して、構成だけを見る(選択枠・ガイドは色のまま。書き出しには影響しない) */
+body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[clip-path]{filter:grayscale(1)}
+#stBackChip{display:flex;align-items:center;gap:6px;padding:9px 14px;border:0;border-radius:999px;
   background:#15171D;color:#E8EAF0;font:600 13px/1.2 system-ui,-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif;box-shadow:0 6px 20px rgba(0,0,0,.25);cursor:pointer}
-#stBackChip.on{display:flex}
 #stBackChip i{width:8px;height:8px;border-radius:50%;background:#FF2E5E}
 @media (max-width:640px){
   .st-bar{padding:10px 14px}
@@ -2099,7 +2105,7 @@ kbd{
 }
 </style>
 <div id="studio" data-theme="dark" role="dialog" aria-label="クライアント"></div>
-<button id="stBackChip" type="button"><i></i><span></span></button>
+<div id="stCanvasBar"><button id="stBackChip" type="button"><i></i><span></span></button><div id="stVm" role="group" aria-label="表示"><button type="button" data-vm="wire">ワイヤー</button><button type="button" data-vm="comp">カンプ</button></div></div>
 
 <!-- ドロワー -->
 <div id="drawerWrap">
@@ -2686,7 +2692,7 @@ kbd{
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-25.6';
+const APP_VERSION='2026-10-25.7';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -11093,7 +11099,7 @@ function selSvg(s){
     /* 固定中: グレー枠のみ(ハンドルなし) */
     return`<g transform="translate(${s.x} ${s.y}) rotate(${s.rot||0})" pointer-events="none"><rect x="${ox}" y="${oy}" width="${ow}" height="${oh}" fill="none" stroke="var(--ink-soft)" stroke-width="${sw}" stroke-dasharray="${5/wz} ${4/wz}"/></g>`;
   }
-  let h=`<g data-id="${s.id}" transform="translate(${s.x} ${s.y}) rotate(${s.rot||0})">`;
+  let h=`<g data-id="${s.id}" data-ui="1" transform="translate(${s.x} ${s.y}) rotate(${s.rot||0})">`;
   h+=`<rect x="${ox}" y="${oy}" width="${ow}" height="${oh}" fill="none" stroke="var(--accent)" stroke-width="${sw}" stroke-dasharray="${5/wz} ${4/wz}"/>`;
   /* 回転ハンドル(デバイスは外装の上に出す) */
   h+=`<line x1="0" y1="${oy}" x2="0" y2="${oy-23/wz}" stroke="var(--accent)" stroke-width="${sw}"/>`;
@@ -11106,7 +11112,7 @@ function selSvg(s){
 /* パスの点・ハンドル(自由変形用) */
 function pathEditSvg(s){
   const r=6/wz,sw=1.5/wz;
-  let h=`<g data-id="${s.id}" transform="translate(${s.x} ${s.y}) rotate(${s.rot||0})">`;
+  let h=`<g data-id="${s.id}" data-ui="1" transform="translate(${s.x} ${s.y}) rotate(${s.rot||0})">`;
   pathContours(s).forEach((pts,ci)=>{
     const col=ci?'var(--danger)':'var(--accent)';   /* 穴の点は赤で区別 */
     /* 辺の中点: ドラッグで曲線に曲げられる */
@@ -11132,7 +11138,7 @@ function pathEditSvg(s){
 function imgAdjustSvg(s){
   const f=s.imgFill,q=imgFillRect(s);
   const r=7/wz,sw=1.5/wz;
-  let h=`<g data-id="${s.id}" transform="translate(${s.x} ${s.y}) rotate(${s.rot||0})">`;
+  let h=`<g data-id="${s.id}" data-ui="1" transform="translate(${s.x} ${s.y}) rotate(${s.rot||0})">`;
   if(!f.show)   /* はみ出しを薄く見せて全体を掴めるように */
     h+=`<image href="${imgHref(f.src)}" x="${q.x}" y="${q.y}" width="${q.w}" height="${q.h}" preserveAspectRatio="none" opacity=".3" pointer-events="none"/>`;
   h+=`<rect data-ifmove="1" x="${q.x}" y="${q.y}" width="${q.w}" height="${q.h}" fill="transparent" stroke="var(--accent)" stroke-width="${sw}" stroke-dasharray="${5/wz} ${4/wz}"/>`;
@@ -11146,7 +11152,7 @@ function imgAdjustSvg(s){
 function textPickSvg(s){
   const L=textLayout(s);
   const sw=0.8/wz;
-  let h=`<g data-id="${s.id}" transform="translate(${s.x} ${s.y}) rotate(${s.rot||0})" style="cursor:text">`;
+  let h=`<g data-id="${s.id}" data-ui="1" transform="translate(${s.x} ${s.y}) rotate(${s.rot||0})" style="cursor:text">`;
   L.lines.forEach(l=>l.chars.forEach(c=>{
     const on=txSel&&txSel.sid===s.id&&c.i>=txSel.a&&c.i<=txSel.b;
     /* 当たり判定は行(列)の帯の中の1文字ぶん */
@@ -17472,7 +17478,7 @@ async function stAfterRender(){
     const box=$('#stCvImg');
     try{
       const src=await previewDataURL(c.design);
-      if(box&&box.isConnected)box.innerHTML=src?`<img alt="デザインの見本" src="${src}">`:'<span class="ph">まだ何も置いていません</span>';
+      if(box&&box.isConnected)box.innerHTML=src?`<img alt="デザインの見本" src="${src}"${k==='wire'?' style="filter:grayscale(1)"':''}>`:'<span class="ph">まだ何も置いていません</span>';
     }catch(e){if(box)box.innerHTML='<span class="ph">見本を表示できませんでした</span>';}
   }
 }
@@ -17502,6 +17508,7 @@ function stOpenCanvas(){
     if(!c.st[ST_STEPS[stStepI].k]){c.st[ST_STEPS[stStepI].k]='doing';}
     stSave(c);
   }
+  if(ST_STEPS[stStepI].k==='wire')w.view='wire';else delete w.view;
   stEl().classList.remove('on');
   try{localStorage.removeItem('ntd-st-open');}catch(e){}
   openWire(w.id);
@@ -17513,10 +17520,21 @@ function stRuleClient(){return doc&&isWire()?stClients().find(x=>x.design===doc.
 function stSyncBack(){
   const chip=$('#stBackChip');if(!chip||!doc)return;
   const c=!stEl().classList.contains('on')&&isWire()&&stClients().find(x=>x.design===doc.current);
-  chip.classList.toggle('on',!!c);
+  $('#stCanvasBar').classList.toggle('on',!!c);
+  /* ワイヤー表示はクライアントのデザインだけ(デザインごとに覚える) */
+  const gray=!!c&&curDoc().view==='wire';
+  document.body.classList.toggle('wire-gray',gray);
+  document.querySelectorAll('#stVm button').forEach(b=>b.classList.toggle('on',b.dataset.vm===(gray?'wire':'comp')));
   renderBrandColors();
   if(c){chip.querySelector('span').textContent=c.name+' の工程へ';chip.dataset.id=c.id;}
 }
+$('#stVm').addEventListener('click',e=>{
+  const b=e.target.closest('[data-vm]');if(!b)return;
+  const d=curDoc();if(!d||!d.shapes)return;
+  if(b.dataset.vm==='wire')d.view='wire';else delete d.view;
+  save();stSyncBack();
+  toast(b.dataset.vm==='wire'?'ワイヤー表示: 色を消して構成だけを見ます(書き出すHTMLは色つきのままです)':'カンプ表示: 色つきで見ます');
+});
 $('#ruleBox').addEventListener('click',e=>{
   const b=e.target.closest('[data-rule-edit]');if(!b)return;
   e.stopPropagation();hideMenus();
