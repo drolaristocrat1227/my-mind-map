@@ -850,8 +850,14 @@ body:not(.wire-mode) #layerPanel{display:none;}
 .btnChk{display:inline-flex;align-items:center;gap:3px;font-size:11px;color:var(--ink-soft);margin-left:6px;white-space:nowrap;cursor:pointer}
 .btnHint{font-size:11px;line-height:1.6;color:var(--ink-soft);margin:6px 0 8px}
 #btnFields .numRow input[type=text]{flex:1;min-width:0}
-#btnFields .radLbl{flex:none;width:7.2em;white-space:normal;line-height:1.3}
-#btnFields .radRow input[type=range]{flex:1;min-width:60px;touch-action:none}
+#btnFields .radLbl,#uiFields .radLbl{flex:none;width:7.2em;white-space:normal;line-height:1.3}
+/* スライダーは見出しを上の行にして、横幅いっぱいに使う(細かく、滑らかに動かせる) */
+#btnFields .radRow.btnRow,#uiFields .radRow.btnRow{flex-wrap:wrap;row-gap:2px}
+#btnFields .radRow.btnRow>.radLbl,#uiFields .radRow.btnRow>.radLbl{width:100%}
+#fillMenu input[type=range]{touch-action:none;cursor:pointer}
+#uiFields .numRow input[type=text],#uiFields textarea{flex:1;min-width:0}
+#uiFields .btnNum{width:58px;flex:none;padding:4px 6px;border-radius:8px;border:1px solid var(--panel-border);background:var(--node-bg);color:var(--ink);font:inherit;font-size:12px;text-align:right}
+#btnFields .radRow input[type=range],#uiFields .radRow input[type=range]{flex:1;min-width:60px;touch-action:none}
 #btnFields .btnNum{width:58px;flex:none;padding:4px 6px;border-radius:8px;border:1px solid var(--panel-border);background:var(--node-bg);color:var(--ink);font:inherit;font-size:12px;text-align:right}
 #btnFields .btnNum:disabled{opacity:.35}
 #btnFields .btnRow{flex-wrap:wrap;row-gap:4px}
@@ -1751,6 +1757,11 @@ kbd{
     <div class="numRow"><span class="radLbl">埋め込み</span><input type="text" id="mapSrc" spellcheck="false" autocomplete="off" placeholder="「地図を埋め込む」のコード(省略可)" style="flex:1;min-width:0"></div>
     <p class="btnHint">「場所」を入れるだけで、書き出したページに本物の地図が出ます。ピンの位置を細かく決めたい時は、Googleマップの「共有」→「地図を埋め込む」のコードを貼ります。</p>
     <div class="segRow"><button class="seg" id="mapOpen">Googleマップで場所を確かめる</button></div>
+  </div>
+  <div id="uiPart">
+    <hr>
+    <div class="menu-label" id="uiPartName">UIパーツ</div>
+    <div id="uiFields"></div>
   </div>
   <div id="btnPart">
     <hr>
@@ -2863,7 +2874,7 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-27.2';
+const APP_VERSION='2026-10-27.3';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -3004,6 +3015,7 @@ function eachImageSrc(d,fn){
   (d.wires||[]).forEach(w=>(w.shapes||[]).forEach(s=>{
     if(s.src)fn(s,'src');
     if(s.imgFill&&s.imgFill.src)fn(s.imgFill,'src');
+    if(s.ui&&s.ui.img)fn(s.ui,'img');
     /* メディア(動画ファイル・その最初の画面・カルーセルと横スクロールの画像) */
     if(s.media){
       const m=s.media;
@@ -6652,6 +6664,7 @@ function siteMedia(s,o){
 function siteShapeEl(s,o,tagOf){
   if(s.media)return siteAttrs(siteMedia(s,o),s);
   if(s.type==='btn')return siteAttrs(siteBtn(s,o),s);
+  if(s.type==='ui')return siteAttrs(siteUi(s,o),s);
   if(s.type==='gmap')return siteAttrs(siteMap(s,o),s);
   if(s.type==='text'&&siteTextOk(s))return siteAttrs(siteText(s,o,tagOf(s)),s);
   const el=siteAttrs((s.type==='image'?siteImage(s,o):siteCssBox(s,o))||siteSvg(s,o),s);
@@ -6988,19 +7001,42 @@ img{display:block;max-width:none}
 .nt-flow{white-space:pre-wrap;overflow-wrap:anywhere}
 /* Googleマップ */
 .nt-map{display:block;background:#E5EBEE}
+/* UIパーツ(カード・チェックボックス・トグル・入力欄・検索バー・タブ・ナビ) */
+.nt-ui{display:block}
+.nt-ui-p{position:absolute;display:block;margin:0;padding:0;border:0;background:none;white-space:nowrap;font:inherit;text-align:left}
+.nt-ui-tx{line-height:1.6}
+.nt-ui-img{overflow:hidden;background:#E3E6EC}
+.nt-ui-img img{display:block;width:100%;height:100%;object-fit:cover}
+.nt-ui-ic{position:absolute;overflow:visible;z-index:1;pointer-events:none}
+.nt-ui-in{position:absolute;inset:0;width:100%;height:100%;box-sizing:border-box;color:#1F1D1A;outline:none}
+.nt-ui-in::placeholder{color:var(--ph)}
+.nt-ui-in:focus{box-shadow:0 0 0 3px rgba(46,91,79,.18)}
+.nt-ui-t{display:flex;align-items:center}
+.nt-ui-sw{cursor:pointer}
+.nt-ui-cb{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer;z-index:1}
+.nt-uc-box{background:var(--off);box-shadow:inset 0 0 0 1.5px var(--offb);transition:background .2s}
+.nt-uc-mark{opacity:0;transition:opacity .2s}
+.nt-ui-sw:has(.nt-ui-cb:checked) .nt-uc-box{background:var(--on);box-shadow:none}
+.nt-ui-sw:has(.nt-ui-cb:checked) .nt-uc-mark{opacity:1}
+.nt-ut-track{background:var(--off);transition:background .2s}
+.nt-ut-knob{border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,.25);transition:translate .2s}
+.nt-ui-sw:has(.nt-ui-cb:checked) .nt-ut-track{background:var(--on)}
+.nt-ui-sw:has(.nt-ui-cb:checked) .nt-ut-knob{translate:var(--mv) 0}
+.nt-ui-cb:focus-visible~.nt-uc-box,.nt-ui-cb:focus-visible~.nt-ut-track{outline:2px solid currentColor;outline-offset:2px}
+.nt-ui-tabs button{cursor:pointer}
 /* ボタン(ふだん/ホバー。スマホはタップで .nt-hov が付く) */
 .nt-button{display:flex;align-items:center;justify-content:center;box-sizing:border-box;background:var(--bg);border:var(--bw) solid var(--bc);border-radius:var(--r);color:var(--tc);cursor:pointer;white-space:nowrap;overflow:hidden;line-height:1.2;transition:background-color var(--d),border-color var(--d),border-width var(--d),border-radius var(--d),color var(--d)}
 .nt-button:hover,.nt-button.nt-hov{background:var(--bgh,var(--bg));border-color:var(--bch,var(--bc));border-width:var(--bwh,var(--bw));border-radius:var(--rh,var(--r));color:var(--tch,var(--tc))}
 .nt-bi{display:flex;align-items:center;gap:var(--gap)}
-.nt-bt{display:grid;overflow:hidden}
+.nt-bt{display:grid;overflow:hidden;transition:translate var(--d)}
 .nt-bt>span{grid-area:1/1;transition:opacity var(--d),translate var(--d)}
 .nt-bt2{opacity:0;translate:0 70%}
 .nt-btx:hover .nt-bt1,.nt-btx.nt-hov .nt-bt1{opacity:0;translate:0 -70%}
 .nt-btx:hover .nt-bt2,.nt-btx.nt-hov .nt-bt2{opacity:1;translate:0 0}
-.nt-ba{flex:none;overflow:visible;rotate:var(--aang,0deg);transition:color var(--d),translate var(--d),rotate var(--d)}
+.nt-ba{position:absolute;overflow:visible;rotate:var(--aang,0deg);transition:color var(--d),translate var(--d),rotate var(--d)}
 .nt-ba .nt-sh{transform-box:fill-box;transform-origin:0 50%;transition:scale var(--d)}
 .nt-ba .nt-hd{transition:translate var(--d)}
-.nt-button:hover .nt-ba,.nt-button.nt-hov .nt-ba{translate:var(--adx,0px) 0;rotate:var(--aangh,var(--aang,0deg))}
+.nt-button:hover .nt-ba,.nt-button.nt-hov .nt-ba{translate:var(--adx,0px) var(--ady,0px)}
 .nt-button:hover .nt-bach,.nt-button.nt-hov .nt-bach{color:var(--ach)}
 .nt-button:hover .nt-sh,.nt-button.nt-hov .nt-sh{scale:var(--ak,1) 1}
 .nt-button:hover .nt-hd,.nt-button.nt-hov .nt-hd{translate:var(--adl,0px) 0}
@@ -9249,6 +9285,7 @@ function siteImageUses(d,pages){
   frames.forEach(f=>[f,...frameDescendants(d.shapes,f)].forEach(s=>{
     if(s.hidden)return;
     if(s.type==='image'&&s.src)need(s.src,s.imgBox?s.imgBox.w:s.w,s.imgBox?s.imgBox.h:s.h);
+    if(s.type==='ui'&&s.ui&&s.ui.img)need(s.ui.img,s.w,s.h*0.6);
     if(s.media){
       (s.media.imgs||[]).forEach(r=>need(r,s.w,s.h));
       (s.media.items||[]).forEach(it=>{if(it.img)need(it.img,0,s.h*0.8);});
@@ -9959,6 +9996,8 @@ async function makeWireCanvas(w,opt){
       doFill(()=>ctx.fill(p2));
       drawImgFill(p2);
       if(!s.noStroke&&strokeW(s)>0)doStroke(spaint,sa,()=>ctx.stroke(p2));
+    }else if(s.type==='ui'){
+      uiCanvas(ctx,s);
     }else if(s.type==='gmap'){
       gmapCanvas(ctx,s);
     }else if(s.type==='btn'){
@@ -11262,6 +11301,7 @@ function devPartsCanvas(ctx,parts){
 }
 
 function shapeSvg(s){
+  if(s.type==='ui')return uiSvg(s);
   if(s.type==='btn')return btnSvg(s);
   if(s.type==='gmap')return gmapSvg(s);
   const tr=`transform="translate(${s.x} ${s.y}) rotate(${s.rot||0})"`;
@@ -12201,56 +12241,13 @@ function addIcon(iconId){
    消える。なお四角の fill:null は「塗りなし(透明)」という別の意味なので、
    アウトラインボタンのように意図している場合はそのままでよい。
    ============================================================ */
-const UI_PARTS=[
-  {id:'btnPrimary',n:'ボタン(塗り)',build:()=>[
-    {type:'rect',x:0,y:0,w:140,h:44,rot:0,fill:'#4A7DE8',noStroke:true,r:10},
-    {type:'text',x:0,y:0,rot:0,fill:'#FFFFFF',text:'ボタン',fs:15,fw:600,va:'middle'}
-  ]},
-  {id:'btnOutline',n:'ボタン(アウトライン)',build:()=>[
-    {type:'rect',x:0,y:0,w:140,h:44,rot:0,fill:null,noStroke:false,sc:'#4A7DE8',sw:1.5,r:10},
-    {type:'text',x:0,y:0,rot:0,fill:'#4A7DE8',text:'ボタン',fs:15,fw:600,va:'middle'}
-  ]},
-  {id:'input',n:'入力欄',build:()=>[
-    {type:'rect',x:0,y:0,w:240,h:44,rot:0,fill:'#FFFFFF',noStroke:false,sc:'#D7DBE2',sw:1.5,r:8},
-    {type:'text',x:-58,y:0,rot:0,fill:'#8B93A6',text:'プレースホルダー',fs:13,fw:400,va:'middle'}
-  ]},
-  {id:'checkbox',n:'チェックボックス',build:()=>[
-    {type:'rect',x:-70,y:0,w:20,h:20,rot:0,fill:'#FFFFFF',noStroke:false,sc:'#8B93A6',sw:1.5,r:4},
-    {type:'icon',x:-70,y:0,w:14,h:14,rot:0,fill:'#4A7DE8',noStroke:true,iconId:'check'},
-    {type:'text',x:8,y:0,rot:0,fill:'#23262D',text:'チェックボックス',fs:14,fw:400,va:'middle'}
-  ]},
-  {id:'toggle',n:'トグルスイッチ',build:()=>[
-    {type:'rect',x:0,y:0,w:44,h:24,rot:0,fill:'#4A7DE8',noStroke:true,r:12},
-    {type:'ellipse',x:10,y:0,w:18,h:18,rot:0,fill:'#FFFFFF',noStroke:true}
-  ]},
-  {id:'tabs',n:'タブバー',build:()=>[
-    {type:'text',x:-90,y:-6,rot:0,fill:'#4A7DE8',text:'タブ1',fs:14,fw:700,va:'middle'},
-    {type:'text',x:0,y:-6,rot:0,fill:'#8B93A6',text:'タブ2',fs:14,fw:500,va:'middle'},
-    {type:'text',x:90,y:-6,rot:0,fill:'#8B93A6',text:'タブ3',fs:14,fw:500,va:'middle'},
-    {type:'rect',x:-90,y:16,w:40,h:3,rot:0,fill:'#4A7DE8',noStroke:true,r:1.5}
-  ]},
-  {id:'card',n:'カード',build:()=>[
-    {type:'rect',x:0,y:0,w:220,h:260,rot:0,fill:'#FFFFFF',noStroke:true,r:14,shadows:[{ang:90,dist:4,b:16,c:'#000000',a:0.12}]},
-    {type:'rect',x:0,y:-60,w:196,h:110,rot:0,fill:'#E9ECF2',noStroke:true,r:8},
-    {type:'text',x:-86,y:20,rot:0,fill:'#23262D',text:'見出し',fs:15,fw:700,va:'middle'},
-    {type:'text',x:-86,y:44,rot:0,fill:'#8B93A6',text:'説明テキスト',fs:12,fw:400,va:'middle'}
-  ]},
-  {id:'searchBar',n:'検索バー',build:()=>[
-    {type:'rect',x:0,y:0,w:220,h:44,rot:0,fill:'#FFFFFF',noStroke:false,sc:'#D7DBE2',sw:1.5,r:22},
-    {type:'icon',x:-84,y:0,w:18,h:18,rot:0,fill:'#8B93A6',noStroke:true,iconId:'search'},
-    {type:'text',x:-40,y:0,rot:0,fill:'#8B93A6',text:'検索',fs:14,fw:400,va:'middle'}
-  ]},
-  {id:'navbar',n:'ナビゲーションバー',build:()=>[
-    {type:'rect',x:0,y:0,w:320,h:56,rot:0,fill:'#FFFFFF',noStroke:false,sc:'#E7E9EE',sw:1,r:0},
-    {type:'icon',x:-140,y:0,w:20,h:20,rot:0,fill:'#23262D',noStroke:true,iconId:'arrowLeft'},
-    {type:'text',x:0,y:0,rot:0,fill:'#23262D',text:'タイトル',fs:16,fw:700,va:'middle'},
-    {type:'icon',x:140,y:0,w:20,h:20,rot:0,fill:'#23262D',noStroke:true,iconId:'settings'}
-  ]}
-];
+/* UIパーツ(部品)。中身・見た目は「色とスタイル」の各パーツの設定で変える(UI_KINDS)。ボタンは「ボタンを足す」へ */
+const UI_PARTS=[{id:'card',n:'カード'},{id:'check',n:'チェックボックス'},{id:'toggle',n:'トグルスイッチ'},{id:'input',n:'入力欄'},{id:'search',n:'検索バー'},{id:'tabs',n:'タブ'},{id:'nav',n:'ナビゲーションバー'}];
 const partById=id=>UI_PARTS.find(p=>p.id===id);
 /* UIパーツを配置(画面中央に、複数の図形をグループとして) */
 function addPart(partId){
   const part=partById(partId);if(!part)return;
+  if(typeof uiAdd==='function'&&!part.build){uiAdd(partId);return;}
   const d=curDoc();if(!d.shapes)return;
   exitPen();exitEraser();exitBrush();
   pushUndo();
@@ -12290,7 +12287,7 @@ function addDeviceFrame(k){
   addFrame(d.w,d.h,d.n,true,{device:{kind:d.kind},r:d.r});
 }
 /* ---------- 大きさ(px)をパネルから指定 ---------- */
-const sizeableShape=s=>['rect','ellipse','path','line','image','icon','btn','gmap'].includes(s.type);
+const sizeableShape=s=>['rect','ellipse','path','line','image','icon','btn','gmap','ui'].includes(s.type);
 let szLink=true;   /* 縦横比を保つ(既定ON) */
 /* 中心を保ったまま大きさを変える。パスは点も比率で拡縮 */
 function resizeShapeTo(s,nw,nh){
@@ -15537,7 +15534,7 @@ $('#wireBarToggleBtn').onclick=toggleWireBar;
 applyWireBar();
 
 /* ---------- レイヤーパネル ---------- */
-const SHAPE_TYPE_LABEL={gmap:'地図',btn:'ボタン',rect:'四角',ellipse:'丸',line:'線',text:'テキスト',image:'画像',path:'パス',frame:'フレーム',icon:'アイコン'};
+const SHAPE_TYPE_LABEL={ui:'UIパーツ',gmap:'地図',btn:'ボタン',rect:'四角',ellipse:'丸',line:'線',text:'テキスト',image:'画像',path:'パス',frame:'フレーム',icon:'アイコン'};
 function shapeLabel(s){
   if(s.name)return s.name;
   if(s.role&&LAY_KIND[s.role])return LAY_KIND[s.role];
@@ -16278,6 +16275,7 @@ function updateStyleMenu(){
   renderIcoPart();
   renderBtnPart();
   renderMapPart();
+  renderUiPart();
   $('#textSec').style.display=texts.length?'block':'none';
   if(texts.length){
     const t0=texts[0];
@@ -17747,7 +17745,7 @@ const LAY_ICONS={
   btn:'<svg viewBox="0 0 24 24"><rect x="2.5" y="7" width="19" height="10" rx="5"/><path d="M13 12h5M16 10l2 2-2 2"/></svg>',
   gmap:'<svg viewBox="0 0 24 24"><path d="M12 21s-6-5.6-6-11a6 6 0 0 1 12 0c0 5.4-6 11-6 11z"/><circle cx="12" cy="10" r="2.2"/></svg>'
 };
-function layIcon(s,k){return LAY_ICONS[s.type==='btn'||s.type==='gmap'?s.type:k]||layerIconFor(s);}
+function layIcon(s,k){return LAY_ICONS[s.type==='btn'||s.type==='gmap'?s.type:s.type==='ui'?'btn':k]||layerIconFor(s);}
 /* ---- ページ・セクション・コンテナを足す ---- */
 function layTopFrames(sh){const par=layParents(sh);return sh.filter((s,i)=>isFrame(s)&&!par[i]);}
 function layAddPage(){
@@ -17945,16 +17943,19 @@ function btnSet(o,k,v){
   const t=ks.reduce((a,x)=>(a[x]=a[x]||{}),o);
   if(v===undefined||v===null||v==='')delete t[last];else t[last]=v;
 }
-/* いま見せる値(ホバーを見ている時はホバーの値を重ねる) */
+/* いま見せる値(ホバーを見ている時はホバーの値を重ねる)。
+   文字はボタンの真ん中(tx,ty でずらせる)。矢印は文字の右か左に置き(ax,ay でずらせる)、向きは dir(既定は右) */
+const BTN_DIR={right:{a:0,x:1,y:0},left:{a:180,x:-1,y:0},up:{a:-90,x:0,y:-1},down:{a:90,x:0,y:1}};
 function btnLook(s,hover){
   const b=s.btn,h=hover?(b.hv||{}):{},ar=b.ar||{};
   const pick=(k,hk)=>h[hk||k]!==undefined?h[hk||k]:b[k];
+  const dir=BTN_DIR[ar.dir]||BTN_DIR.right;
   return{
     t:(hover&&h.t)?h.t:b.t,fs:b.fs,fw:b.fw,ff:b.ff||docFont(),tc:pick('tc'),bg:pick('bg'),bc:pick('bc'),bw:pick('bw')||0,
     shape:pick('shape'),r:pick('r'),ic:b.ic||'none',gap:b.gap!==undefined?b.gap:12,
-    ar:{st:ar.st||'line',len:hover&&h.alen!==undefined?h.alen:(ar.len||22),th:ar.th||1.5,hd:ar.hd||6,
-      ang:b.ic==='left'?180:0,
-      col:(hover&&h.ac)?h.ac:(ar.col||pick('tc')),dx:hover?(h.adx||0)*(b.ic==='left'?-1:1):0}
+    tx:+b.tx||0,ty:+b.ty||0,ax:+b.ax||0,ay:+b.ay||0,dir,
+    ar:{st:ar.st||'line',len:hover&&h.alen!==undefined?h.alen:(ar.len||22),th:ar.th||1.5,hd:ar.hd||6,ang:dir.a,
+      col:(hover&&h.ac)?h.ac:(ar.col||pick('tc')),dx:hover?(h.adx||0)*dir.x:0,dy:hover?(h.adx||0)*dir.y:0}
   };
 }
 const btnRadius=(L,h)=>L.shape==='pill'?h/2:L.shape==='round'?(L.r||0):0;
@@ -17971,11 +17972,16 @@ function btnArrowGeo(a){
   if(a.st==='tri')return{w:L,shaft:`M0 0H${Math.max(0,L-H*1.4)}`,head:`M${L} 0L${L-H*1.4} ${-H}L${L-H*1.4} ${H}Z`,fillHead:true};
   return{w:L,shaft:`M0 0H${L}`,head:`M${L-H} ${-H*0.85}L${L} 0L${L-H} ${H*0.85}`,fillHead:false};
 }
-/* 中身の並び: [矢印][間][文字] か [文字][間][矢印] を真ん中に */
-function btnLayoutX(L){
-  const tw=btnTextW(L),hasA=L.ic!=='none',aw=hasA?btnArrowGeo({...L.ar,len:L.ar.len}).w:0;
-  const total=tw+(hasA?L.gap+aw:0),x0=-total/2;
-  return{tw,aw,textX:L.ic==='left'?x0+aw+L.gap:x0,arrowX:L.ic==='left'?x0:x0+tw+L.gap};
+/* 文字と矢印の位置(ボタンの真ん中が 0,0)。矢印の位置は、ずらす前の文字の端から決める */
+function btnLayout(L){
+  const tw=btnTextW(L),g=L.ic==='none'?null:btnArrowGeo(L.ar);
+  const out={tw,textX:L.tx,textY:L.ty,g};
+  if(g){
+    const vert=L.dir.y!==0,span=vert?L.ar.hd*2:g.w;   /* 横に占める幅(上下向きは先の幅) */
+    const cx=L.ic==='left'?-tw/2-L.gap-span/2:tw/2+L.gap+span/2;
+    out.ax=cx+L.ax;out.ay=L.ay;out.aw=g.w;
+  }
+  return out;
 }
 function btnArrowSvgInner(a,stroke){
   const g=btnArrowGeo(a);
@@ -17983,63 +17989,62 @@ function btnArrowSvgInner(a,stroke){
     +(g.fillHead?`<path d="${g.head}" fill="${stroke}"/>`:`<path d="${g.head}" fill="none" stroke="${stroke}" stroke-width="${a.th}" stroke-linecap="round" stroke-linejoin="round"/>`);
 }
 function btnSvg(s){
-  const L=btnLook(s,btnHoverPrev===s.id),X=btnLayoutX(L);
+  const L=btnLook(s,btnHoverPrev===s.id),X=btnLayout(L);
   const rr=Math.min(btnRadius(L,s.h),s.h/2,s.w/2);
   const tr=`transform="translate(${s.x} ${s.y}) rotate(${s.rot||0})"`;
   const bw=L.bw||0;
   let h=`<g data-id="${s.id}" ${tr}>`;
   h+=`<rect x="${-s.w/2+bw/2}" y="${-s.h/2+bw/2}" width="${Math.max(0,s.w-bw)}" height="${Math.max(0,s.h-bw)}" rx="${Math.max(0,rr-bw/2)}" fill="${L.bg&&L.bg!=='none'?L.bg:'transparent'}" stroke="${bw?L.bc:'none'}" stroke-width="${bw}"/>`;
-  h+=`<text x="${X.textX}" y="0" dominant-baseline="central" font-size="${L.fs}" font-weight="${L.fw}" font-family="${escXml(cssFont(L.ff))}" fill="${L.tc}" style="white-space:pre">${escXml(L.t||'')}</text>`;
-  if(L.ic!=='none'){
-    const cx=X.arrowX+X.aw/2;
-    h+=`<g transform="translate(${X.arrowX+L.ar.dx} 0) rotate(${L.ar.ang} ${X.aw/2} 0)">${btnArrowSvgInner(L.ar,L.ar.col)}</g>`;
-  }
+  h+=`<text x="${X.textX}" y="${X.textY}" text-anchor="middle" dominant-baseline="central" font-size="${L.fs}" font-weight="${L.fw}" font-family="${escXml(cssFont(L.ff))}" fill="${L.tc}" style="white-space:pre">${escXml(L.t||'')}</text>`;
+  if(X.g)h+=`<g transform="translate(${X.ax+L.ar.dx} ${X.ay+L.ar.dy}) rotate(${L.ar.ang}) translate(${-X.aw/2} 0)">${btnArrowSvgInner(L.ar,L.ar.col)}</g>`;
   return h+'</g>';
 }
 /* 画像(PNG・PDF)に書き出す時 */
 function btnCanvas(ctx,s){
-  const L=btnLook(s,false),X=btnLayoutX(L),rr=Math.min(btnRadius(L,s.h),s.h/2,s.w/2),bw=L.bw||0;
+  const L=btnLook(s,false),X=btnLayout(L),rr=Math.min(btnRadius(L,s.h),s.h/2,s.w/2),bw=L.bw||0;
   const p=new Path2D();p.roundRect(-s.w/2+bw/2,-s.h/2+bw/2,Math.max(0,s.w-bw),Math.max(0,s.h-bw),Math.max(0,rr-bw/2));
   if(L.bg&&L.bg!=='none'){ctx.fillStyle=L.bg;ctx.fill(p);}
   if(bw){ctx.strokeStyle=L.bc;ctx.lineWidth=bw;ctx.stroke(p);}
-  ctx.fillStyle=L.tc;ctx.textBaseline='middle';ctx.textAlign='left';
-  ctx.font=`${L.fw} ${L.fs}px ${cssFont(L.ff)}`;ctx.fillText(L.t||'',X.textX,0);
-  if(L.ic!=='none'){
-    const g=btnArrowGeo(L.ar);
-    ctx.save();ctx.translate(X.arrowX,0);ctx.translate(X.aw/2,0);ctx.rotate(L.ar.ang*Math.PI/180);ctx.translate(-X.aw/2,0);
+  ctx.fillStyle=L.tc;ctx.textBaseline='middle';ctx.textAlign='center';
+  ctx.font=`${L.fw} ${L.fs}px ${cssFont(L.ff)}`;ctx.fillText(L.t||'',X.textX,X.textY);
+  if(X.g){
+    const g=X.g;
+    ctx.save();ctx.translate(X.ax,X.ay);ctx.rotate(L.ar.ang*Math.PI/180);ctx.translate(-X.aw/2,0);
     ctx.strokeStyle=L.ar.col;ctx.fillStyle=L.ar.col;ctx.lineWidth=L.ar.th;ctx.lineCap='round';ctx.lineJoin='round';
     if(g.shaft)ctx.stroke(new Path2D(g.shaft));
     if(g.fillHead)ctx.fill(new Path2D(g.head));else ctx.stroke(new Path2D(g.head));
     ctx.restore();
   }
 }
-/* ホームページに書き出す: 本物の文字と、CSSの変数で「ふだん」と「ホバー」を持たせる */
+/* ホームページに書き出す: 本物の文字と、CSSの変数で「ふだん」と「ホバー」を持たせる。
+   文字は真ん中(ずらした分だけ動かす)、矢印は編集画面で決めた位置に置き、向きの分だけ回す */
 function siteBtn(s,o){
-  const b=s.btn,h=b.hv||{},L=btnLook(s,false);
+  const b=s.btn,h=b.hv||{},L=btnLook(s,false),X=btnLayout(L);
   const rad=(shape,r)=>shape==='pill'?'999px':shape==='round'?cssNum(r||0)+'px':'0px';
   const v=[siteBox(s,o,s.w,s.h),`font-family:${cssFont(L.ff)}`,`font-size:${cssNum(L.fs)}px`,`font-weight:${L.fw}`,
     `--tc:${cssCol(L.tc)}`,`--bg:${L.bg&&L.bg!=='none'?cssCol(L.bg):'transparent'}`,`--bc:${cssCol(L.bc||'#000000')}`,`--bw:${cssNum(L.bw)}px`,
-    `--r:${rad(L.shape,L.r)}`,`--gap:${cssNum(L.gap)}px`,`--d:${cssNum(h.dur||0.3)}s`];
+    `--r:${rad(L.shape,L.r)}`,`--d:${cssNum(h.dur||0.3)}s`];
   if(h.tc)v.push(`--tch:${cssCol(h.tc)}`);
   if(h.bg)v.push(`--bgh:${h.bg==='none'?'transparent':cssCol(h.bg)}`);
   if(h.bc)v.push(`--bch:${cssCol(h.bc)}`);
   if(h.bw!==undefined)v.push(`--bwh:${cssNum(h.bw)}px`);
   if(h.shape)v.push(`--rh:${rad(h.shape,h.r!==undefined?h.r:L.r)}`);
   let arrow='';
-  if(L.ic!=='none'){
-    const a=L.ar,g=btnArrowGeo(a),ah=a.hd*2+a.th*2;
+  if(X.g){
+    const a=L.ar,g=X.g,ah=a.hd*2+a.th*2;
     const k=h.alen?h.alen/Math.max(1,a.len):1,dl=h.alen&&a.st!=='chev'?h.alen-a.len:0;
-    const ang=a.ang,angH=ang;
-    v.push(`--aang:${cssNum(ang)}deg`,`--aangh:${cssNum(angH)}deg`,`--adx:${cssNum((h.adx||0)*(b.ic==='left'?-1:1))}px`,`--ak:${cssNum(k)}`,`--adl:${cssNum(dl)}px`);
-    const st=[b.ar&&b.ar.col?`color:${cssCol(b.ar.col)}`:'',h.ac?`--ach:${cssCol(h.ac)}`:''].filter(Boolean).join(';');
-    arrow=`<svg class="nt-ba${h.ac?' nt-bach':''}" aria-hidden="true" width="${cssNum(g.w)}" height="${cssNum(ah)}" viewBox="0 ${cssNum(-ah/2)} ${cssNum(g.w)} ${cssNum(ah)}"${st?` style="${st}"`:''}>`
+    v.push(`--aang:${cssNum(a.ang)}deg`,`--adx:${cssNum((h.adx||0)*L.dir.x)}px`,`--ady:${cssNum((h.adx||0)*L.dir.y)}px`,`--ak:${cssNum(k)}`,`--adl:${cssNum(dl)}px`);
+    /* ボタンの枠の内側が基準(枠線の分を引く) */
+    const left=s.w/2+X.ax-g.w/2-L.bw,top=s.h/2+X.ay-ah/2-L.bw;
+    const st=[`left:${cssNum(left)}px`,`top:${cssNum(top)}px`,b.ar&&b.ar.col?`color:${cssCol(b.ar.col)}`:'',h.ac?`--ach:${cssCol(h.ac)}`:''].filter(Boolean).join(';');
+    arrow=`<svg class="nt-ba${h.ac?' nt-bach':''}" aria-hidden="true" width="${cssNum(g.w)}" height="${cssNum(ah)}" viewBox="0 ${cssNum(-ah/2)} ${cssNum(g.w)} ${cssNum(ah)}" style="${st}">`
       +(g.shaft?`<path class="nt-sh" d="${g.shaft}" fill="none" stroke="currentColor" stroke-width="${a.th}" stroke-linecap="round"/>`:'')
       +`<g class="nt-hd">`+(g.fillHead?`<path d="${g.head}" fill="currentColor"/>`:`<path d="${g.head}" fill="none" stroke="currentColor" stroke-width="${a.th}" stroke-linecap="round" stroke-linejoin="round"/>`)+'</g></svg>';
   }
   const two=!!(h.t&&h.t!==b.t);
-  const txt=two?`<span class="nt-bt"><span class="nt-bt1">${escXml(b.t||'')}</span><span class="nt-bt2" aria-hidden="true">${escXml(h.t)}</span></span>`:`<span class="nt-bt"><span class="nt-bt1">${escXml(b.t||'')}</span></span>`;
-  const inner=b.ic==='left'?arrow+txt:txt+arrow;
-  return`<span class="nt-e nt-button nt-h${two?' nt-btx':''}" style="${v.join(';')}"><span class="nt-bi">${inner}</span></span>`;
+  const tst=(L.tx||L.ty)?` style="translate:${cssNum(L.tx)}px ${cssNum(L.ty)}px"`:'';
+  const txt=two?`<span class="nt-bt"${tst}><span class="nt-bt1">${escXml(b.t||'')}</span><span class="nt-bt2" aria-hidden="true">${escXml(h.t)}</span></span>`:`<span class="nt-bt"${tst}><span class="nt-bt1">${escXml(b.t||'')}</span></span>`;
+  return`<span class="nt-e nt-button nt-h${two?' nt-btx':''}" style="${v.join(';')}">${txt}${arrow}</span>`;
 }
 /* ---- 足す ---- */
 function btnAdd(){
@@ -18070,13 +18075,16 @@ const BTN_FIELDS={
     ['tc','文字の色','color'],['bg','塗り','color',{none:'塗りなし'}],
     ['shape','形','seg',[['square','四角'],['round','角丸'],['pill','丸い']]],['r','角の丸み','range',0,40,1,{if:b=>b.shape==='round'}],
     ['bc','枠の色','color'],['bw','枠の太さ','range',0,8,0.5],
-    ['ic','矢印','seg',[['none','なし'],['right','文字の右'],['left','文字の左']]],
+    ['ic','矢印の場所','seg',[['none','なし'],['right','文字の右'],['left','文字の左']]],
     ['ar.st','矢印の形','seg',[['line','線の矢印'],['half','線の矢印(下なし)'],['chev','くの字'],['tri','三角']],{if:b=>b.ic!=='none'}],
     ['ar.len','矢印の長さ','range',4,80,1,{if:b=>b.ic!=='none'&&(b.ar||{}).st!=='chev'}],
     ['ar.th','矢印の細さ','range',0.5,6,0.25,{if:b=>b.ic!=='none'&&(b.ar||{}).st!=='tri'}],
     ['ar.hd','先の大きさ','range',2,20,0.5,{if:b=>b.ic!=='none'}],
     ['ar.col','矢印の色','color',{if:b=>b.ic!=='none',same:'文字と同じ'}],
-    ['gap','文字との間','range',0,40,1,{if:b=>b.ic!=='none'}]
+    ['ar.dir','矢印の向き','seg',[['right','→ 右'],['left','← 左'],['up','↑ 上'],['down','↓ 下']],{if:b=>b.ic!=='none'}],
+    ['gap','文字との間','range',0,40,1,{if:b=>b.ic!=='none'}],
+    ['tx','文字の位置(横)','range',-150,150,1],['ty','文字の位置(縦)','range',-60,60,1],
+    ['ax','矢印の位置(横)','range',-150,150,1,{if:b=>b.ic!=='none'}],['ay','矢印の位置(縦)','range',-60,60,1,{if:b=>b.ic!=='none'}]
   ],
   h:[
     ['hv.bg','塗り','color',{same:'変えない',none:'塗りなし'}],['hv.tc','文字の色','color',{same:'変えない'}],
@@ -18476,6 +18484,241 @@ addEventListener('keydown',e=>{
   if(isFullscreen())return;   /* 全画面の時は、まずブラウザが全画面をやめる */
   e.stopPropagation();closePreview();
 },true);
+/* ============================================================
+   UIパーツ(type:'ui')。カード・チェックボックス・トグル・入力欄・検索バー・タブ・ナビゲーションバーを、
+   1つの部品として置き、パーツごとの設定で見た目を変える。s.ui={kind,...設定}
+   形は「部品の中の四角・文字・アイコン・画像」に組み立て(uiLayout)、編集画面・画像の書き出し・ホームページで同じ物を描く
+   ============================================================ */
+const UI_KINDS={
+  card:{n:'カード',w:280,h:340,def:{title:'見出し',text:'説明の文章が入ります。2〜3行くらいがちょうど良い長さです。',btn:'詳しく見る →',bg:'#FFFFFF',r:14,shadow:true,pad:18,imgH:46,img:null,tfs:18,tfw:700,tc:'#1F1D1A',bfs:13,bc:'#6B655C',ac:'#2E5B4F'}},
+  check:{n:'チェックボックス',w:200,h:28,def:{label:'内容に同意する',on:true,size:20,r:5,bc:'#8B93A6',fill:'#2E5B4F',cc:'#FFFFFF',fs:15,tc:'#1F1D1A',gap:10}},
+  toggle:{n:'トグルスイッチ',w:180,h:28,def:{label:'お知らせを受け取る',on:true,tw:46,th:26,onc:'#2E5B4F',offc:'#C9CED8',knob:'#FFFFFF',fs:15,tc:'#1F1D1A',gap:12}},
+  input:{n:'入力欄',w:280,h:46,def:{ph:'お名前',bg:'#FFFFFF',bc:'#D7DBE2',bw:1.5,r:8,fs:15,tc:'#8B93A6',pad:14}},
+  search:{n:'検索バー',w:280,h:46,def:{ph:'キーワードで探す',bg:'#FFFFFF',bc:'#D7DBE2',bw:1.5,r:23,fs:15,tc:'#8B93A6',ic:'#8B93A6',pad:16}},
+  tabs:{n:'タブ',w:360,h:48,def:{items:'タブ1,タブ2,タブ3',act:0,fs:15,ac:'#2E5B4F',ic:'#8B93A6',line:'#2E5B4F',base:'#E3E6EC'}},
+  nav:{n:'ナビゲーションバー',w:390,h:56,def:{title:'タイトル',bg:'#FFFFFF',tc:'#1F1D1A',fs:17,ic:'#1F1D1A',left:true,right:true,line:'#E7E9EE'}}
+};
+/* 文字の幅・行(テキストと同じ測り方) */
+function uiText(text,fs,fw,ff,wrapW){
+  const p={type:'text',text:text||' ',fs,fw:fw||400,ff:ff||docFont(),ls:0,align:'left',lh:1.6};
+  if(wrapW)p.wrapW=wrapW;
+  try{wfNeed(p);return textLayout(p);}catch(e){return{w:(text||'').length*fs,h:fs*1.4,lines:[{top:0,lineH:fs*1.4,chars:[...(text||'')].map(ch=>({ch}))}]};}
+}
+const UI_ICON={
+  check:'M5 12.5l4.5 4.5L19 7.5',
+  search:'M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-4-4',
+  back:'M15 5l-7 7 7 7',
+  menu:'M4 7h16M4 12h16M4 17h16'
+};
+/* 部品を、部品の左上を原点とした「四角・文字・アイコン・画像」の並びにする */
+function uiLayout(s){
+  const u=s.ui,W=s.w,H=s.h,P=[],ff=docFont();
+  const txt=(x,y,text,fs,fw,c,o)=>P.push({k:'text',x,y,text,fs,fw:fw||400,c,ff,...(o||{})});
+  if(u.kind==='card'){
+    const pad=u.pad,ih=Math.round((H-pad)*(u.imgH/100));
+    P.push({k:'rect',x:0,y:0,w:W,h:H,r:u.r,fill:u.bg,shadow:!!u.shadow});
+    P.push({k:'img',x:pad,y:pad,w:W-pad*2,h:ih,r:Math.max(0,u.r-6),src:u.img});
+    let y=pad+ih+14;
+    const tl=uiText(u.title,u.tfs,u.tfw,ff,W-pad*2);
+    txt(pad,y,u.title,u.tfs,u.tfw,u.tc,{wrap:W-pad*2,lines:tl.lines.length,lh:1.6});y+=tl.h+6;
+    const bl=uiText(u.text,u.bfs,400,ff,W-pad*2);
+    txt(pad,y,u.text,u.bfs,400,u.bc,{wrap:W-pad*2,lines:bl.lines.length,lh:1.6,maxH:Math.max(0,H-y-pad-(u.btn?u.bfs*2:0))});
+    if(u.btn)txt(pad,H-pad-u.bfs*1.6,u.btn,u.bfs,700,u.ac);
+  }else if(u.kind==='check'){
+    const z=u.size,y=(H-z)/2;
+    P.push({k:'rect',x:0,y,w:z,h:z,r:u.r,fill:u.on?u.fill:'#FFFFFF',stroke:u.on?u.fill:u.bc,sw:1.5,cls:'nt-ui-box'});
+    if(u.on)P.push({k:'icon',x:z*0.15,y:y+z*0.15,size:z*0.7,d:UI_ICON.check,c:u.cc,stroke:2.6});
+    txt(z+u.gap,H/2-u.fs*0.8,u.label,u.fs,400,u.tc);
+  }else if(u.kind==='toggle'){
+    const y=(H-u.th)/2,kr=u.th-6;
+    P.push({k:'rect',x:0,y,w:u.tw,h:u.th,r:u.th/2,fill:u.on?u.onc:u.offc});
+    P.push({k:'rect',x:u.on?u.tw-3-kr:3,y:y+3,w:kr,h:kr,r:kr/2,fill:u.knob,shadow:true});
+    if(u.label)txt(u.tw+u.gap,H/2-u.fs*0.8,u.label,u.fs,400,u.tc);
+  }else if(u.kind==='input'||u.kind==='search'){
+    P.push({k:'rect',x:0,y:0,w:W,h:H,r:u.r,fill:u.bg,stroke:u.bc,sw:u.bw});
+    let x=u.pad;
+    if(u.kind==='search'){const z=Math.round(u.fs*1.25);P.push({k:'icon',x,y:(H-z)/2,size:z,d:UI_ICON.search,c:u.ic,stroke:2});x+=z+10;}
+    txt(x,H/2-u.fs*0.8,u.ph,u.fs,400,u.tc);
+  }else if(u.kind==='tabs'){
+    const items=String(u.items||'').split(/[,、]/).map(t=>t.trim()).filter(Boolean),n=Math.max(1,items.length),cw=W/n;
+    P.push({k:'rect',x:0,y:H-1,w:W,h:1,r:0,fill:u.base});
+    items.forEach((t,i)=>{
+      const on=i===(+u.act||0),L=uiText(t,u.fs,on?700:500,ff);
+      txt(i*cw+(cw-L.w)/2,H/2-u.fs*0.8-2,t,u.fs,on?700:500,on?u.ac:u.ic);
+      if(on)P.push({k:'rect',x:i*cw+(cw-L.w)/2-6,y:H-3,w:L.w+12,h:3,r:1.5,fill:u.line});
+    });
+  }else if(u.kind==='nav'){
+    P.push({k:'rect',x:0,y:0,w:W,h:H,r:0,fill:u.bg});
+    P.push({k:'rect',x:0,y:H-1,w:W,h:1,r:0,fill:u.line});
+    const z=22;
+    if(u.left)P.push({k:'icon',x:14,y:(H-z)/2,size:z,d:UI_ICON.back,c:u.ic,stroke:2});
+    if(u.right)P.push({k:'icon',x:W-14-z,y:(H-z)/2,size:z,d:UI_ICON.menu,c:u.ic,stroke:2});
+    const L=uiText(u.title,u.fs,700,ff);txt((W-L.w)/2,H/2-u.fs*0.8,u.title,u.fs,700,u.tc);
+  }
+  return P;
+}
+/* 編集画面 */
+function uiSvg(s){
+  const P=uiLayout(s),x0=-s.w/2,y0=-s.h/2;
+  let h=`<g data-id="${s.id}" transform="translate(${s.x} ${s.y}) rotate(${s.rot||0})"><rect x="${x0}" y="${y0}" width="${s.w}" height="${s.h}" fill="transparent"/><g transform="translate(${x0} ${y0})">`;
+  P.forEach(p=>{
+    if(p.k==='rect')h+=`<rect x="${p.x}" y="${p.y}" width="${Math.max(0,p.w)}" height="${Math.max(0,p.h)}" rx="${p.r||0}" fill="${p.fill||'none'}"${p.stroke?` stroke="${p.stroke}" stroke-width="${p.sw||1}"`:''}${p.shadow?' style="filter:drop-shadow(0 4px 10px rgba(0,0,0,.14))"':''}/>`;
+    else if(p.k==='img'){
+      const cid='uic_'+s.id;
+      h+=`<clipPath id="${cid}"><rect x="${p.x}" y="${p.y}" width="${p.w}" height="${p.h}" rx="${p.r}"/></clipPath>`;
+      h+=p.src?`<image href="${escXml(imgHref(p.src))}" x="${p.x}" y="${p.y}" width="${p.w}" height="${p.h}" preserveAspectRatio="xMidYMid slice" clip-path="url(#${cid})"/>`
+        :`<rect x="${p.x}" y="${p.y}" width="${p.w}" height="${p.h}" rx="${p.r}" fill="#E3E6EC"/><path d="M${p.x+p.w/2-14} ${p.y+p.h/2+10}l9-11 6 7 4-5 9 9z" fill="#B9C0CC"/>`;
+    }else if(p.k==='icon')h+=`<g transform="translate(${p.x} ${p.y}) scale(${p.size/24})"><path d="${p.d}" fill="none" stroke="${p.c}" stroke-width="${p.stroke}" stroke-linecap="round" stroke-linejoin="round"/></g>`;
+    else if(p.k==='text'){
+      const ff=escXml(cssFont(p.ff));
+      if(p.wrap){
+        const L=uiText(p.text,p.fs,p.fw,p.ff,p.wrap);
+        L.lines.forEach(l=>{
+          if(p.maxH!==undefined&&l.top+l.lineH>p.maxH+1)return;
+          h+=`<text x="${p.x}" y="${p.y+l.top+l.lineH/2}" dominant-baseline="central" font-size="${p.fs}" font-weight="${p.fw}" font-family="${ff}" fill="${p.c}" style="white-space:pre">${escXml(l.chars.map(c=>c.ch).join(''))}</text>`;
+        });
+      }else h+=`<text x="${p.x}" y="${p.y+p.fs*0.8}" dominant-baseline="central" font-size="${p.fs}" font-weight="${p.fw}" font-family="${ff}" fill="${p.c}" style="white-space:pre">${escXml(p.text||'')}</text>`;
+    }
+  });
+  return h+'</g></g>';
+}
+/* 画像(PNG・PDF)の書き出し */
+function uiCanvas(ctx,s){
+  ctx.save();ctx.translate(-s.w/2,-s.h/2);
+  uiLayout(s).forEach(p=>{
+    if(p.k==='rect'){const q=new Path2D();q.roundRect(p.x,p.y,Math.max(0,p.w),Math.max(0,p.h),p.r||0);if(p.fill){ctx.fillStyle=p.fill;ctx.fill(q);}if(p.stroke){ctx.strokeStyle=p.stroke;ctx.lineWidth=p.sw||1;ctx.stroke(q);}}
+    else if(p.k==='img'){const q=new Path2D();q.roundRect(p.x,p.y,p.w,p.h,p.r);ctx.fillStyle='#E3E6EC';ctx.fill(q);}
+    else if(p.k==='icon'){ctx.save();ctx.translate(p.x,p.y);ctx.scale(p.size/24,p.size/24);ctx.strokeStyle=p.c;ctx.lineWidth=p.stroke;ctx.lineCap='round';ctx.lineJoin='round';ctx.stroke(new Path2D(p.d));ctx.restore();}
+    else if(p.k==='text'){
+      ctx.fillStyle=p.c;ctx.font=`${p.fw} ${p.fs}px ${cssFont(p.ff)}`;ctx.textBaseline='middle';ctx.textAlign='left';
+      if(p.wrap){const L=uiText(p.text,p.fs,p.fw,p.ff,p.wrap);L.lines.forEach(l=>{if(p.maxH!==undefined&&l.top+l.lineH>p.maxH+1)return;ctx.fillText(l.chars.map(c=>c.ch).join(''),p.x,p.y+l.top+l.lineH/2);});}
+      else ctx.fillText(p.text||'',p.x,p.y+p.fs*0.8);
+    }
+  });
+  ctx.restore();
+}
+/* ホームページ: 本物の文字・入力欄・押すと切り替わるチェックボックス/トグル/タブ */
+function siteUi(s,o){
+  const u=s.ui,box=siteBox(s,o,s.w,s.h),ff=cssFont(docFont());
+  const ab=(x,y,w,h)=>`left:${cssNum(x)}px;top:${cssNum(y)}px;width:${cssNum(w)}px;height:${cssNum(h)}px`;
+  const ico=(p,cls)=>`<svg class="nt-ui-ic${cls?' '+cls:''}" aria-hidden="true" viewBox="0 0 24 24" style="${ab(p.x,p.y,p.size,p.size)}"><path d="${p.d}" fill="none" stroke="${cssCol(p.c)}" stroke-width="${p.stroke}" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  if(u.kind==='input'||u.kind==='search'){
+    const sx=u.kind==='search'?Math.round(u.fs*1.25)+10:0;
+    const ic=u.kind==='search'?ico({x:u.pad,y:(s.h-Math.round(u.fs*1.25))/2,size:Math.round(u.fs*1.25),d:UI_ICON.search,c:u.ic,stroke:2}):'';
+    return`<label class="nt-e nt-ui" style="${box}">${ic}<input class="nt-ui-in" type="${u.kind==='search'?'search':'text'}" placeholder="${escXml(u.ph||'')}" aria-label="${escXml(u.ph||'入力')}" style="padding:0 ${cssNum(u.pad)}px 0 ${cssNum(u.pad+sx)}px;background:${cssCol(u.bg)};border:${cssNum(u.bw)}px solid ${cssCol(u.bc)};border-radius:${cssNum(u.r)}px;font-size:${cssNum(u.fs)}px;font-family:${ff};--ph:${cssCol(u.tc)}"></label>`;
+  }
+  if(u.kind==='check'||u.kind==='toggle'){
+    /* 押すと切り替わる(本物の checkbox を見えない形で重ねる)。見た目は両方の状態を持ち、.on で切り替える */
+    const on=!!u.on;
+    let vis='';
+    if(u.kind==='check'){
+      const z=u.size,y=(s.h-z)/2;
+      vis=`<span class="nt-ui-p nt-uc-box" style="${ab(0,y,z,z)};border-radius:${cssNum(u.r)}px;--off:#FFFFFF;--offb:${cssCol(u.bc)};--on:${cssCol(u.fill)}"></span>`+ico({x:z*0.15,y:y+z*0.15,size:z*0.7,d:UI_ICON.check,c:u.cc,stroke:2.6},'nt-uc-mark');
+      vis+=`<span class="nt-ui-p nt-ui-t" style="left:${cssNum(z+u.gap)}px;top:0;height:${cssNum(s.h)}px;font-size:${cssNum(u.fs)}px;color:${cssCol(u.tc)}">${escXml(u.label||'')}</span>`;
+    }else{
+      const y=(s.h-u.th)/2,kr=u.th-6;
+      vis=`<span class="nt-ui-p nt-ut-track" style="${ab(0,y,u.tw,u.th)};border-radius:${cssNum(u.th/2)}px;--off:${cssCol(u.offc)};--on:${cssCol(u.onc)}"></span><span class="nt-ui-p nt-ut-knob" style="${ab(3,y+3,kr,kr)};background:${cssCol(u.knob)};--mv:${cssNum(u.tw-6-kr)}px"></span>`;
+      if(u.label)vis+=`<span class="nt-ui-p nt-ui-t" style="left:${cssNum(u.tw+u.gap)}px;top:0;height:${cssNum(s.h)}px;font-size:${cssNum(u.fs)}px;color:${cssCol(u.tc)}">${escXml(u.label)}</span>`;
+    }
+    return`<label class="nt-e nt-ui nt-ui-sw" style="${box};font-family:${ff}"><input type="checkbox" class="nt-ui-cb"${on?' checked':''}${u.kind==='toggle'?' role="switch"':''} aria-label="${escXml(u.label||'チェック')}">${vis}</label>`;
+  }
+  /* カード・タブ・ナビ: 組み立てた形をそのまま(文字は本物の文字) */
+  const P=uiLayout(s);let h='';
+  P.forEach((p,i)=>{
+    if(p.k==='rect')h+=`<span class="nt-ui-p" style="${ab(p.x,p.y,Math.max(0,p.w),Math.max(0,p.h))};border-radius:${cssNum(p.r||0)}px;background:${p.fill?cssCol(p.fill):'transparent'}${p.stroke?`;box-shadow:inset 0 0 0 ${cssNum(p.sw||1)}px ${cssCol(p.stroke)}`:''}${p.shadow?';box-shadow:0 4px 16px rgba(0,0,0,.12)':''}"${u.kind==='tabs'&&p.h===3?` data-uline="1"`:''}></span>`;
+    else if(p.k==='img')h+=`<span class="nt-ui-p nt-ui-img" style="${ab(p.x,p.y,p.w,p.h)};border-radius:${cssNum(p.r)}px">${p.src?`<img src="${escXml(imgHref(p.src))}" alt="${escXml(u.title||'')}" loading="lazy">`:''}</span>`;
+    else if(p.k==='icon')h+=ico(p);
+    else if(p.k==='text'){
+      const tag=u.kind==='card'&&p.fs===u.tfs&&p.text===u.title?'h3':u.kind==='tabs'?'button':'span';
+      const st=p.wrap?`left:${cssNum(p.x)}px;top:${cssNum(p.y)}px;width:${cssNum(p.wrap)}px;white-space:normal;line-height:1.6${p.maxH!==undefined?`;max-height:${cssNum(p.maxH)}px;overflow:hidden`:''}`:`left:${cssNum(p.x)}px;top:${cssNum(p.y)}px;line-height:${cssNum(p.fs*1.6)}px`;
+      h+=`<${tag}${tag==='button'?' type="button"':''} class="nt-ui-p nt-ui-tx" style="${st};font-size:${cssNum(p.fs)}px;font-weight:${p.fw};color:${cssCol(p.c)}">${escXml(p.text||'')}</${tag}>`;
+    }
+  });
+  return`<div class="nt-e nt-ui${u.kind==='tabs'?' nt-ui-tabs':''}" style="${box};font-family:${ff}">${h}</div>`;
+}
+/* ---- 足す・パネル ---- */
+function uiAdd(kind){
+  const K=UI_KINDS[kind];if(!K)return;
+  const d=curDoc();if(!d||!d.shapes)return;
+  exitPen();exitEraser();exitBrush();hideMenus();
+  pushUndo();
+  const sh=d.shapes,sel=selShapes(),p=sel.length===1&&isFrame(sel[0])?sel[0]:null;
+  const s={id:uid(),type:'ui',x:0,y:0,w:K.w,h:K.h,rot:0,ui:{kind,...JSON.parse(JSON.stringify(K.def))}};
+  if(p){
+    const its=layItems(sh,p,layParents(sh));
+    const bottom=its.length?Math.max(...its.map(it=>{const b=layBox(it);return b.y+b.h;})):p.y-p.h/2+24;
+    s.x=p.x;s.y=bottom+16+s.h/2;
+    const need=bottom+16+s.h+24-(p.y-p.h/2);
+    if(need>p.h){p.y=p.y-p.h/2+need/2;p.h=need;}
+    sh.splice(layAfterLast(sh,p),0,s);
+  }else{const c=s2w(viewW()/2,viewH()/2);s.x=c.x;s.y=c.y;sh.push(s);}
+  wireSel=[s.id];selAnchor=null;
+  save();renderWire();openStyleMenu();updateStyleMenu();renderLayerPanel();
+  toast(`${K.n}を置きました。「色とスタイル」の「${K.n}」で中身と見た目を変えられます`);
+}
+/* [項目, 見出し, 種類, ...] 種類: text / textarea / range(最小,最大,刻み) / color / seg / bool / img */
+const UI_FIELDS={
+  card:[['img','画像','img'],['title','見出し','text'],['text','説明','textarea'],['btn','リンクの文字(空欄で出さない)','text'],['imgH','画像の高さ(%)','range',0,80,1],['pad','内側の余白','range',0,48,1],['r','角の丸み','range',0,40,1],['bg','背景の色','color'],['shadow','影','bool'],['tfs','見出しの大きさ','range',10,40,1],['tc','見出しの色','color'],['bfs','説明の大きさ','range',9,24,1],['bc','説明の色','color'],['ac','リンクの色','color']],
+  check:[['label','文字','text'],['on','チェック','bool'],['size','箱の大きさ','range',12,40,1],['r','箱の角の丸み','range',0,20,1],['fill','チェックした時の色','color'],['cc','チェックの印の色','color'],['bc','枠の色(チェック前)','color'],['fs','文字の大きさ','range',10,32,1],['tc','文字の色','color'],['gap','箱と文字の間','range',0,32,1]],
+  toggle:[['label','文字(空欄で出さない)','text'],['on','オン','bool'],['tw','幅','range',30,90,1],['th','高さ','range',16,44,1],['onc','オンの色','color'],['offc','オフの色','color'],['knob','つまみの色','color'],['fs','文字の大きさ','range',10,32,1],['tc','文字の色','color'],['gap','スイッチと文字の間','range',0,32,1]],
+  input:[['ph','入る文字の例(プレースホルダー)','text'],['fs','文字の大きさ','range',10,28,1],['tc','例の文字の色','color'],['bg','背景の色','color'],['bc','枠の色','color'],['bw','枠の太さ','range',0,4,0.5],['r','角の丸み','range',0,30,1],['pad','左右の余白','range',0,40,1]],
+  search:[['ph','入る文字の例(プレースホルダー)','text'],['fs','文字の大きさ','range',10,28,1],['tc','例の文字の色','color'],['ic','虫めがねの色','color'],['bg','背景の色','color'],['bc','枠の色','color'],['bw','枠の太さ','range',0,4,0.5],['r','角の丸み','range',0,30,1],['pad','左右の余白','range',0,40,1]],
+  tabs:[['items','タブの名前(、で区切る)','text'],['act','選んでいるタブ(番号)','range',0,9,1],['fs','文字の大きさ','range',10,28,1],['ac','選んでいる色','color'],['ic','ほかのタブの色','color'],['line','下線の色','color'],['base','下の線の色','color']],
+  nav:[['title','タイトル','text'],['fs','文字の大きさ','range',12,28,1],['tc','文字の色','color'],['bg','背景の色','color'],['ic','アイコンの色','color'],['left','左に戻るアイコン','bool'],['right','右にメニューアイコン','bool'],['line','下の線の色','color']]
+};
+const uiSel=()=>selShapes().find(x=>x.type==='ui');
+function renderUiPart(){
+  const ss=selShapes().filter(x=>x.type==='ui');
+  $('#uiPart').style.display=ss.length===1?'block':'none';
+  if(ss.length!==1)return;
+  const u=ss[0].ui;
+  $('#uiPartName').textContent=(UI_KINDS[u.kind]||{}).n||'UIパーツ';
+  $('#uiFields').innerHTML=(UI_FIELDS[u.kind]||[]).map(f=>{
+    const [k,label,type]=f,v=u[k];
+    if(type==='text')return`<div class="numRow"><span class="radLbl">${label}</span><input type="text" data-uk="${k}" value="${escXml(v==null?'':v)}" spellcheck="false" autocomplete="off"></div>`;
+    if(type==='textarea')return`<div class="menu-label">${label}</div><div class="numRow"><textarea data-uk="${k}" rows="3" spellcheck="false" style="flex:1;min-width:0;resize:vertical">${escXml(v||'')}</textarea></div>`;
+    if(type==='color')return`<div class="numRow btnRow"><span class="radLbl">${label}</span><input type="color" data-uk="${k}" value="${escXml(normHex(v)||'#000000')}"></div>`;
+    if(type==='bool')return`<div class="numRow btnRow"><span class="radLbl">${label}</span><label class="btnChk" style="margin:0"><input type="checkbox" data-ub="${k}"${v?' checked':''}>${v?'あり':'なし'}</label></div>`;
+    if(type==='img')return`<div class="segRow"><button class="seg" data-uimg="1">${v?'画像を替える':'＋ 画像を選ぶ'}</button>${v?'<button class="seg" data-uimgx="1">画像を外す</button>':''}</div>`;
+    return`<div class="radRow btnRow"><span class="radLbl">${label}</span><input type="range" data-uk="${k}" min="${f[3]}" max="${f[4]}" step="${f[5]}" value="${v}"><input type="number" class="btnNum" data-ukn="${k}" min="${f[3]}" max="${f[4]}" step="${f[5]}" value="${v}" aria-label="${escXml(label)}(数値)"></div>`;
+  }).join('');
+}
+let uiRaf=0;
+const uiRedraw=()=>{if(uiRaf)return;uiRaf=requestAnimationFrame(()=>{uiRaf=0;renderWire();});};
+$('#uiFields').addEventListener('pointerdown',e=>{e.stopPropagation();if(e.target.matches('input,textarea'))pushUndo();});
+$('#uiFields').addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter'&&e.target.matches('input[type=text]'))e.target.blur();});
+$('#uiFields').addEventListener('input',e=>{
+  const s=uiSel(),t=e.target;if(!s)return;
+  if(t.dataset.ukn){
+    if(t.value==='')return;
+    const v=clamp(+t.value,+t.min,+t.max);if(isNaN(v))return;
+    s.ui[t.dataset.ukn]=v;const rg=t.parentElement.querySelector('input[type=range]');if(rg)rg.value=v;
+    save();uiRedraw();return;
+  }
+  if(!t.dataset.uk)return;
+  const v=t.type==='range'?+t.value:t.value;
+  s.ui[t.dataset.uk]=v;
+  if(t.type==='range'){const n=t.parentElement.querySelector('.btnNum');if(n)n.value=v;}
+  save();uiRedraw();
+});
+$('#uiFields').addEventListener('change',e=>{
+  const s=uiSel(),t=e.target;if(!s)return;
+  if(t.dataset.ub){pushUndo();s.ui[t.dataset.ub]=t.checked;save();renderWire();renderUiPart();}
+});
+$('#uiFields').addEventListener('click',async e=>{
+  const s=uiSel();if(!s)return;
+  if(e.target.closest('[data-uimgx]')){pushUndo();s.ui.img=null;save();renderWire();renderUiPart();return;}
+  if(!e.target.closest('[data-uimg]'))return;
+  const inp=document.createElement('input');inp.type='file';inp.accept='image/*';
+  inp.onchange=()=>{
+    const f=inp.files&&inp.files[0];if(!f)return;
+    const rd=new FileReader();
+    rd.onload=async()=>{pushUndo();s.ui.img=await storeImage(rd.result);save();renderWire();renderUiPart();toast('カードの画像を入れました');};
+    rd.readAsDataURL(f);
+  };
+  inp.click();
+});
+
 /* ============================================================
    クライアント(制作の工程)
    クライアントごとに、クライアント情報 → ヒアリング → ペルソナ → デザインルール → 掲載内容 →
@@ -18915,10 +19158,11 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&stEl().classList.contains('o
    「色とスタイル」(案A): 選んだ物の種類に合わせて、使う設定だけをよく使う順に上へ出す。
    ほかは「詳しい設定」に畳む。設定の中身(スイッチ・処理)はこれまでと同じで、並びとまとまりだけを変える
    ============================================================ */
-const CTX_ALL=['frameSec','sizeSec','posSec','webSec','mapPart','btnPart','icoPart','textSec','fillSec','gradSec','strokeSec','radiusSec','shadowSec','blurSec','imgFillSec','aspectSec','imgFxSec','toPathSec','refineSec'];
+const CTX_ALL=['frameSec','sizeSec','posSec','webSec','uiPart','mapPart','btnPart','icoPart','textSec','fillSec','gradSec','strokeSec','radiusSec','shadowSec','blurSec','imgFillSec','aspectSec','imgFxSec','toPathSec','refineSec'];
 /* 種類ごとに上へ出す物(よく使う順) */
 const CTX_ORDER={
   btn:['btnPart','sizeSec','webSec'],
+  ui:['uiPart','sizeSec','webSec'],
   gmap:['mapPart','sizeSec','webSec'],
   text:['textSec','fillSec','webSec'],
   frame:['frameSec','webSec','fillSec'],
@@ -18928,16 +19172,16 @@ const CTX_ORDER={
   multi:['fillSec','sizeSec','webSec']
 };
 /* その種類では効かない物は出さない(ボタン・地図は、塗りや枠線を自分の設定で決める) */
-const CTX_HIDE={btn:['fillSec','gradSec','strokeSec','radiusSec'],gmap:['fillSec','gradSec','strokeSec']};
+const CTX_HIDE={ui:['fillSec','gradSec','strokeSec','radiusSec'],btn:['fillSec','gradSec','strokeSec','radiusSec'],gmap:['fillSec','gradSec','strokeSec']};
 /* ホームページ用の設定で、最初に開く分野 */
-const CTX_WEBCAT={btn:'link',frame:'layout',gmap:'layout',image:'link',text:'link',shape:'link',icon:'link'};
+const CTX_WEBCAT={ui:'link',btn:'link',frame:'layout',gmap:'layout',image:'link',text:'link',shape:'link',icon:'link'};
 let ctxLastKey='',ctxHidden={};
 function ctxKind(ss){
   if(!ss.length)return null;
   const ts=[...new Set(ss.map(x=>x.type))];
   if(ss.length>1&&ts.length>1)return'multi';
   const t=ts[0];
-  if(['btn','gmap','text','icon','image'].includes(t))return t;
+  if(['btn','gmap','text','icon','image','ui'].includes(t))return t;
   return t==='frame'?'frame':'shape';
 }
 function ctxArrange(){
@@ -18949,7 +19193,8 @@ function ctxArrange(){
   const sh=curShapes(),one=ss[0],par=parentFrameAt(sh,sh.indexOf(one));
   const lk=one.type==='frame'?layKind(sh,one):'';
   $('#ctxIc').innerHTML=layIcon(one,lk);
-  $('#ctxN').textContent=k==='multi'?ss.length+'個を選んでいます':(one.type==='frame'?LAY_KIND[lk]||'フレーム':SHAPE_TYPE_LABEL[one.type]||'図形')+(ss.length>1?'('+ss.length+'個)':'');
+  if(one.type==='ui'){$('#ctxN').textContent=(UI_KINDS[one.ui.kind]||{}).n||'UIパーツ';}
+  else $('#ctxN').textContent=k==='multi'?ss.length+'個を選んでいます':(one.type==='frame'?LAY_KIND[lk]||'フレーム':SHAPE_TYPE_LABEL[one.type]||'図形')+(ss.length>1?'('+ss.length+'個)':'');
   const nm=one.type==='btn'?'「'+((one.btn||{}).t||'')+'」':one.type==='text'?'「'+(one.text||'').replace(/\n/g,' ').slice(0,16)+'」':one.type==='gmap'?((one.gmap||{}).q||''):(one.name||'');
   $('#ctxSub').textContent=k==='multi'?'共通の設定だけを出しています':[nm,par?frameLabelText(par)+' の中':''].filter(Boolean).join(' ・ ');
   /* 並べ替え: 上に出す物 → 「詳しい設定」 */
@@ -18980,10 +19225,27 @@ function ctxArrange(){
   more.style.display=vis?'block':'none';
   more.querySelector('.mCnt').textContent=vis?'('+vis+')':'';
 }
+/* スライダーを動かしている間は、キャンバスと「色とスタイル」の描き直しを1コマに1回にまとめる(引っかからずに滑らかに動く) */
+let rngDrag=false;
+{
+  const _rw=renderWire;let rwQ=0;
+  renderWire=function(){
+    if(rngDrag){if(!rwQ)rwQ=requestAnimationFrame(()=>{rwQ=0;_rw();});return;}
+    return _rw.apply(this,arguments);
+  };
+  document.addEventListener('pointerdown',e=>{if(e.target.matches&&e.target.matches('#fillMenu input[type=range]'))rngDrag=true;},true);
+  const end=()=>{if(!rngDrag)return;rngDrag=false;requestAnimationFrame(()=>{_rw();});};
+  addEventListener('pointerup',end,true);addEventListener('pointercancel',end,true);
+}
 /* 「色とスタイル」を描き直すたびに並べ直す */
 {
   const _usm=updateStyleMenu;
-  updateStyleMenu=function(){const r=_usm.apply(this,arguments);try{ctxArrange();}catch(e){console.error(e);}return r;};
+  let usmQ=0;
+  const run=()=>{const r=_usm();try{ctxArrange();}catch(e){console.error(e);}return r;};
+  updateStyleMenu=function(){
+    if(rngDrag){if(!usmQ)usmQ=requestAnimationFrame(()=>{usmQ=0;run();});return;}
+    return run();
+  };
 }
 /* タブはやめたので、「ホームページ」側を開く操作は、ホームページ用の設定を開いてその場所まで送る */
 {
