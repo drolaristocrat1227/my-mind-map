@@ -1266,6 +1266,9 @@ kbd{
   <button class="iconbtn" id="menuBtn" title="マップ一覧">
     <svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></svg>
   </button>
+  <button class="iconbtn" id="studioBtn" title="クライアント(制作の工程)" aria-label="クライアント(制作の工程)">
+    <svg viewBox="0 0 24 24"><path d="M4.5 8h15a1.5 1.5 0 0 1 1.5 1.5v8a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5v-8A1.5 1.5 0 0 1 4.5 8zM9 8V6.5A1.5 1.5 0 0 1 10.5 5h3A1.5 1.5 0 0 1 15 6.5V8M3 13h18"/></svg>
+  </button>
   <div id="appmark" title="NT-D">
     <svg viewBox="0 0 24 24"><path d="M12 2L22 12L12 22L2 12Z"/><path class="inner" d="M12 6.4L17.6 12L12 17.6L6.4 12Z"/></svg>
   </div>
@@ -1943,6 +1946,153 @@ kbd{
 <input type="file" id="mediaFileInput" hidden>
 <input type="file" id="imgFillInput" accept="image/*" hidden>
 
+<!-- クライアント(制作の工程): クライアント一覧と、7つの工程の画面。ライト/ダークを切り替えられる -->
+<style>
+#studio{position:fixed;inset:0;z-index:60;overflow:auto;display:none;
+  background:var(--st-bg);color:var(--st-ink);font-family:var(--st-body);font-size:14px;line-height:1.6;
+  -webkit-font-smoothing:antialiased;transition:background .3s ease,color .3s ease}
+#studio.on{display:block}
+#studio[data-theme="dark"]{--st-bg:#0D0E12;--st-side:#111217;--st-panel:#15171D;--st-board:#0A0B0E;--st-line:#262A33;--st-ink:#E8EAF0;--st-muted:#9097A6;--st-row:#C3C8D4;
+  --st-accent:#FF2E5E;--st-on:#0D0E12;--st-doing:#8C7BFF;--st-off:#3A3F4B;--st-sel:#1F222B;--st-r:10px;--st-gap:12px;
+  --st-head:Inter,"Noto Sans JP",sans-serif;--st-body:Inter,"Noto Sans JP",sans-serif;--st-num:"JetBrains Mono",ui-monospace,monospace;--st-hw:700}
+#studio[data-theme="light"]{--st-bg:#F4F0E8;--st-side:#F4F0E8;--st-panel:#FBF9F4;--st-board:#E9E3D7;--st-line:#DCD5C8;--st-ink:#1F1D1A;--st-muted:#6B655C;--st-row:#1F1D1A;
+  --st-accent:#2E5B4F;--st-on:#FFFFFF;--st-doing:#B5832E;--st-off:#D6CEBF;--st-sel:#FBF9F4;--st-r:0px;--st-gap:0px;
+  --st-head:"Shippori Mincho B1",serif;--st-body:"Zen Kaku Gothic New",sans-serif;--st-num:"Shippori Mincho B1",serif;--st-hw:500}
+#studio *{box-sizing:border-box}
+:where(#studio) button{font-family:inherit;font-size:inherit;color:inherit;cursor:pointer}
+#studio input,#studio textarea,#studio select{font-family:inherit;color:var(--st-ink)}
+#studio :focus-visible{outline:2px solid var(--st-accent);outline-offset:2px}
+.st-bar{position:sticky;top:0;z-index:2;display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:12px 24px;border-bottom:1px solid var(--st-line);background:var(--st-bg)}
+.st-logo{font-family:var(--st-head);font-weight:700;font-size:22px;letter-spacing:.03em}
+.st-crumb{color:var(--st-muted);font-size:13px;display:flex;gap:8px;align-items:center;min-width:0}
+.st-crumb b{color:var(--st-ink);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:240px}
+.st-sp{flex:1}
+.st-seg{display:flex;padding:3px;border:1px solid var(--st-line);border-radius:var(--st-r);background:var(--st-panel)}
+.st-seg button{border:0;border-radius:var(--st-r);padding:6px 12px;font-size:12px;background:transparent;color:var(--st-muted)}
+.st-seg button.on{background:var(--st-accent);color:var(--st-on)}
+.st-btn{border:1px solid var(--st-line);border-radius:var(--st-r);background:var(--st-panel);padding:9px 16px;font-size:13px;transition:transform .2s ease,box-shadow .2s ease,background .2s ease}
+.st-btn:hover{transform:translateY(-1px)}
+.st-btn.pri{border-color:transparent;background:var(--st-accent);color:var(--st-on) !important;font-weight:700}
+#studio[data-theme="dark"] .st-btn.pri:hover{box-shadow:0 0 0 4px rgba(255,46,94,.16),0 8px 26px rgba(255,46,94,.22)}
+.st-btn.ghost{background:transparent}
+.st-x{width:40px;height:40px;border:1px solid var(--st-line);border-radius:var(--st-r);background:var(--st-panel);display:grid;place-items:center}
+.st-x svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round}
+.st-search{flex:1 1 220px;max-width:420px;display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--st-line);border-radius:var(--st-r);background:var(--st-panel);color:var(--st-muted)}
+.st-search svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;flex:none}
+.st-search input{flex:1;min-width:0;border:0;background:transparent;font-size:14px;outline:0}
+/* クライアント一覧 */
+.st-home{max-width:1180px;margin:0 auto;padding:36px 28px 60px;display:flex;flex-direction:column;gap:28px}
+.st-hhead{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:16px}
+.st-kick{font-size:12px;letter-spacing:.2em;color:var(--st-muted)}
+.st-h1{margin:6px 0 0;font-family:var(--st-head);font-weight:var(--st-hw);font-size:38px;line-height:1.25}
+.st-stats{display:flex;gap:28px;font-size:13px;color:var(--st-muted)}
+.st-stats b{font-family:var(--st-num);font-size:22px;color:var(--st-ink);margin-left:4px}
+.st-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:20px}
+.st-card{display:flex;flex-direction:column;text-align:left;padding:0;background:var(--st-panel);border:1px solid var(--st-line);border-radius:var(--st-r);overflow:hidden;transition:transform .25s ease,border-color .25s ease}
+.st-card:hover{transform:translateY(-3px);border-color:var(--st-muted)}
+.st-cover{height:110px;display:flex;align-items:flex-end;justify-content:space-between;padding:14px 16px;font-family:var(--st-head);font-size:34px;line-height:1}
+.st-cbody{padding:14px 16px 16px;display:flex;flex-direction:column;gap:10px}
+.st-cname{font-size:16px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.st-ckind{font-size:12px;color:var(--st-muted);min-height:1.6em}
+.st-bars{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px}
+.st-bars i{height:4px;border-radius:2px;background:var(--st-off)}
+.st-bars i.done{background:var(--st-accent)}.st-bars i.doing{background:var(--st-doing)}.st-bars i.skip{background:var(--st-muted);opacity:.45}
+.st-cfoot{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--st-muted)}
+.st-add{min-height:230px;border:1px dashed var(--st-line);border-radius:var(--st-r);background:transparent;color:var(--st-muted);display:grid;place-items:center;font-size:14px}
+.st-add>span>span{display:block;font-size:30px;font-weight:300;line-height:1.2}
+.st-empty{padding:24px;border:1px dashed var(--st-line);border-radius:var(--st-r);color:var(--st-muted);text-align:center}
+/* 工程の画面 */
+.st-body{display:flex;flex-wrap:wrap;min-height:calc(100% - 65px)}
+.st-nav{flex:1 1 250px;max-width:100%;padding:24px 16px;display:flex;flex-direction:column;gap:4px;border-right:1px solid var(--st-line);background:var(--st-side)}
+.st-nav .st-cl{padding:0 10px 14px}
+.st-nav .st-cl b{display:block;font-family:var(--st-head);font-weight:var(--st-hw);font-size:21px;margin-top:4px;word-break:break-all}
+.st-step{display:flex;align-items:center;gap:12px;padding:10px;border:0;border-radius:var(--st-r);text-align:left;background:transparent;color:var(--st-row);font-size:14px;transition:background .15s ease,padding-left .2s ease}
+.st-step:hover{padding-left:16px}
+.st-step.cur{background:var(--st-sel);color:var(--st-ink);font-weight:700}
+.st-step .dot{width:8px;height:8px;border-radius:50%;background:var(--st-off);flex:none}
+.st-step.done .dot{background:var(--st-accent)}
+.st-step.doing .dot{background:var(--st-doing);animation:stPulse 2s ease-in-out infinite}
+.st-step.skip .dot{background:transparent;border:1.5px solid var(--st-muted)}
+.st-step.skip .nm{text-decoration:line-through;text-decoration-color:var(--st-muted)}
+.st-step .nm{flex:1}
+.st-step .no{font-family:var(--st-num);font-size:11px;color:var(--st-muted)}
+.st-step .tg{font-size:11px;color:var(--st-muted);font-weight:400}
+@keyframes stPulse{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--st-doing) 60%,transparent)}50%{box-shadow:0 0 0 5px transparent}}
+.st-prog{margin-top:auto;padding:16px 10px 0}
+.st-prog .row{display:flex;justify-content:space-between;font-size:12px;color:var(--st-muted);margin-bottom:8px}
+.st-del{margin-top:14px;border:0;background:transparent;color:var(--st-muted);font-size:12px;text-align:left;padding:6px 10px;text-decoration:underline}
+.st-main{flex:999 1 560px;min-width:0;padding:32px 40px 60px;display:flex;flex-direction:column;gap:24px}
+.st-mhead{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:16px}
+.st-mhead .stepno{font-family:var(--st-num);font-size:12px;letter-spacing:.12em;color:var(--st-doing)}
+#studio[data-theme="light"] .st-mhead .stepno{color:var(--st-accent)}
+.st-mhead p{margin:6px 0 0;color:var(--st-muted)}
+.st-acts{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.st-saved{font-size:12px;color:var(--st-muted)}
+.st-in{animation:stIn .35s ease both}
+@keyframes stIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.st-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:var(--st-gap)}
+#studio[data-theme="light"] .st-fields{border-top:1px solid var(--st-ink)}
+.st-f{display:flex;flex-direction:column;gap:8px;padding:16px 18px;border:1px solid var(--st-line);border-radius:var(--st-r);background:var(--st-panel);position:relative}
+#studio[data-theme="light"] .st-f{border-width:0 0 1px;background:transparent;padding:20px 18px 20px 0}
+.st-f:focus-within{border-color:var(--st-accent)}
+.st-f .lb{font-size:12px;color:var(--st-muted);letter-spacing:.04em}
+.st-f input.lb{border:0;background:transparent;padding:0;outline:0}
+.st-f textarea,.st-f input.v{border:0;background:transparent;resize:vertical;font-size:16px;line-height:1.6;padding:0;outline:0;min-height:1.6em}
+#studio[data-theme="light"] .st-f textarea,#studio[data-theme="light"] .st-f input.v{font-family:var(--st-head);font-size:18px}
+.st-f .rm{position:absolute;top:8px;right:8px;width:28px;height:28px;border:0;border-radius:var(--st-r);background:transparent;color:var(--st-muted);opacity:0;transition:opacity .15s}
+.st-f:hover .rm,.st-f:focus-within .rm{opacity:1}
+.st-tools{display:flex;flex-wrap:wrap;gap:8px}
+.st-chip{border:1px solid var(--st-line);border-radius:999px;background:var(--st-panel);padding:7px 14px;font-size:13px}
+#studio[data-theme="light"] .st-chip{border-radius:0}
+.st-sec{display:flex;flex-direction:column;gap:12px}
+.st-sec h2{margin:0;font-size:12px;letter-spacing:.18em;color:var(--st-muted);font-weight:500}
+.st-sw{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.st-swc{border:1px solid var(--st-line);border-radius:var(--st-r);overflow:hidden;background:var(--st-panel);position:relative}
+.st-swc label.c{display:block;height:96px;cursor:pointer;position:relative}
+.st-swc label.c input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+.st-swc .meta{display:flex;align-items:center;gap:6px;padding:8px 10px}
+.st-swc .meta input{flex:1;min-width:0;border:0;background:transparent;font-size:13px;outline:0}
+.st-swc .meta code{font-family:var(--st-num);font-size:11px;color:var(--st-muted)}
+.st-swc .rm{position:absolute;top:6px;right:6px;width:26px;height:26px;border:0;border-radius:var(--st-r);background:rgba(0,0,0,.45);color:#fff;opacity:0;transition:opacity .15s}
+.st-swc:hover .rm,.st-swc:focus-within .rm{opacity:1}
+.st-fonts{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.st-font{padding:16px 18px;border:1px solid var(--st-line);border-radius:var(--st-r);background:var(--st-panel);display:flex;flex-direction:column;gap:10px}
+.st-font select{border:1px solid var(--st-line);border-radius:var(--st-r);background:var(--st-bg);padding:8px 10px;font-size:13px}
+.st-font .sm{font-size:26px;line-height:1.4;word-break:break-all}
+.st-font .sm.body{font-size:16px;line-height:1.9}
+.st-space{display:flex;flex-wrap:wrap;align-items:flex-end;gap:18px;padding:16px 18px;border:1px solid var(--st-line);border-radius:var(--st-r);background:var(--st-panel)}
+.st-space div{display:flex;flex-direction:column;align-items:center;gap:6px;font-family:var(--st-num);font-size:11px;color:var(--st-muted)}
+.st-space i{display:block;background:var(--st-accent);border-radius:2px;opacity:.85}
+.st-cv{display:flex;flex-wrap:wrap;gap:20px;align-items:stretch}
+.st-cvimg{flex:999 1 420px;min-width:0;min-height:320px;border:1px solid var(--st-line);border-radius:var(--st-r);background-color:var(--st-board);
+  background-image:radial-gradient(color-mix(in srgb,var(--st-muted) 35%,transparent) 1px,transparent 1px);background-size:22px 22px;display:grid;place-items:center;padding:24px;overflow:hidden}
+.st-cvimg img{max-width:100%;max-height:420px;box-shadow:0 18px 44px rgba(0,0,0,.22);background:#fff}
+.st-cvimg .ph{color:var(--st-muted);text-align:center}
+.st-cvside{flex:1 1 240px;display:flex;flex-direction:column;gap:14px;padding:18px;border:1px solid var(--st-line);border-radius:var(--st-r);background:var(--st-panel)}
+.st-cvside .sws{display:flex;gap:6px;flex-wrap:wrap}
+.st-cvside .sws i{width:28px;height:28px;border-radius:var(--st-r);border:1px solid var(--st-line)}
+.st-note{font-size:13px;color:var(--st-muted);margin:0}
+/* キャンバスから工程の画面へ戻るボタン */
+#stBackChip{position:fixed;left:12px;bottom:84px;z-index:45;display:none;align-items:center;gap:6px;padding:9px 14px;border:0;border-radius:999px;
+  background:#15171D;color:#E8EAF0;font:600 13px/1.2 system-ui,-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif;box-shadow:0 6px 20px rgba(0,0,0,.25);cursor:pointer}
+#stBackChip.on{display:flex}
+#stBackChip i{width:8px;height:8px;border-radius:50%;background:#FF2E5E}
+@media (max-width:640px){
+  .st-bar{padding:10px 14px}
+  .st-main{padding:24px 16px 48px}
+  .st-home{padding:24px 16px 48px}
+  .st-h1{font-size:30px}
+  /* スマホ: 工程は横に並べてスクロール */
+  .st-nav{flex-direction:row;flex-wrap:nowrap;overflow-x:auto;gap:6px;padding:10px 12px;border-right:0;border-bottom:1px solid var(--st-line)}
+  .st-nav .st-cl,.st-nav .st-prog{display:none}
+  .st-step,.st-del{flex:none;white-space:nowrap}
+  .st-step{padding:8px 12px}.st-step:hover{padding-left:12px}.st-step .no{display:none}
+  .st-del{margin-top:0}
+}
+</style>
+<div id="studio" data-theme="dark" role="dialog" aria-label="クライアント"></div>
+<button id="stBackChip" type="button"><i></i><span></span></button>
+
 <!-- ドロワー -->
 <div id="drawerWrap">
   <div id="drawerBack"></div>
@@ -1953,6 +2103,7 @@ kbd{
     </header>
     <div id="mapList"></div>
     <div id="drawerFoot">
+      <button id="newClientBtn">＋ クライアント</button>
       <button id="newMapBtn">＋ マップ</button>
       <button id="newWireBtn">＋ デザイン</button>
       <button id="newTextBtn">＋ 文書</button>
@@ -2527,7 +2678,7 @@ kbd{
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-25.1';
+const APP_VERSION='2026-10-25.2';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -2716,6 +2867,7 @@ function normalizeDoc(d){
   if(!d.tree)d.tree=d.maps.map(m=>({t:'m',id:m.id}));
   if(!d.wires)d.wires=[];
   if(!d.texts)d.texts=[];
+  if(!d.clients)d.clients=[];
   /* 旧形式のふちどり・シャドウを新形式へ(巻き上げで使える) */
   d.wires.forEach(w=>(w.shapes||[]).forEach(s=>{migrateOl(s);migrateSh(s);}));
   /* 旧フォルダ(children=id文字列配列)→新ネスト(children=node配列)へ移行 */
@@ -2729,7 +2881,7 @@ function normalizeDoc(d){
 }
 function freshDoc(){
   const w=welcomeMap();
-  return{maps:[w],wires:[],texts:[],tree:[{t:'m',id:w.id}],current:w.id,theme:matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'};
+  return{maps:[w],wires:[],texts:[],clients:[],tree:[{t:'m',id:w.id}],current:w.id,theme:matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'};
 }
 let doc=null;
 let saveTimer=null;
@@ -17050,6 +17202,373 @@ $('#p1restore').onclick=()=>{paneState='split';applyMulti();};
 /* ============================================================
    初期化(保存データを読み込んでから画面を組み立てる)
    ============================================================ */
+/* ============================================================
+   クライアント(制作の工程)
+   クライアントごとに、クライアント情報 → ヒアリング → ペルソナ → デザインルール → 掲載内容 →
+   ワイヤーフレーム → デザインカンプ の順に進める。データは doc.clients に保存する。
+   ワイヤーフレームとデザインカンプは、いまのデザイン画面(キャンバス)を使う
+   ============================================================ */
+const ST_STEPS=[
+  {k:'info',n:'クライアント情報',desc:'お客さまの基本情報と連絡先'},
+  {k:'hearing',n:'ヒアリング',desc:'お客さまの考えを、質問に沿って聞き取ります'},
+  {k:'persona',n:'ペルソナ',desc:'誰に向けたサイトかを、1人の人物にまとめます'},
+  {k:'rules',n:'デザインルール',desc:'色・文字・余白の決まり'},
+  {k:'content',n:'掲載内容',desc:'ページごとに載せる文章と写真'},
+  {k:'wire',n:'ワイヤーフレーム',desc:'構成だけを組み、お客さまに確認してもらいます'},
+  {k:'comp',n:'デザインカンプ',desc:'デザインルールの色と文字で仕上げ、HTMLに書き出します'}
+];
+const ST_INFO=[['name','屋号・会社名'],['kind','業種'],['person','ご担当者'],['tel','電話'],['mail','メール'],['addr','住所'],['due','公開の予定'],['memo','メモ']];
+const ST_PERSONA=[['name','名前'],['age','年代・性別'],['job','仕事'],['life','ふだんの暮らし'],['pain','困っていること'],['want','サイトで知りたいこと'],['device','よく使う端末']];
+/* ヒアリングのひな形(質問は書き換え・追加・削除できる) */
+const ST_HEARING=['サイトでいちばん叶えたいこと','主なお客さま','お客さまに伝えたい強み','競合・参考にしたいサイト','好きな雰囲気・避けたい雰囲気','必要なページ','写真や文章の用意','公開後の更新はだれがするか','ご予算','公開の希望日'];
+const ST_CONTENT=['トップ','会社・お店の紹介','サービス・メニュー','お知らせ','お問い合わせ'];
+const ST_STATUS={done:'完了',doing:'作業中',skip:'スキップ'};
+const ST_SVG={
+  x:'<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  search:'<svg viewBox="0 0 24 24"><path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-4-4"/></svg>'
+};
+let stView='home',stCid=null,stStepI=0,stQuery='';
+const stEl=()=>$('#studio');
+function stClients(){if(!doc.clients)doc.clients=[];return doc.clients;}
+function stClient(){return stClients().find(c=>c.id===stCid)||null;}
+function stNewClient(){
+  return{id:uid(),name:'新しいクライアント',created:Date.now(),updated:Date.now(),st:{},info:{},
+    hearing:ST_HEARING.map(q=>({id:uid(),q,a:''})),persona:{},
+    rules:{colors:[{n:'メイン',c:'#4A2E21'},{n:'背景',c:'#F8F1E7'},{n:'差し色',c:'#D98F4E'},{n:'文字',c:'#2B2B2B'}],head:'w-shippori',body:'w-notosans',space:8},
+    content:ST_CONTENT.map(q=>({id:uid(),q,a:''})),design:null};
+}
+/* 保存(開いているマップ・デザインの更新日時は変えない) */
+function stSave(c){
+  if(c)c.updated=Date.now();
+  clearTimeout(saveTimer);saveTimer=setTimeout(doSave,250);
+}
+const stStat=(c,i)=>(c.st||{})[ST_STEPS[i].k]||'';
+const stDoneN=c=>ST_STEPS.filter((_,i)=>['done','skip'].includes(stStat(c,i))).length;
+const stFirstOpen=c=>{const i=ST_STEPS.findIndex((_,j)=>!['done','skip'].includes(stStat(c,j)));return i<0?ST_STEPS.length-1:i;};
+const stDate=t=>{const d=new Date(t);return`${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`;};
+/* ライト/ダーク。使う方のフォントだけを読み込む */
+function stTheme(){try{return localStorage.getItem('ntd-st-theme')==='light'?'light':'dark';}catch(e){return'dark';}}
+function stApplyTheme(){
+  const t=stTheme();
+  stEl().dataset.theme=t;
+  const id='stFont-'+t;
+  if(!document.getElementById(id)){
+    const l=document.createElement('link');l.rel='stylesheet';l.id=id;
+    l.href=t==='light'
+      ?'https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap'
+      :'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@500&display=swap';
+    document.head.appendChild(l);
+  }
+}
+function stOpen(cid){
+  if(editingId)commitEdit();
+  finishWireText();
+  closeDrawer();
+  if(cid){stView='client';stCid=cid;const c=stClient();stStepI=c?stFirstOpen(c):0;}
+  else stView=stView==='client'&&stClient()?'client':'home';
+  stApplyTheme();
+  stEl().classList.add('on');
+  try{localStorage.setItem('ntd-st-open','1');}catch(e){}
+  stRender();
+  stSyncBack();
+}
+function stClose(){
+  stEl().classList.remove('on');
+  try{localStorage.removeItem('ntd-st-open');}catch(e){}
+  stSyncBack();
+}
+function stThemeSeg(){
+  const t=stTheme();
+  return`<div class="st-seg" role="group" aria-label="画面の明るさ">
+    <button type="button" data-act="theme" data-v="light" class="${t==='light'?'on':''}" aria-pressed="${t==='light'}">ライト</button>
+    <button type="button" data-act="theme" data-v="dark" class="${t==='dark'?'on':''}" aria-pressed="${t==='dark'}">ダーク</button></div>`;
+}
+function stBars(c){
+  return`<div class="st-bars" aria-hidden="true">${ST_STEPS.map((_,i)=>`<i class="${stStat(c,i)}"></i>`).join('')}</div>`;
+}
+function stRender(){
+  const el=stEl();
+  if(stView==='client'&&!stClient())stView='home';
+  el.innerHTML=stView==='home'?stHomeHtml():stClientHtml();
+  el.scrollTop=0;
+  if(stView==='client'){
+    const cs=el.querySelector('.st-step.cur');if(cs&&matchMedia('(max-width:640px)').matches)cs.scrollIntoView({inline:'center',block:'nearest'});
+    stAfterRender();
+  }
+}
+/* ---- クライアント一覧 ---- */
+function stHomeHtml(){
+  const all=stClients().slice().sort((a,b)=>(b.updated||0)-(a.updated||0));
+  const q=stQuery.trim().toLowerCase();
+  const list=q?all.filter(c=>[c.name,c.info.kind,c.info.person].join(' ').toLowerCase().includes(q)):all;
+  const pub=all.filter(c=>stDoneN(c)===ST_STEPS.length).length;
+  const cards=list.map(c=>{
+    const col=c.rules.colors,bg=(col[0]||{}).c||'#4A2E21',fg=(col[1]||{}).c||'#FFFFFF';
+    const n=stDoneN(c),i=stFirstOpen(c);
+    const now=n===ST_STEPS.length?'すべて完了':ST_STEPS[i].n;
+    return`<button type="button" class="st-card" data-act="open" data-id="${c.id}">
+      <div class="st-cover" style="background:${escXml(bg)};color:${escXml(fg)}"><span>${escXml([...(c.name||'？')][0])}</span></div>
+      <div class="st-cbody">
+        <div><div class="st-cname">${escXml(c.name)}</div><div class="st-ckind">${escXml(c.info.kind||'')}</div></div>
+        ${stBars(c)}
+        <div class="st-cfoot"><span>${escXml(now)}</span><span>${stDate(c.updated||c.created)}</span></div>
+      </div></button>`;
+  }).join('');
+  return`<header class="st-bar">
+      <span class="st-logo">NT-D</span>
+      <label class="st-search">${ST_SVG.search}<input type="search" id="stQ" placeholder="クライアントを探す" aria-label="クライアントを探す" value="${escXml(stQuery)}"></label>
+      <span class="st-sp"></span>
+      ${stThemeSeg()}
+      <button type="button" class="st-btn pri" data-act="new">＋ 新しいクライアント</button>
+      <button type="button" class="st-x" data-act="close" aria-label="マップ・デザインの画面へ" title="マップ・デザインの画面へ">${ST_SVG.x}</button>
+    </header>
+    <main class="st-home st-in">
+      <div class="st-hhead">
+        <div><div class="st-kick">CLIENTS</div><h1 class="st-h1">クライアント</h1></div>
+        <div class="st-stats"><span>制作中<b>${all.length-pub}</b></span><span>完了<b>${pub}</b></span></div>
+      </div>
+      ${q&&!list.length?`<div class="st-empty">「${escXml(stQuery)}」に合うクライアントはありません</div>`:''}
+      <div class="st-grid">${cards}
+        <button type="button" class="st-add" data-act="new"><span><span>＋</span>新しいクライアント</span></button>
+      </div>
+    </main>`;
+}
+/* ---- 工程の画面 ---- */
+function stNavHtml(c){
+  const steps=ST_STEPS.map((s,i)=>{
+    const st=stStat(c,i);
+    return`<button type="button" class="st-step ${st}${i===stStepI?' cur':''}" data-act="step" data-i="${i}"${i===stStepI?' aria-current="step"':''}>
+      <span class="dot"></span><span class="nm">${s.n}</span>${st&&st!=='doing'?`<span class="tg">${ST_STATUS[st]}</span>`:''}<span class="no">${String(i+1).padStart(2,'0')}</span></button>`;
+  }).join('');
+  return`<div class="st-cl"><div class="st-kick">CLIENT</div><b id="stNavName">${escXml(c.name)}</b></div>${steps}
+    <div class="st-prog"><div class="row"><span>進み具合</span><span>${stDoneN(c)} / ${ST_STEPS.length}</span></div>${stBars(c)}</div>
+    <button type="button" class="st-del" data-act="delete">このクライアントを削除</button>`;
+}
+function stClientHtml(){
+  const c=stClient(),s=ST_STEPS[stStepI],st=stStat(c,stStepI);
+  const last=stStepI===ST_STEPS.length-1;
+  const acts=`<span class="st-saved" id="stSaved">自動で保存します</span>
+    <button type="button" class="st-btn ghost" data-act="skip">${st==='skip'?'スキップを取り消す':'スキップ'}</button>
+    ${st==='done'
+      ?`<button type="button" class="st-btn ghost" data-act="undone">完了を取り消す</button>${last?'':'<button type="button" class="st-btn pri" data-act="next">次の工程へ</button>'}`
+      :`<button type="button" class="st-btn pri" data-act="done">${last?'完了にする':'完了にして次へ'}</button>`}`;
+  return`<header class="st-bar">
+      <button type="button" class="st-btn ghost" data-act="home">← クライアント</button>
+      <span class="st-crumb">/ <b id="stCrumbName">${escXml(c.name)}</b></span>
+      <span class="st-sp"></span>
+      ${stThemeSeg()}
+      <button type="button" class="st-x" data-act="close" aria-label="マップ・デザインの画面へ" title="マップ・デザインの画面へ">${ST_SVG.x}</button>
+    </header>
+    <div class="st-body">
+      <nav class="st-nav" id="stNav" aria-label="工程">${stNavHtml(c)}</nav>
+      <main class="st-main">
+        <div class="st-mhead st-in">
+          <div><div class="stepno">STEP ${String(stStepI+1).padStart(2,'0')}${st?' ・ '+ST_STATUS[st]:''}</div>
+            <h1 class="st-h1">${s.n}</h1><p>${s.desc}</p></div>
+          <div class="st-acts">${acts}</div>
+        </div>
+        <div class="st-in" id="stPane">${stPaneHtml(c,s.k)}</div>
+      </main>
+    </div>`;
+}
+const stField=(path,label,val,multi)=>`<label class="st-f"><span class="lb">${escXml(label)}</span>${multi
+  ?`<textarea rows="2" data-f="${path}">${escXml(val||'')}</textarea>`
+  :`<input class="v" type="text" data-f="${path}" value="${escXml(val||'')}">`}</label>`;
+/* 質問(見出し)も書き換えられる一覧(ヒアリング・掲載内容) */
+function stQaHtml(c,key,addLabel,ph){
+  return`<div class="st-fields">${c[key].map(r=>`<div class="st-f">
+      <input class="lb" type="text" data-qa="${key}" data-id="${r.id}" data-part="q" value="${escXml(r.q)}" aria-label="見出し">
+      <textarea rows="2" data-qa="${key}" data-id="${r.id}" data-part="a" placeholder="${escXml(ph)}" aria-label="${escXml(r.q)}">${escXml(r.a)}</textarea>
+      <button type="button" class="rm" data-act="qa-del" data-key="${key}" data-id="${r.id}" aria-label="この項目を削除" title="この項目を削除">${ST_SVG.x.replace('<svg','<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"')}</button>
+    </div>`).join('')}</div>
+    <div class="st-tools"><button type="button" class="st-chip" data-act="qa-add" data-key="${key}">＋ ${addLabel}</button>
+    ${key==='hearing'?'<button type="button" class="st-chip" data-act="qa-tpl">ひな形の質問を足す</button>':''}</div>`;
+}
+function stPaneHtml(c,k){
+  if(k==='info')return`<div class="st-fields">${ST_INFO.map(([f,l])=>stField('info.'+f,l,f==='name'?c.name:c.info[f],f==='memo'||f==='addr')).join('')}</div>`;
+  if(k==='persona')return`<div class="st-fields">${ST_PERSONA.map(([f,l])=>stField('persona.'+f,l,c.persona[f],!['name','age','device'].includes(f))).join('')}</div>
+    <p class="st-note">ヒアリングの「主なお客さま」を見ながら、1人の人物として具体的に書くと、デザインの判断がしやすくなります。</p>`;
+  if(k==='hearing')return stQaHtml(c,'hearing','質問を追加','答えを書きます');
+  if(k==='content')return stQaHtml(c,'content','ページ・項目を追加','載せる文章・写真');
+  if(k==='rules')return stRulesHtml(c);
+  return stCanvasHtml(c,k);
+}
+const stFontOpts=sel=>WFONTS.filter(f=>f.web&&!f.old).map(f=>`<option value="${f.k}"${f.k===sel?' selected':''}>${escXml(f.n)}</option>`).join('');
+const stFontFam=k=>{const f=WFONTS.find(x=>x.k===k);return f?f.f:'sans-serif';};
+function stRulesHtml(c){
+  const r=c.rules,sp=r.space||8;
+  return`<div class="st-sec" style="gap:28px">
+    <section class="st-sec"><h2>COLOR</h2><div class="st-sw">${r.colors.map((x,i)=>`<div class="st-swc">
+        <label class="c" style="background:${escXml(x.c)}"><input type="color" data-ci="${i}" data-part="c" value="${escXml(x.c)}" aria-label="${escXml(x.n)}の色"></label>
+        <div class="meta"><input type="text" data-ci="${i}" data-part="n" value="${escXml(x.n)}" aria-label="色の名前"><code>${escXml(x.c.toUpperCase())}</code></div>
+        <button type="button" class="rm" data-act="color-del" data-i="${i}" aria-label="この色を削除" title="この色を削除">×</button>
+      </div>`).join('')}</div>
+      <div class="st-tools"><button type="button" class="st-chip" data-act="color-add">＋ 色を追加</button></div></section>
+    <section class="st-sec"><h2>TYPE</h2><div class="st-fonts">
+      <div class="st-font"><span class="st-kick">見出しの文字</span><select data-font="head" aria-label="見出しの文字">${stFontOpts(r.head)}</select>
+        <div class="sm" style="font-family:${escXml(stFontFam(r.head))}">${escXml(c.name)}</div></div>
+      <div class="st-font"><span class="st-kick">本文の文字</span><select data-font="body" aria-label="本文の文字">${stFontOpts(r.body)}</select>
+        <div class="sm body" style="font-family:${escXml(stFontFam(r.body))}">本文の見本です。読みやすさと雰囲気を確かめます。</div></div>
+    </div></section>
+    <section class="st-sec"><h2>SPACING</h2>
+      <div class="st-tools"><span class="st-note" style="align-self:center">余白の基本の単位</span>${[4,8,10].map(v=>`<button type="button" class="st-chip" data-act="space" data-v="${v}" aria-pressed="${sp===v}" style="${sp===v?'background:var(--st-accent);color:var(--st-on);border-color:transparent':''}">${v}px</button>`).join('')}</div>
+      <div class="st-space">${[1,2,3,5,8].map(m=>`<div><i style="width:${sp*m}px;height:${sp*m}px"></i>${sp*m}</div>`).join('')}</div>
+    </section>
+    <p class="st-note">この色と文字は、デザインカンプの色・フォントの選択肢として使えるようにしていく予定です。</p>
+  </div>`;
+}
+function stCanvasHtml(c,k){
+  const w=c.design&&wireById(c.design);
+  const sw=c.rules.colors.map(x=>`<i style="background:${escXml(x.c)}" title="${escXml(x.n)}"></i>`).join('');
+  return`<div class="st-cv">
+    <div class="st-cvimg" id="stCvImg">${w?'<span class="ph">読み込み中…</span>':`<div class="ph">まだデザインがありません。<br>右の「デザインを作る」から始めます。</div>`}</div>
+    <div class="st-cvside">
+      <div class="st-kick">${k==='wire'?'WIREFRAME':'DESIGN'}</div>
+      <div style="font-weight:700">${w?escXml(w.name):'デザインはまだありません'}</div>
+      <p class="st-note">${k==='wire'
+        ?'灰色の箱と文字で、載せる内容の順番と配置を組みます。お客さまに構成を確認してもらう区切りの工程です。'
+        :'ワイヤーで組んだデザインに、デザインルールの色と文字を当てて仕上げます。仕上がったら「HTMLに書き出す」で公開用のファイルを作ります。'}</p>
+      <div class="st-kick">デザインルールの色</div><div class="sws">${sw}</div>
+      <button type="button" class="st-btn pri" data-act="canvas" style="margin-top:auto">${w?'キャンバスを開く':'デザインを作る'}</button>
+      ${w?'':'<p class="st-note">ワイヤーフレームとデザインカンプは、同じデザインを使います。</p>'}
+    </div></div>`;
+}
+/* 描いた後: キャンバスの見本画像・ルールのフォントを読み込む */
+async function stAfterRender(){
+  const c=stClient();if(!c)return;
+  const k=ST_STEPS[stStepI].k;
+  if(k==='rules'){
+    const url=webFontCssUrl([c.rules.head,c.rules.body]);
+    if(url&&!document.querySelector(`link[data-st-font="${CSS.escape(url)}"]`)){
+      const l=document.createElement('link');l.rel='stylesheet';l.href=url;l.dataset.stFont=url;document.head.appendChild(l);
+    }
+  }
+  if((k==='wire'||k==='comp')&&c.design&&wireById(c.design)){
+    const box=$('#stCvImg');
+    try{
+      const src=await previewDataURL(c.design);
+      if(box&&box.isConnected)box.innerHTML=src?`<img alt="デザインの見本" src="${src}">`:'<span class="ph">まだ何も置いていません</span>';
+    }catch(e){if(box)box.innerHTML='<span class="ph">見本を表示できませんでした</span>';}
+  }
+}
+/* 書いている途中の工程は「作業中」にする(並びの表示だけ描き直す。入力欄はそのまま) */
+function stTouch(c){
+  const k=ST_STEPS[stStepI].k;
+  if(!c.st)c.st={};
+  if(!c.st[k]){c.st[k]='doing';const nav=$('#stNav');if(nav)nav.innerHTML=stNavHtml(c);}
+  stSave(c);
+  const sv=$('#stSaved');if(sv)sv.textContent='保存しました';
+}
+function stSetStat(v){
+  const c=stClient(),k=ST_STEPS[stStepI].k;
+  if(!c.st)c.st={};
+  if(v)c.st[k]=v;else delete c.st[k];
+  stSave(c);
+}
+/* キャンバスを開く(無ければ作る)。このクライアントの基本のフォントを使う */
+function stOpenCanvas(){
+  const c=stClient();
+  let w=c.design&&wireById(c.design);
+  if(!w){
+    w={id:uid(),name:c.name+' のデザイン',shapes:[],updated:Date.now(),site:{font:c.rules.body||'w-notosans'}};
+    doc.wires.push(w);
+    doc.tree.unshift({t:'w',id:w.id});
+    c.design=w.id;
+    if(!c.st[ST_STEPS[stStepI].k]){c.st[ST_STEPS[stStepI].k]='doing';}
+    stSave(c);
+  }
+  stEl().classList.remove('on');
+  try{localStorage.removeItem('ntd-st-open');}catch(e){}
+  openWire(w.id);
+  stSyncBack();
+}
+/* キャンバスがクライアントのデザインの時は、工程の画面へ戻るボタンを出す */
+function stSyncBack(){
+  const chip=$('#stBackChip');if(!chip||!doc)return;
+  const c=!stEl().classList.contains('on')&&isWire()&&stClients().find(x=>x.design===doc.current);
+  chip.classList.toggle('on',!!c);
+  if(c){chip.querySelector('span').textContent=c.name+' の工程へ';chip.dataset.id=c.id;}
+}
+$('#stBackChip').addEventListener('click',()=>{
+  const id=$('#stBackChip').dataset.id,c=stClients().find(x=>x.id===id);
+  if(!c)return;
+  stView='client';stCid=c.id;stStepI=['done','skip'].includes(stStat(c,5))?6:5;
+  stOpen();
+});
+['openWire','switchMap','openText'].forEach(fn=>{
+  const orig=window[fn];
+  if(typeof orig==='function')window[fn]=function(){const r=orig.apply(this,arguments);try{stSyncBack();}catch(e){}return r;};
+});
+/* ---- 操作 ---- */
+stEl().addEventListener('click',e=>{
+  const b=e.target.closest('[data-act]');if(!b||!stEl().contains(b))return;
+  const act=b.dataset.act,c=stClient();
+  if(act==='close'){stClose();return;}
+  if(act==='theme'){try{localStorage.setItem('ntd-st-theme',b.dataset.v);}catch(err){}stApplyTheme();stRender();return;}
+  if(act==='home'){stView='home';stRender();return;}
+  if(act==='new'){
+    const n=stNewClient();stClients().unshift(n);stSave(n);
+    stView='client';stCid=n.id;stStepI=0;stRender();
+    const inp=stEl().querySelector('[data-f="info.name"]');if(inp){inp.focus();inp.select();}
+    return;
+  }
+  if(act==='open'){stView='client';stCid=b.dataset.id;const x=stClient();stStepI=x?stFirstOpen(x):0;stRender();return;}
+  if(!c)return;
+  if(act==='step'){stStepI=+b.dataset.i;stRender();return;}
+  if(act==='done'){const nm=ST_STEPS[stStepI].n;stSetStat('done');if(stStepI<ST_STEPS.length-1)stStepI++;stRender();toast(nm+'を完了にしました');return;}
+  if(act==='next'){stStepI=Math.min(ST_STEPS.length-1,stStepI+1);stRender();return;}
+  if(act==='undone'){stSetStat('doing');stRender();return;}
+  if(act==='skip'){const was=stStat(c,stStepI)==='skip';stSetStat(was?'':'skip');stRender();return;}
+  if(act==='delete'){
+    askConfirm(`「${c.name}」を削除しますか？`,'ヒアリングなどの内容は消えます。作ったデザインは「マップ・デザイン」の一覧に残ります。',()=>{
+      doc.clients=stClients().filter(x=>x.id!==c.id);stSave();stView='home';stRender();toast('クライアントを削除しました');
+    });
+    return;
+  }
+  if(act==='qa-add'){const k=b.dataset.key;c[k].push({id:uid(),q:k==='hearing'?'新しい質問':'新しい項目',a:''});stTouch(c);stRender();
+    const all=stEl().querySelectorAll(`[data-qa="${k}"][data-part="q"]`);const last=all[all.length-1];if(last){last.focus();last.select();}return;}
+  if(act==='qa-tpl'){const have=new Set(c.hearing.map(r=>r.q));const add=ST_HEARING.filter(q=>!have.has(q));
+    if(!add.length){toast('ひな形の質問はすべて入っています');return;}
+    add.forEach(q=>c.hearing.push({id:uid(),q,a:''}));stTouch(c);stRender();toast(`ひな形の質問を${add.length}つ足しました`);return;}
+  if(act==='qa-del'){const k=b.dataset.key;c[k]=c[k].filter(r=>r.id!==b.dataset.id);stTouch(c);stRender();return;}
+  if(act==='color-add'){c.rules.colors.push({n:'色'+(c.rules.colors.length+1),c:'#888888'});stTouch(c);stRender();return;}
+  if(act==='color-del'){c.rules.colors.splice(+b.dataset.i,1);stTouch(c);stRender();return;}
+  if(act==='space'){c.rules.space=+b.dataset.v;stTouch(c);stRender();return;}
+  if(act==='canvas'){stOpenCanvas();return;}
+});
+stEl().addEventListener('input',e=>{
+  const t=e.target;
+  if(t.id==='stQ'){stQuery=t.value;const pos=t.selectionStart;stRender();const q=$('#stQ');if(q){q.focus();try{q.setSelectionRange(pos,pos);}catch(err){}}return;}
+  const c=stClient();if(!c)return;
+  if(t.dataset.f){
+    const [grp,key]=t.dataset.f.split('.');
+    if(grp==='info'&&key==='name'){
+      c.name=t.value.trim()||'無題のクライアント';
+      const a=$('#stNavName'),b=$('#stCrumbName');if(a)a.textContent=c.name;if(b)b.textContent=c.name;
+    }else c[grp][key]=t.value;
+    stTouch(c);return;
+  }
+  if(t.dataset.qa){const r=c[t.dataset.qa].find(x=>x.id===t.dataset.id);if(r){r[t.dataset.part]=t.value;stTouch(c);}return;}
+  if(t.dataset.ci!==undefined){
+    const x=c.rules.colors[+t.dataset.ci];if(!x)return;
+    x[t.dataset.part]=t.value;
+    if(t.dataset.part==='c'){const sw=t.closest('.st-swc');sw.querySelector('label.c').style.background=t.value;sw.querySelector('code').textContent=t.value.toUpperCase();}
+    stTouch(c);return;
+  }
+});
+stEl().addEventListener('change',e=>{
+  const t=e.target,c=stClient();
+  if(c&&t.dataset.font){c.rules[t.dataset.font]=t.value;stTouch(c);stRender();}
+});
+$('#studioBtn').addEventListener('click',()=>stOpen());
+$('#newClientBtn').onclick=()=>{
+  const n=stNewClient();stClients().unshift(n);stSave(n);
+  stOpen(n.id);
+  const inp=stEl().querySelector('[data-f="info.name"]');if(inp){inp.focus();inp.select();}
+};
+addEventListener('keydown',e=>{if(e.key==='Escape'&&stEl().classList.contains('on')&&getComputedStyle($('#confirmWrap')).display==='none')stClose();});
+
+
 function startApp(){
 selectedId=cur().root.id;
 renderBrandColors();   /* 保存したブランドカラーをパレットに反映 */
@@ -17078,6 +17597,8 @@ if(isWire()){
   requestAnimationFrame(()=>{render();fitView();updateHistBtns();});
 }
 addEventListener('resize',()=>applyView());
+/* 前回クライアントの画面を開いていたら、また開く */
+try{if(localStorage.getItem('ntd-st-open')==='1')stOpen();else stSyncBack();}catch(e){}
 /* 閉じる直前: 保存待ちが残っていれば即書き込む(同期のlocalStorageにも保険をかける) */
 addEventListener('beforeunload',()=>{
   if(saveTimer){
