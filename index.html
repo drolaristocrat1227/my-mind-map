@@ -762,6 +762,25 @@ body.wire-mode #wireEmpty.on{display:flex;}
 body.wirebar-off #wireBar{display:none;}
 body:not(.wire-mode) #wireBarToggleBtn{display:none;}
 body:not(.wire-mode) #wireLayerBtn{display:none;}
+body:not(.wire-mode) #fsBtn{display:none;}
+/* ページの確認(プレビュー): 書き出すHTMLを画面いっぱいに出す */
+#pvWrap{position:fixed;inset:0;z-index:1500;display:none;background:#1A1C22}
+#pvWrap.on{display:block}
+#pvStage{position:absolute;inset:0;display:flex;justify-content:center;overflow:auto}
+#pvFrame{border:0;background:#fff;width:100%;height:100%;flex:none;transition:width .25s ease}
+#pvWrap[data-w="tab"] #pvFrame{width:820px;max-width:100%;box-shadow:0 0 0 1px rgba(255,255,255,.08),0 20px 60px rgba(0,0,0,.5)}
+#pvWrap[data-w="sp"] #pvFrame{width:390px;max-width:100%;box-shadow:0 0 0 1px rgba(255,255,255,.08),0 20px 60px rgba(0,0,0,.5)}
+#pvBar{position:absolute;top:10px;right:10px;z-index:2;display:flex;align-items:center;gap:6px;padding:5px;border-radius:12px;background:rgba(21,23,29,.92);color:#E8EAF0;
+  font:600 12px/1.2 var(--ui-font);box-shadow:0 6px 24px rgba(0,0,0,.35);opacity:.25;transition:opacity .2s ease}
+#pvBar:hover,#pvBar:focus-within,#pvWrap.bar #pvBar{opacity:1}
+#pvBar select{max-width:200px;padding:6px 8px;border-radius:8px;border:1px solid rgba(255,255,255,.14);background:#0D0E12;color:#E8EAF0;font:inherit}
+#pvBar .pvSeg{display:flex;padding:2px;border-radius:9px;background:#0D0E12}
+#pvBar button{border:0;border-radius:7px;padding:6px 10px;background:transparent;color:#9097A6;font:inherit;cursor:pointer}
+#pvBar button.on{background:#FF2E5E;color:#0D0E12}
+#pvBar .pvX{width:32px;height:32px;padding:0;font-size:20px;line-height:1;color:#E8EAF0}
+#pvBar .pvBig{color:#E8EAF0}
+#pvLoading{position:absolute;inset:0;display:none;align-items:center;justify-content:center;color:#9097A6;font:600 14px var(--ui-font)}
+#pvWrap.loading #pvLoading{display:flex}
 /* レイヤーパネル */
 #layerPanel{
   position:fixed;top:74px;left:14px;z-index:20;
@@ -1331,8 +1350,8 @@ kbd{
   <button class="iconbtn" id="exportBtn" title="エクスポート">
     <svg viewBox="0 0 24 24"><path d="M12 4v11m0 0l-4.5-4.5M12 15l4.5-4.5M4 19h16"/></svg>
   </button>
-  <button class="iconbtn" id="fsBtn" title="画面いっぱいに表示(もう一度押すと戻る)" aria-label="画面いっぱいに表示">
-    <svg viewBox="0 0 24 24" id="fsIcon"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg>
+  <button class="iconbtn" id="fsBtn" title="このページを画面いっぱいで確認(書き出した時の見え方)" aria-label="このページを画面いっぱいで確認">
+    <svg viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="12.5" rx="1.8"/><path d="M8.5 20.5h7M12 17v3.5M10.5 8.6v5.3l4.4-2.65z"/></svg>
   </button>
   <button class="iconbtn" id="helpBtn" title="ヘルプ">
     <svg viewBox="0 0 24 24"><path d="M9.3 9.2a2.8 2.8 0 1 1 3.9 3c-.9.5-1.2 1-1.2 2M12 17.5v.1"/><circle cx="12" cy="12" r="9.2"/></svg>
@@ -2216,6 +2235,16 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
 }
 </style>
 <div id="studio" data-theme="dark" role="dialog" aria-label="クライアント"></div>
+<div id="pvWrap" role="dialog" aria-label="ページの確認">
+  <div id="pvStage"><iframe id="pvFrame" title="ページの確認"></iframe></div>
+  <div id="pvLoading">表示を準備しています…</div>
+  <div id="pvBar">
+    <select id="pvPage" aria-label="確認するページ"></select>
+    <div class="pvSeg" role="group" aria-label="画面の幅"><button type="button" data-w="pc" class="on">PC</button><button type="button" data-w="tab">タブレット</button><button type="button" data-w="sp">スマホ</button></div>
+    <button type="button" class="pvBig" id="pvFull" title="ブラウザの枠も消して、画面全体に出す">全画面</button>
+    <button type="button" class="pvX" id="pvClose" aria-label="確認をやめる" title="確認をやめる(Esc)">&times;</button>
+  </div>
+</div>
 <div id="stCanvasBar"><button id="stBackChip" type="button"><i></i><span></span></button><div id="stVm" role="group" aria-label="表示"><button type="button" data-vm="wire">ワイヤー</button><button type="button" data-vm="comp">カンプ</button></div></div>
 
 <!-- ドロワー -->
@@ -2807,7 +2836,7 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-26.6';
+const APP_VERSION='2026-10-26.7';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -18196,30 +18225,83 @@ $('#mapOpen').onclick=()=>{
 };
 $('#boxMenu').addEventListener('click',e=>{if(e.target.closest('[data-add="gmap"]'))gmapAdd();});
 /* ============================================================
-   画面いっぱい(全画面)で表示する。ブラウザの全画面の機能を使う(Esc か、もう一度押すと戻る)
+   ページの確認(プレビュー)。いま作っているページを、書き出すHTMLのまま画面いっぱいに出して、
+   PC(やタブレット・スマホ)での見え方・動き・ホバーを確かめる。編集中のデータは変えない
    ============================================================ */
 const isFullscreen=()=>!!(document.fullscreenElement||document.webkitFullscreenElement);
-function toggleFullscreen(){
-  const el=document.documentElement;
+let pvUrl=null,pvPages=[];
+/* 確かめられるページ: ホームページのページ一覧(フレームが決まっている物)と、まだ一覧に無いいちばん外のフレーム */
+function pvPageList(d){
+  const c=siteCfg(d),sh=d.shapes,par=layParents(sh);
+  const list=c.pages.filter(p=>p.pc||p.tab||p.sp).map(p=>({p,label:(p.title||p.file)+'('+p.file+')'}));
+  const used=new Set(c.pages.flatMap(p=>[p.pc,p.tab,p.sp]).filter(Boolean));
+  sh.forEach((f,i)=>{if(isFrame(f)&&!par[i]&&!used.has(f.id)&&!f.device)list.push({p:{id:'pv-'+f.id,file:'preview.html',title:f.name||'',desc:'',pc:f.id,tab:null,sp:null},label:(f.name||'フレーム')+'(ページ一覧に無いフレーム)'});});
+  return list;
+}
+/* 選んでいる物を含むページ(無ければ1ページ目) */
+function pvStartIndex(d,list){
+  const sh=d.shapes,par=layParents(sh);
+  let f=selShapes()[0]||null;
+  while(f&&par[sh.indexOf(f)])f=par[sh.indexOf(f)];
+  const i=f?list.findIndex(x=>[x.p.pc,x.p.tab,x.p.sp].includes(f.id)):-1;
+  return i<0?0:i;
+}
+async function pvShow(i){
+  const d=curDoc(),x=pvPages[i];if(!x)return;
+  $('#pvWrap').classList.add('loading');
+  try{
+    await prepareSiteImages(d,[x.p]);
+    let html;try{html=sitePageDoc(d,x.p,{files:false});}finally{siteImgOpt=null;}
+    if(!html){toast('このページは表示できませんでした');return;}
+    if(pvUrl)URL.revokeObjectURL(pvUrl);
+    pvUrl=URL.createObjectURL(new Blob([html],{type:'text/html'}));
+    $('#pvFrame').src=pvUrl;
+  }catch(e){toast('表示できませんでした: '+e.message);}
+  finally{$('#pvWrap').classList.remove('loading');}
+}
+async function openPreview(){
+  const d=curDoc();if(!d||!d.shapes)return;
+  if(editingId)commitEdit();
+  finishWireText();hideMenus();
+  pvPages=pvPageList(d);
+  if(!pvPages.length){toast('ページ(フレーム)を作ると、画面いっぱいで確かめられます');return;}
+  const i=pvStartIndex(d,pvPages);
+  $('#pvPage').innerHTML=pvPages.map((x,k)=>`<option value="${k}">${escXml(x.label)}</option>`).join('');
+  $('#pvPage').value=String(i);
+  pvSetWidth('pc');
+  $('#pvWrap').classList.add('on','bar');
+  setTimeout(()=>$('#pvWrap').classList.remove('bar'),2200);
+  await pvShow(i);
+}
+function closePreview(){
+  if(isFullscreen())(document.exitFullscreen||document.webkitExitFullscreen).call(document);
+  $('#pvWrap').classList.remove('on');
+  $('#pvFrame').src='about:blank';
+  if(pvUrl){URL.revokeObjectURL(pvUrl);pvUrl=null;}
+}
+function pvSetWidth(w){
+  $('#pvWrap').dataset.w=w;
+  document.querySelectorAll('#pvBar [data-w]').forEach(b=>b.classList.toggle('on',b.dataset.w===w));
+}
+$('#fsBtn').onclick=openPreview;
+$('#pvClose').onclick=closePreview;
+$('#pvPage').addEventListener('change',()=>pvShow(+$('#pvPage').value));
+$('#pvBar').addEventListener('click',e=>{const b=e.target.closest('[data-w]');if(b)pvSetWidth(b.dataset.w);});
+/* ブラウザの枠(タブ・アドレスバー)も消して、画面全体に出す */
+$('#pvFull').onclick=()=>{
   if(isFullscreen()){(document.exitFullscreen||document.webkitExitFullscreen).call(document);return;}
-  const req=el.requestFullscreen||el.webkitRequestFullscreen;
-  if(!req){toast('この端末では画面いっぱいにできません(ホーム画面に追加して開くと、広く使えます)');return;}
-  try{const p=req.call(el,{navigationUI:'hide'});if(p&&p.catch)p.catch(()=>toast('画面いっぱいにできませんでした'));}
-  catch(e){toast('画面いっぱいにできませんでした');}
-}
-function syncFullscreen(){
-  const on=isFullscreen();
-  $('#fsIcon').innerHTML=on?'<path d="M9 4v5H4M15 4v5h5M15 20v-5h5M9 20v-5H4"/>':'<path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/>';
-  $('#fsBtn').title=on?'画面いっぱいをやめる(Esc)':'画面いっぱいに表示(もう一度押すと戻る)';
-  $('#fsBtn').setAttribute('aria-label',on?'画面いっぱいをやめる':'画面いっぱいに表示');
-  $('#fsBtn').classList.toggle('active',on);
-  document.querySelectorAll('#studio [data-act="fs"]').forEach(b=>{b.innerHTML='<svg viewBox="0 0 24 24">'+(on?'<path d="M9 4v5H4M15 4v5h5M15 20v-5h5M9 20v-5H4"/>':'<path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/>')+'</svg>';b.title=b.ariaLabel=on?'画面いっぱいをやめる':'画面いっぱいに表示';});
-  /* 画面の広さが変わるので、表示を合わせ直す */
-  requestAnimationFrame(()=>{try{applyView();}catch(e){}});
-}
-$('#fsBtn').onclick=toggleFullscreen;
-document.addEventListener('fullscreenchange',syncFullscreen);
-document.addEventListener('webkitfullscreenchange',syncFullscreen);
+  const el=$('#pvWrap'),req=el.requestFullscreen||el.webkitRequestFullscreen;
+  if(!req){toast('この端末では、ブラウザの枠を消せません');return;}
+  try{const p=req.call(el,{navigationUI:'hide'});if(p&&p.catch)p.catch(()=>toast('全画面にできませんでした'));}catch(e){toast('全画面にできませんでした');}
+};
+const pvSyncFull=()=>{$('#pvFull').textContent=isFullscreen()?'全画面をやめる':'全画面';};
+document.addEventListener('fullscreenchange',pvSyncFull);
+document.addEventListener('webkitfullscreenchange',pvSyncFull);
+addEventListener('keydown',e=>{
+  if(e.key!=='Escape'||!$('#pvWrap').classList.contains('on'))return;
+  if(isFullscreen())return;   /* 全画面の時は、まずブラウザが全画面をやめる */
+  e.stopPropagation();closePreview();
+},true);
 /* ============================================================
    クライアント(制作の工程)
    クライアントごとに、クライアント情報 → ヒアリング → ペルソナ → デザインルール → 掲載内容 →
@@ -18298,10 +18380,6 @@ function stClose(){
   try{localStorage.removeItem('ntd-st-open');}catch(e){}
   stSyncBack();
 }
-function stFsBtn(){
-  const on=isFullscreen();
-  return`<button type="button" class="st-x" data-act="fs" aria-label="${on?'画面いっぱいをやめる':'画面いっぱいに表示'}" title="${on?'画面いっぱいをやめる':'画面いっぱいに表示'}"><svg viewBox="0 0 24 24">${on?'<path d="M9 4v5H4M15 4v5h5M15 20v-5h5M9 20v-5H4"/>':'<path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/>'}</svg></button>`;
-}
 function stThemeSeg(){
   const t=stTheme();
   return`<div class="st-seg" role="group" aria-label="画面の明るさ">
@@ -18344,7 +18422,6 @@ function stHomeHtml(){
       <label class="st-search">${ST_SVG.search}<input type="search" id="stQ" placeholder="クライアントを探す" aria-label="クライアントを探す" value="${escXml(stQuery)}"></label>
       <span class="st-sp"></span>
       ${stThemeSeg()}
-      ${stFsBtn()}
       <button type="button" class="st-btn pri" data-act="new">＋ 新しいクライアント</button>
       <button type="button" class="st-x" data-act="close" aria-label="マップ・デザインの画面へ" title="マップ・デザインの画面へ">${ST_SVG.x}</button>
     </header>
@@ -18385,7 +18462,6 @@ function stClientHtml(){
       <span class="st-crumb">/ <b id="stCrumbName">${escXml(c.name)}</b></span>
       <span class="st-sp"></span>
       ${stThemeSeg()}
-      ${stFsBtn()}
       <button type="button" class="st-x" data-act="close" aria-label="マップ・デザインの画面へ" title="マップ・デザインの画面へ">${ST_SVG.x}</button>
     </header>
     <div class="st-body">
@@ -18589,7 +18665,6 @@ stEl().addEventListener('click',e=>{
   const b=e.target.closest('[data-act]');if(!b||!stEl().contains(b))return;
   const act=b.dataset.act,c=stClient();
   if(act==='close'){stClose();return;}
-  if(act==='fs'){toggleFullscreen();return;}
   if(act==='theme'){doc.theme=b.dataset.v;applyTheme();clearTimeout(saveTimer);saveTimer=setTimeout(doSave,250);stRender();return;}
   if(act==='home'){stView='home';stRender();return;}
   if(act==='new'){
