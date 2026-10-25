@@ -1653,6 +1653,10 @@ kbd{
         <button class="seg" data-vh="top" role="radio">する・中身は上</button>
         <button class="seg" data-vh="bottom" role="radio">する・中身は下</button>
       </div>
+      <div id="vhRefPart">
+        <div class="numRow"><span class="radLbl">作業時の画面</span><select id="vhRef" style="flex:1;min-width:0"></select></div>
+        <p class="btnHint" id="vhRefNote"></p>
+      </div>
     </div>
     <div id="webGrowRow">
       <div class="menu-label">中身に合わせて縦に伸ばす(ページ直下の区画)</div>
@@ -2836,7 +2840,7 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-26.7';
+const APP_VERSION='2026-10-26.8';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -11449,7 +11453,10 @@ function textPickSvg(s){
 const txRange=s=>(txSel&&txSel.sid===s.id&&txSel.b>=txSel.a)?txSel:null;
 function renderWire(){
   const d=curDoc();if(!d.shapes)return;
-  if(!(wDrag&&/^(move|resize|rotate|gresize)$/.test(wDrag.mode))&&layAll(d))save();
+  if(!(wDrag&&/^(move|resize|rotate|gresize)$/.test(wDrag.mode))){
+    const a=vhEditorAll(d),b=layAll(d);
+    if(a||b)save();
+  }
   wireViewApply();
   wireSel=wireSel.filter(id=>{const s=d.shapes.find(x=>x.id===id);return s&&!s.hidden;});
   let html='';
@@ -15085,6 +15092,7 @@ function updateWebSec(ss){
   if(topSecs.length){
     const v0=topSecs[0].vh||'';
     const same=topSecs.every(x=>(x.vh||'')===v0);
+    vhRefPanel(topSecs[0]);
     document.querySelectorAll('#webVh .seg').forEach(b=>{
       const on=same&&b.dataset.vh===v0;
       b.classList.toggle('active',on);b.setAttribute('aria-checked',on?'true':'false');
@@ -15192,7 +15200,8 @@ $('#webVh').addEventListener('click',e=>{
   const list=webTargets().filter(x=>{if(!isFrame(x))return false;const p=parentFrameAt(sh,sh.indexOf(x));return p&&!parentFrameAt(sh,sh.indexOf(p));});
   if(v&&list.some(x=>x.pin==='top'||x.pin==='bottom')){toast('ページ全体に固定した区画は、画面いっぱいにできません');return;}
   setWebProp(list,x=>{if(v)x.vh=v;else delete x.vh;},
-    v?'書き出したページで、この区画の高さを画面の高さに合わせます(編集画面ではデザインどおりの高さです)':'画面いっぱいをやめました');
+    v?'この区画の高さを画面の高さに合わせます(編集画面でも、「作業時の画面」の高さで表示します)':'画面いっぱいをやめました');
+  renderWire();updateStyleMenu();
 });
 $('#webGrow').addEventListener('click',e=>{
   const b=e.target.closest('.seg');if(!b)return;
@@ -18224,6 +18233,82 @@ $('#mapOpen').onclick=()=>{
   window.open('https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(q),'_blank','noopener');
 };
 $('#boxMenu').addEventListener('click',e=>{if(e.target.closest('[data-add="gmap"]'))gmapAdd();});
+/* ============================================================
+   100vh(高さを画面いっぱいに)の区画を、編集画面でも想定した画面の高さで表示する。
+   書き出したページと同じく、区画いっぱいの背景(四角・画像)は伸ばし、ほかの中身はそろえ方(中央・上・下)に合わせて動かす。
+   区画の下にある物は、伸びた分だけずらす(並べるページなら自動で並び直る)
+   ============================================================ */
+const VH_REFS=[
+  {k:'laptop',n:'ノートPC(1440×800)',w:1440,h:800},
+  {k:'desktop',n:'デスクトップ(1920×950)',w:1920,h:950},
+  {k:'tablet',n:'タブレット(820×1100)',w:820,h:1100},
+  {k:'phone',n:'スマホ(390×750)',w:390,h:750}
+];
+/* ページの幅から決める既定(PC・タブレット・スマホ) */
+const vhRefAuto=W=>W>=SITE_PC?'laptop':W>=SITE_BP?'tablet':'phone';
+/* その画面で開いた時の区画の高さ(デザインのpx)。書き出したページの拡大縮小(上限の幅つき)と同じ計算 */
+function vhTargetH(d,page){
+  const c=siteCfg(d),key=(c.vhRef&&c.vhRef!=='auto')?c.vhRef:vhRefAuto(page.w);
+  const ref=VH_REFS.find(x=>x.k===key)||VH_REFS[0];
+  let k=ref.w/page.w;
+  if(k>1)k=page.w<SITE_BP?1:Math.max(1,Math.min(k,(siteMaxW(c)||page.w)/page.w));
+  return Math.round(ref.h/k);
+}
+function vhEditorAll(d){
+  const sh=d.shapes;
+  if(!sh.some(x=>x.vh&&isFrame(x)))return false;
+  let changed=false;
+  const par=layParents(sh);
+  sh.forEach((sec,i)=>{
+    if(!isFrame(sec)||!sec.vh||sec.hidden)return;
+    const page=par[i];if(!page||par[sh.indexOf(page)])return;   /* ページ直下の区画だけ */
+    const kids=sh.filter((x,j)=>j>i&&par[j]===sec&&!x.hidden);
+    const isFill=x=>!isFrame(x)&&x.type!=='text'&&!x.fr&&!x.nw&&!x.gid&&!x.href&&x.w>=sec.w*0.9&&x.h>=sec.h*0.8;
+    /* ページ全体に固定する区画(ヘッダーなど)は、書き出したページと同じく動かさない */
+    const fills=kids.filter(isFill),rest=kids.filter(x=>!isFill(x)&&!(isFrame(x)&&(x.pin==='top'||x.pin==='bottom')));
+    const top=sec.y-sec.h/2;
+    let ct=0,cb=0;
+    if(rest.length){const b=unionWorldBox(rest.flatMap(x=>layBlock(sh,x)));ct=b.y-top;cb=b.y+b.h-top;}
+    /* 中身が切れない高さより低くはしない(書き出したページと同じ余白 24px) */
+    const m=24;let T=vhTargetH(d,page);
+    if(rest.length){
+      T=Math.max(T,cb-ct+m*2);
+      if(sec.vh==='top')T=Math.max(T,cb+m);else if(sec.vh==='bottom')T=Math.max(T,sec.h-ct+m);else T=Math.max(T,sec.h-2*ct+2*m,2*cb-sec.h+2*m);
+    }
+    const dH=Math.round(T-sec.h);
+    if(Math.abs(dH)<1)return;
+    const shift=sec.vh==='top'?0:sec.vh==='bottom'?dH:dH/2;
+    const oldBottom=top+sec.h;
+    /* 区画の下にある物(ページの中)を、伸びた分だけずらす。並べるページは自動で並び直るので動かさない */
+    if(!page.lay){
+      const below=sh.filter((x,j)=>par[j]===page&&x!==sec&&(isFrame(x)?x.y-x.h/2:unionWorldBox([x]).y)>=oldBottom-1);
+      below.forEach(x=>layBlock(sh,x).forEach(y=>{y.y+=dH;}));
+      /* 下の物も同じだけずれたので、ページも同じだけ伸ばす(縮める) */
+      page.y+=dH/2;page.h+=dH;
+    }
+    sec.y=top+T/2;sec.h=T;
+    fills.forEach(x=>{const ft=x.y-x.h/2-top;x.h=Math.max(1,x.h+dH);x.y=top+ft+x.h/2;});
+    rest.forEach(x=>layBlock(sh,x).forEach(y=>{y.y+=shift;}));
+    changed=true;
+  });
+  return changed;
+}
+function vhRefPanel(sec){
+  const d=curDoc(),c=siteCfg(d),sh=curShapes();
+  $('#vhRefPart').style.display=sec&&sec.vh?'block':'none';
+  if(!sec||!sec.vh)return;
+  const page=parentFrameAt(sh,sh.indexOf(sec));if(!page)return;
+  const auto=VH_REFS.find(x=>x.k===vhRefAuto(page.w));
+  $('#vhRef').innerHTML=`<option value="auto">自動(${escXml(auto.n)})</option>`+VH_REFS.map(x=>`<option value="${x.k}">${escXml(x.n)}</option>`).join('');
+  $('#vhRef').value=c.vhRef||'auto';
+  $('#vhRefNote').textContent=`編集画面では、この画面で開いた時の高さ(${vhTargetH(d,page)}px)で表示します。実際の高さは見る人の画面で変わります。`;
+}
+$('#vhRef').addEventListener('change',()=>{
+  const c=siteCfg();pushUndo();
+  if($('#vhRef').value==='auto')delete c.vhRef;else c.vhRef=$('#vhRef').value;
+  save();renderWire();updateStyleMenu();
+});
+$('#vhRef').addEventListener('pointerdown',e=>e.stopPropagation());
 /* ============================================================
    ページの確認(プレビュー)。いま作っているページを、書き出すHTMLのまま画面いっぱいに出して、
    PC(やタブレット・スマホ)での見え方・動き・ホバーを確かめる。編集中のデータは変えない
