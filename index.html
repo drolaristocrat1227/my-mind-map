@@ -279,7 +279,20 @@ body.wire-mode.rulers #rulerTop,body.wire-mode.rulers #rulerLeft,body.wire-mode.
 /* 色とスタイル: デザイン / ホームページ のタブ */
 #fmTabs{padding:6px 12px 4px;}
 #fillMenu.tab-web>*:not(#menuGrip):not(#fmTabs):not(#webSec){display:none!important;}
-#fillMenu.tab-design #webSec{display:none!important;}
+/* 案A: タブは使わない(1つの並び)。上に選んだ物の種類と場所、下に「詳しい設定」 */
+#fmTabs{display:none!important;}
+#ctxHead{display:none;align-items:center;gap:10px;padding:6px 14px 10px}
+.ctxIc{width:34px;height:34px;flex:none;border-radius:9px;background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent);display:grid;place-items:center}
+.ctxIc svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.ctxN{font-size:15px;font-weight:700;color:var(--ink)}
+.ctxSub{font-size:11.5px;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#moreSec{border-top:1px solid var(--panel-border);margin-top:8px}
+#moreSec>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;padding:11px 14px;font-size:12.5px;font-weight:700;color:var(--ink-soft)}
+#moreSec>summary::-webkit-details-marker{display:none}
+#moreSec>summary:hover{background:var(--btn-hover)}
+#moreSec>summary .mChev{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;transition:transform .15s}
+#moreSec[open]>summary .mChev{transform:rotate(90deg)}
+#moreSec .mCnt{font-weight:500;margin-left:6px}
 #fillMenu.tab-web #webSec>.collHead{display:none;}
 #fillMenu.tab-web #webSec.closed>.collBody{display:block;}
 #fillMenu.tab-web #webSec{border-top:none;}
@@ -1544,6 +1557,7 @@ kbd{
 <div id="fillMenu" class="menu glass">
   <div id="menuGrip">色とスタイル<span>ここをドラッグで移動</span></div>
   <div class="segRow" id="fmTabs"><button class="seg" data-tab="design">デザイン</button><button class="seg" data-tab="web">ホームページ</button></div>
+  <div id="ctxHead"><div class="ctxIc" id="ctxIc"></div><div style="min-width:0"><div class="ctxN" id="ctxN"></div><div class="ctxSub" id="ctxSub"></div></div></div>
   <div id="frameSec">
     <div class="menu-label">フレーム</div>
     <div class="numRow"><span class="radLbl">名前</span><input type="text" id="frName" spellcheck="false" autocomplete="off" placeholder="フレーム"></div>
@@ -1835,6 +1849,7 @@ kbd{
       </div>
     </div>
   </div>
+  <div id="fillSec">
   <div class="segRow" id="paintTargetRow">
     <button class="seg" data-pt="fill">塗り</button>
     <button class="seg" data-pt="stroke">枠線</button>
@@ -1852,6 +1867,7 @@ kbd{
     <input type="text" id="hexInput" spellcheck="false" autocomplete="off" placeholder="#4A7DE8" maxlength="7">
   </div>
   <div class="radRow"><span class="radLbl">透明度</span><input type="range" id="alphaIn" min="0" max="100" step="1" value="100"><span class="radNum" id="alphaV">100%</span></div>
+  </div>
   <div id="gradSec">
     <hr>
     <div class="menu-label">塗りのスタイル</div>
@@ -2847,7 +2863,7 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-27.1';
+const APP_VERSION='2026-10-27.2';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -18895,6 +18911,93 @@ $('#newClientBtn').onclick=()=>{
 addEventListener('keydown',e=>{if(e.key==='Escape'&&stEl().classList.contains('on')&&getComputedStyle($('#confirmWrap')).display==='none')stClose();});
 
 
+/* ============================================================
+   「色とスタイル」(案A): 選んだ物の種類に合わせて、使う設定だけをよく使う順に上へ出す。
+   ほかは「詳しい設定」に畳む。設定の中身(スイッチ・処理)はこれまでと同じで、並びとまとまりだけを変える
+   ============================================================ */
+const CTX_ALL=['frameSec','sizeSec','posSec','webSec','mapPart','btnPart','icoPart','textSec','fillSec','gradSec','strokeSec','radiusSec','shadowSec','blurSec','imgFillSec','aspectSec','imgFxSec','toPathSec','refineSec'];
+/* 種類ごとに上へ出す物(よく使う順) */
+const CTX_ORDER={
+  btn:['btnPart','sizeSec','webSec'],
+  gmap:['mapPart','sizeSec','webSec'],
+  text:['textSec','fillSec','webSec'],
+  frame:['frameSec','webSec','fillSec'],
+  image:['sizeSec','imgFillSec','aspectSec','imgFxSec','webSec'],
+  icon:['icoPart','fillSec','sizeSec','webSec'],
+  shape:['fillSec','sizeSec','radiusSec','strokeSec','webSec'],
+  multi:['fillSec','sizeSec','webSec']
+};
+/* その種類では効かない物は出さない(ボタン・地図は、塗りや枠線を自分の設定で決める) */
+const CTX_HIDE={btn:['fillSec','gradSec','strokeSec','radiusSec'],gmap:['fillSec','gradSec','strokeSec']};
+/* ホームページ用の設定で、最初に開く分野 */
+const CTX_WEBCAT={btn:'link',frame:'layout',gmap:'layout',image:'link',text:'link',shape:'link',icon:'link'};
+let ctxLastKey='',ctxHidden={};
+function ctxKind(ss){
+  if(!ss.length)return null;
+  const ts=[...new Set(ss.map(x=>x.type))];
+  if(ss.length>1&&ts.length>1)return'multi';
+  const t=ts[0];
+  if(['btn','gmap','text','icon','image'].includes(t))return t;
+  return t==='frame'?'frame':'shape';
+}
+function ctxArrange(){
+  const head=$('#ctxHead');if(!head)return;
+  const ss=selShapes(),k=ctxKind(ss);
+  head.style.display=k?'flex':'none';
+  if(!k)return;
+  /* 上の見出し: 種類・名前・どこにあるか */
+  const sh=curShapes(),one=ss[0],par=parentFrameAt(sh,sh.indexOf(one));
+  const lk=one.type==='frame'?layKind(sh,one):'';
+  $('#ctxIc').innerHTML=layIcon(one,lk);
+  $('#ctxN').textContent=k==='multi'?ss.length+'個を選んでいます':(one.type==='frame'?LAY_KIND[lk]||'フレーム':SHAPE_TYPE_LABEL[one.type]||'図形')+(ss.length>1?'('+ss.length+'個)':'');
+  const nm=one.type==='btn'?'「'+((one.btn||{}).t||'')+'」':one.type==='text'?'「'+(one.text||'').replace(/\n/g,' ').slice(0,16)+'」':one.type==='gmap'?((one.gmap||{}).q||''):(one.name||'');
+  $('#ctxSub').textContent=k==='multi'?'共通の設定だけを出しています':[nm,par?frameLabelText(par)+' の中':''].filter(Boolean).join(' ・ ');
+  /* 並べ替え: 上に出す物 → 「詳しい設定」 */
+  let more=$('#moreSec');
+  if(!more){
+    more=document.createElement('details');more.id='moreSec';
+    more.innerHTML='<summary><span>詳しい設定<span class="mCnt"></span></span><svg class="mChev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></summary><div id="moreBody"></div>';
+    $('#fillMenu').appendChild(more);
+  }
+  const order=CTX_ORDER[k]||CTX_ORDER.multi,body=$('#moreBody');
+  let after=head;
+  order.forEach(id=>{const el=$('#'+id);if(el){after.after(el);after=el;}});
+  after.after(more);
+  CTX_ALL.filter(id=>!order.includes(id)).forEach(id=>{const el=$('#'+id);if(el)body.appendChild(el);});
+  /* 効かない物を隠す(前に隠した物は元に戻してから) */
+  const hide=CTX_HIDE[k]||[];
+  Object.keys(ctxHidden).forEach(id=>{if(!hide.includes(id)){const el=$('#'+id);if(el&&el.style.display==='none')el.style.display=ctxHidden[id];delete ctxHidden[id];}});
+  hide.forEach(id=>{const el=$('#'+id);if(!el)return;if(!(id in ctxHidden))ctxHidden[id]=el.style.display==='none'?'':el.style.display;el.style.display='none';});
+  /* 選び直した時: 上に出した折りたたみは開き、ホームページ用の設定は種類に合う分野を開く */
+  const key=ss.map(x=>x.id).join(',');
+  if(key!==ctxLastKey){
+    ctxLastKey=key;
+    order.forEach(id=>{const el=$('#'+id);if(el&&el.classList.contains('coll'))el.classList.remove('closed');});
+    const wc=CTX_WEBCAT[k];
+    if(wc&&webCat!==wc&&document.querySelector(`#webCats [data-cat="${wc}"]`)){webCat=wc;applyWebCat();}
+  }
+  const vis=[...body.children].filter(el=>el.style.display!=='none'&&getComputedStyle(el).display!=='none').length;
+  more.style.display=vis?'block':'none';
+  more.querySelector('.mCnt').textContent=vis?'('+vis+')':'';
+}
+/* 「色とスタイル」を描き直すたびに並べ直す */
+{
+  const _usm=updateStyleMenu;
+  updateStyleMenu=function(){const r=_usm.apply(this,arguments);try{ctxArrange();}catch(e){console.error(e);}return r;};
+}
+/* タブはやめたので、「ホームページ」側を開く操作は、ホームページ用の設定を開いてその場所まで送る */
+{
+  const _aft=applyFmTab;
+  applyFmTab=function(){
+    if(fmTab==='web'){
+      fmTab='design';
+      const w=$('#webSec');if(w&&w.classList.contains('coll'))w.classList.remove('closed');
+      requestAnimationFrame(()=>{if(w)w.scrollIntoView({block:'nearest'});});
+    }
+    _aft();
+  };
+  fmTab='design';applyFmTab();
+}
 function startApp(){
 selectedId=cur().root.id;
 renderBrandColors();   /* 保存したブランドカラーをパレットに反映 */
