@@ -798,6 +798,22 @@ body:not(.wire-mode) #layerPanel{display:none;}
 .layerRow .lr-btn{width:24px;height:24px;flex:none;border-radius:7px;color:var(--ink-soft);display:flex;align-items:center;justify-content:center;opacity:.55;transition:opacity .12s,background .12s,color .12s;}
 .layerRow .lr-btn:hover{opacity:1;background:var(--btn-hover);}
 .layerRow .lr-btn.active{opacity:1;color:var(--accent);}
+/* レイヤーの木: 入れ子は字下げ、種類(ページ・セクション・コンテナ)の印 */
+.layerRow .lr-fold{width:16px;height:20px;flex:none;color:var(--ink-soft);display:flex;align-items:center;justify-content:center;border-radius:5px}
+.layerRow .lr-fold svg{width:10px;height:10px;stroke:currentColor;stroke-width:2.2;fill:none;transition:transform .15s}
+.layerRow .lr-fold.open svg{transform:rotate(90deg)}
+.layerRow .lr-kind{flex:none;font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;background:var(--btn-active);color:var(--ink-soft)}
+.layerRow .lr-kind.page{background:color-mix(in srgb,var(--accent) 20%,transparent);color:var(--ink)}
+.layerRow .lr-kind.section{background:rgba(46,168,200,.18);color:var(--ink)}
+.layerRow .lr-kind.box{background:rgba(140,123,255,.2);color:var(--ink)}
+#layerPanel{width:280px}
+#layerAdd{display:flex;gap:4px;padding:0 8px 6px;flex:none}
+#layerAdd button{flex:1;padding:5px 4px;border-radius:8px;font-size:11px;font-weight:700;color:var(--ink);background:var(--btn-hover)}
+#layerAdd button:hover{background:var(--btn-active)}
+/* パディング・マージン(上・右・下・左) */
+.layQuad{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin:4px 0 8px}
+.layQuad label{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10px;color:var(--ink-soft)}
+.layQuad input{width:100%;padding:5px 4px;border-radius:8px;border:1px solid var(--panel-border);background:var(--node-bg);color:var(--ink);font:inherit;font-size:12px;text-align:center}
 .layerRow .lr-btn svg{width:14px;height:14px;stroke:currentColor;stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round;}
 .layerRow .lr-dropline{position:absolute;left:6px;right:6px;height:2px;background:var(--accent);border-radius:2px;pointer-events:none;}
 #layerEmpty{padding:20px 14px;font-size:12px;color:var(--ink-soft);text-align:center;}
@@ -1394,6 +1410,9 @@ kbd{
   <button class="iconbtn menu-btn" id="wirePartsBtn" title="UIパーツを追加">
     <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="6" rx="1.5"/><rect x="3" y="14" width="8" height="6" rx="1.5"/><path d="M15 17h6"/></svg>
   </button>
+  <button class="iconbtn menu-btn" id="wireBoxBtn" title="ページ・セクション・コンテナ">
+    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><rect x="6.5" y="7" width="11" height="4" rx="1"/><rect x="6.5" y="13.5" width="5" height="4" rx="1"/><rect x="13" y="13.5" width="4.5" height="4" rx="1"/></svg>
+  </button>
   <button class="iconbtn menu-btn" id="wirePenBtn" title="ペン(パス・手書き)">
     <svg viewBox="0 0 24 24"><path d="M4 20l4.6-1.3L20 7.4 16.6 4 5.3 15.4z"/><path d="M14.4 6.2l3.4 3.4"/></svg>
   </button>
@@ -1603,6 +1622,29 @@ kbd{
         <button class="seg" data-fit="" role="radio">しない</button>
         <button class="seg" data-fit="1" role="radio">する(文章が長くなったら下へ広げる)</button>
       </div>
+    </div>
+    <div id="layRow">
+      <div id="layKindRow">
+        <div class="menu-label">種類</div>
+        <div class="segRow" id="layKind"><button class="seg" data-k="section">セクション</button><button class="seg" data-k="box">コンテナ</button></div>
+      </div>
+      <div class="menu-label">中身の並べ方</div>
+      <div class="segRow" id="layDir"><button class="seg" data-d="">自由に置く</button><button class="seg" data-d="v">縦に並べる</button><button class="seg" data-d="h">横に並べる</button></div>
+      <div id="layOpts">
+        <div class="numRow"><span class="radLbl">間隔</span><input type="number" id="layGap" min="0" step="1"><span>px</span></div>
+        <div class="menu-label">パディング(内側の余白・px)</div>
+        <div class="layQuad" data-q="pad"><label>上<input type="number" step="1"></label><label>右<input type="number" step="1"></label><label>下<input type="number" step="1"></label><label>左<input type="number" step="1"></label></div>
+        <div class="menu-label">そろえ方(並びと直角の向き)</div>
+        <div class="segRow mWrap" id="layAi"><button class="seg" data-v="start">始め</button><button class="seg" data-v="center">中央</button><button class="seg" data-v="end">終わり</button><button class="seg" data-v="stretch">いっぱい</button></div>
+        <div class="menu-label">並びの位置</div>
+        <div class="segRow mWrap" id="layJc"><button class="seg" data-v="start">始め</button><button class="seg" data-v="center">中央</button><button class="seg" data-v="end">終わり</button><button class="seg" data-v="between">均等</button></div>
+        <div class="menu-label">大きさ(押すたびに切り替え)</div>
+        <div class="segRow mWrap" id="layHug"><button class="seg" data-h="w" id="layHugW">幅を中身に合わせる</button><button class="seg" data-h="h">高さを中身に合わせる</button></div>
+      </div>
+    </div>
+    <div id="mgRow">
+      <div class="menu-label">マージン(外側の余白・px。並べる入れ物の中で効きます)</div>
+      <div class="layQuad" data-q="mg"><label>上<input type="number" step="1"></label><label>右<input type="number" step="1"></label><label>下<input type="number" step="1"></label><label>左<input type="number" step="1"></label></div>
     </div>
     <div id="webSceneRow">
       <div class="menu-label">スクロールの演出(区画)</div>
@@ -1912,12 +1954,19 @@ kbd{
   <button class="mi" data-h="5"><b class="hlv">H5</b>見出し5<span class="px">18px</span></button>
   <button class="mi" data-h="6"><b class="hlv">H6</b>見出し6<span class="px">16px</span></button>
 </div>
+<div id="boxMenu" class="menu glass">
+  <div class="menu-label">ページ・セクション・コンテナ</div>
+  <button class="mi" data-add="page"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>ページを足す(トップ・会社概要など)</button>
+  <button class="mi" data-add="section"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M3 15h18"/></svg>セクションを足す(about・menuなど)</button>
+  <button class="mi" data-add="box"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" stroke-dasharray="3 2"/><rect x="7" y="7" width="10" height="4" rx="1"/><rect x="7" y="13" width="10" height="4" rx="1"/></svg>コンテナ(選んだ物を囲む / 空で足す)</button>
+</div>
 <div id="partsMenu" class="menu glass">
   <div class="menu-label">UIパーツを追加</div>
   <div id="partsList"></div>
 </div>
 <div id="layerPanel" class="glass">
   <div id="layerPanelHead"><span>レイヤー</span><span id="layerCount"></span></div>
+  <div id="layerAdd"><button type="button" data-add="page">＋ ページ</button><button type="button" data-add="section">＋ セクション</button><button type="button" data-add="box">＋ コンテナ</button></div>
   <div id="layerList"></div>
 </div>
 <div id="alignMenu" class="menu glass">
@@ -2715,7 +2764,7 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-25.9';
+const APP_VERSION='2026-10-26.1';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -6350,6 +6399,7 @@ function siteAttrs(html,s){
 /* 区画の要素: 指定が無ければ名前から(ヘッダー→header / フッター→footer / メニュー・ナビ→nav)。ふつうは section */
 function sectionTag(f){
   if(f.el)return f.el;
+  if(f.role==='box')return'div';
   const n=(f.name||'').toLowerCase();
   if(/ヘッダー|header/.test(n))return'header';
   if(/フッター|footer/.test(n))return'footer';
@@ -11193,6 +11243,7 @@ function textPickSvg(s){
 const txRange=s=>(txSel&&txSel.sid===s.id&&txSel.b>=txSel.a)?txSel:null;
 function renderWire(){
   const d=curDoc();if(!d.shapes)return;
+  if(!(wDrag&&/^(move|resize|rotate|gresize)$/.test(wDrag.mode))&&layAll(d))save();
   wireViewApply();
   wireSel=wireSel.filter(id=>{const s=d.shapes.find(x=>x.id===id);return s&&!s.hidden;});
   let html='';
@@ -11220,6 +11271,7 @@ function renderWire(){
   d.shapes.forEach(s=>{
     if(isFrame(s)&&(frameLabelOn||wireSel.includes(s.id)))html+=frameLabelSvg(s);
   });
+  html+=layOverlaySvg(d);
   d.shapes.forEach(s=>{if(s.locked)html+=lockSvg(s);});
   /* ガイド線(定規ON時のみ)。掴んで動かせる・定規に戻すと消える */
   if(rulersOn&&d.guides){
@@ -13857,7 +13909,12 @@ function wireUp(e){
     if(!penShape)pathNormalize(dg.s);   /* 描画中は確定時にまとめて整える */
     save();renderWire();
   }
-  if(dg.mode==='move'||dg.mode==='resize'||dg.mode==='rotate'||dg.mode==='gresize')save();
+  if(dg.mode==='move'||dg.mode==='resize'||dg.mode==='rotate'||dg.mode==='gresize'){
+    /* 自動で並べるフレームの上に落としたら、その位置の順番に入れる */
+    if(dg.mode==='move'&&dg.items)layDrop(dg.items);
+    save();
+    if(curDoc().shapes.some(x=>x.lay)){renderWire();renderLayerPanel();}
+  }
   if(dg.mode==='move'&&(smartGuideV!==null||smartGuideH!==null)){
     smartGuideV=null;smartGuideH=null;renderWire();
   }
@@ -14828,6 +14885,7 @@ function updateWebSec(ss){
     });
   }
   $('#webGrowRow').style.display=$('#webVhRow').style.display;
+  layPanelUpdate(ss);
   if(topSecs.length){
     const g0=!!topSecs[0].grow;
     const same=topSecs.every(x=>!!x.grow===g0);
@@ -15242,6 +15300,7 @@ applyWireBar();
 const SHAPE_TYPE_LABEL={rect:'四角',ellipse:'丸',line:'線',text:'テキスト',image:'画像',path:'パス',frame:'フレーム',icon:'アイコン'};
 function shapeLabel(s){
   if(s.name)return s.name;
+  if(s.role&&LAY_KIND[s.role])return LAY_KIND[s.role];
   if(s.type==='text')return(s.text||'').replace(/\n/g,' ').slice(0,14)||'テキスト';
   return SHAPE_TYPE_LABEL[s.type]||s.type;
 }
@@ -15269,19 +15328,35 @@ function renderLayerPanel(){
   const list=$('#layerList');
   if(!d||!d.shapes){list.innerHTML='';$('#layerCount').textContent='';return;}
   $('#layerCount').textContent=d.shapes.length+'個';
-  if(!d.shapes.length){list.innerHTML='<div id="layerEmpty">図形がありません</div>';return;}
-  const rows=d.shapes.map((s,i)=>({s,idx:i})).reverse();   /* 前面が上に来るように逆順表示 */
-  list.innerHTML=rows.map(({s,idx})=>{
-    const sel=wireSel.includes(s.id);
-    return`<div class="layerRow${sel?' sel':''}${s.hidden?' hidden-shape':''}" data-idx="${idx}" data-id="${s.id}">
-      <span class="lr-grip" title="ドラッグで並び替え"><svg viewBox="0 0 10 16"><circle cx="2" cy="2" r="1"/><circle cx="8" cy="2" r="1"/><circle cx="2" cy="8" r="1"/><circle cx="8" cy="8" r="1"/><circle cx="2" cy="14" r="1"/><circle cx="8" cy="14" r="1"/></svg></span>
+  if(!d.shapes.length){list.innerHTML='<div id="layerEmpty">図形がありません。「＋ ページ」から始められます</div>';return;}
+  /* 入れ子(ページ → セクション → コンテナ → 図形)の木。並びはレイヤーの順(上ほど奥・並べるフレームでは並ぶ順) */
+  const sh=d.shapes,par=layParents(sh),kids=new Map();
+  sh.forEach((s,i)=>{const p=par[i];if(!kids.has(p))kids.set(p,[]);kids.get(p).push(i);});
+  const out=[];
+  const row=(i,depth)=>{
+    const s=sh[i],ch=isFrame(s)?(kids.get(s)||[]):[],sel=wireSel.includes(s.id),k=layKind(sh,s,par);
+    out.push(`<div class="layerRow${sel?' sel':''}${s.hidden?' hidden-shape':''}" data-idx="${i}" data-id="${s.id}" data-pid="${par[i]?par[i].id:''}" style="padding-left:${6+depth*12}px">
+      <span class="lr-grip" title="ドラッグで並び替え(同じ入れ物の中)"><svg viewBox="0 0 10 16"><circle cx="2" cy="2" r="1"/><circle cx="8" cy="2" r="1"/><circle cx="2" cy="8" r="1"/><circle cx="8" cy="8" r="1"/><circle cx="2" cy="14" r="1"/><circle cx="8" cy="14" r="1"/></svg></span>
+      ${ch.length?`<button class="lr-fold${s.fold?'':' open'}" data-act="fold" title="開く / 閉じる"><svg viewBox="0 0 10 10"><path d="M3 1.5L7 5 3 8.5"/></svg></button>`:'<span class="lr-fold"></span>'}
       <span class="lr-icon">${layerIconFor(s)}</span>
       <input class="lr-name" data-id="${s.id}" value="${escXml(shapeLabel(s))}" spellcheck="false" autocomplete="off">
+      ${k&&k!=='frame'?`<span class="lr-kind ${k}">${LAY_KIND[k]}${s.lay?(s.lay.d==='h'?' ⇢':' ⇣'):''}</span>`:''}
       <button class="lr-btn lr-eye${s.hidden?'':' active'}" data-act="eye" title="表示 / 非表示">${s.hidden?EYE_OFF_SVG:EYE_ON_SVG}</button>
       <button class="lr-btn lr-lock${s.locked?' active':''}" data-act="lock" title="固定 / 解除">${LOCK_SVG}</button>
-    </div>`;
-  }).join('');
+    </div>`);
+    if(!s.fold)ch.forEach(j=>row(j,depth+1));
+  };
+  (kids.get(null)||[]).forEach(i=>row(i,0));
+  list.innerHTML=out.join('');
 }
+/* 開く・閉じる(中身の多いページやセクションを畳んで見やすく) */
+$('#layerList').addEventListener('click',e=>{
+  const b=e.target.closest('[data-act="fold"]');if(!b)return;
+  e.stopPropagation();
+  const s=shapeById(b.closest('.layerRow').dataset.id);if(!s)return;
+  if(s.fold)delete s.fold;else s.fold=true;
+  save();renderLayerPanel();
+},true);
 $('#layerList').addEventListener('click',e=>{
   const row=e.target.closest('.layerRow');if(!row)return;
   const id=row.dataset.id,s=shapeById(id);if(!s)return;
@@ -15317,7 +15392,7 @@ $('#layerList').addEventListener('pointerdown',e=>{
   const row=grip.closest('.layerRow');
   const startY=e.clientY;
   const rows=[...$('#layerList').querySelectorAll('.layerRow')];
-  const fromPos=rows.indexOf(row);   /* 表示上の位置(0=最前面) */
+  const fromPos=rows.indexOf(row);
   row.classList.add('drag');
   let toPos=fromPos;
   const move=ev=>{
@@ -15334,17 +15409,18 @@ $('#layerList').addEventListener('pointerdown',e=>{
     removeEventListener('pointerup',up);
     rows.forEach(r=>{r.style.transform='';});
     row.classList.remove('drag');
-    if(toPos!==fromPos){
-      const d=curDoc();
-      /* 表示は前面が先頭(=配列の末尾)なので、配列インデックスに変換して並び替える */
-      const arrLen=d.shapes.length;
-      const fromIdx=arrLen-1-fromPos,toIdx=arrLen-1-toPos;
-      pushUndo();
-      const [moved]=d.shapes.splice(fromIdx,1);
-      d.shapes.splice(toIdx,0,moved);
-      save();renderWire();
-      toast('順番を変更しました');
-    }
+    if(toPos===fromPos)return;
+    /* 同じ入れ物の中でだけ並べ替える(ほかの入れ物へはキャンバスでドラッグして入れる) */
+    const target=rows[toPos];
+    if(target.dataset.pid!==row.dataset.pid){toast('同じ入れ物の中で並べ替えられます(ほかの入れ物へは、キャンバスでドラッグして入れます)');return;}
+    const sh=curDoc().shapes,s=shapeById(row.dataset.id),t=shapeById(target.dataset.id);
+    if(!s||!t)return;
+    pushUndo();
+    const block=layBlock(sh,s);
+    if(toPos<fromPos)layMoveBlock(sh,block,t);
+    else{block.forEach(x=>sh.splice(sh.indexOf(x),1));sh.splice(sh.indexOf(layBlock(sh,t).slice(-1)[0])+1,0,...block);}
+    save();renderWire();renderLayerPanel();
+    toast('順番を変更しました');
   };
   addEventListener('pointermove',move);
   addEventListener('pointerup',up);
@@ -17258,6 +17334,349 @@ $('#p1restore').onclick=()=>{paneState='split';applyMulti();};
 /* ============================================================
    初期化(保存データを読み込んでから画面を組み立てる)
    ============================================================ */
+/* ============================================================
+   ページ・セクション・コンテナ(中身を自動で並べる)
+   フレームの役割(s.role): page=ページ / section=セクション / box=コンテナ(指定が無ければ入れ子の深さで決める)。
+   s.lay={d:'v'|'h',gap,pad:[上,右,下,左],ai:'start'|'center'|'end'|'stretch',jc:'start'|'center'|'end'|'between',hug:{w,h}}
+   を持つフレームは、直下の中身をレイヤーの順(重ね順)に縦か横へ並べる。s.mg=[上,右,下,左] はその中での外側の余白。
+   位置は編集画面で計算して図形に書き込むので、書き出すHTMLはこれまでどおりの作り(位置が決まった物)
+   ============================================================ */
+const LAY_KIND={page:'ページ',section:'セクション',box:'コンテナ',frame:'フレーム'};
+const layParents=sh=>sh.map((s,i)=>parentFrameAt(sh,i));
+const q4=v=>Array.isArray(v)?[0,1,2,3].map(i=>+v[i]||0):[0,0,0,0];
+const layR=v=>Math.round(v*100)/100;
+function layKind(sh,f,par){
+  if(!isFrame(f))return'';
+  if(f.role)return f.role;
+  par=par||layParents(sh);
+  const p=par[sh.indexOf(f)];
+  if(!p){const c=curDoc().site;return c&&(c.pages||[]).some(pg=>[pg.pc,pg.tab,pg.sp].includes(f.id))?'page':'frame';}
+  return par[sh.indexOf(p)]?'box':'section';
+}
+/* 図形と、フレームならその中身(まとめて動かす・並べ替える単位) */
+const layBlock=(sh,s)=>isFrame(s)?[s,...frameDescendants(sh,s)]:[s];
+/* フレーム直下の中身(同じグループはひとまとまり)。並びはレイヤーの順 */
+function layItems(sh,f,par){
+  const fi=sh.indexOf(f),out=[],grp={};
+  sh.forEach((s,i)=>{
+    if(i<=fi||s.hidden||par[i]!==f)return;
+    if(s.gid&&!isFrame(s)){if(grp[s.gid]){grp[s.gid].m.push(s);return;}out.push(grp[s.gid]={m:[s]});return;}
+    out.push({m:[s]});
+  });
+  return out;
+}
+function layBox(it){
+  const s=it.m[0];
+  if(it.m.length===1&&isFrame(s))return{x:s.x-s.w/2,y:s.y-s.h/2,w:s.w,h:s.h};
+  return unionWorldBox(it.m);
+}
+function layMove(sh,it,dx,dy){
+  dx=layR(dx);dy=layR(dy);
+  if(!dx&&!dy)return;
+  const seen=new Set();
+  it.m.forEach(s=>layBlock(sh,s).forEach(x=>{
+    if(seen.has(x))return;seen.add(x);
+    x.x=layR(x.x+dx);x.y=layR(x.y+dy);
+    if(x.grad&&x.grad.box){x.grad.box.x+=dx;x.grad.box.y+=dy;}
+  }));
+}
+function layFrame(sh,f,par){
+  const L=f.lay,items=layItems(sh,f,par);
+  const pad=q4(L.pad),gap=+L.gap||0,v=L.d!=='h',hug=L.hug||{};
+  const fx=f.x-f.w/2,fy=f.y-f.h/2;
+  /* いっぱい: 並びと直角の向きに、入れ物の内側いっぱいまで広げる(四角・フレーム、折り返し幅のある文字) */
+  if(L.ai==='stretch')items.forEach(it=>{
+    if(it.m.length!==1)return;
+    const s=it.m[0],m=q4(s.mg);
+    if(v){
+      const W=Math.max(1,layR(f.w-pad[1]-pad[3]-m[1]-m[3]));
+      if(s.type==='rect'||isFrame(s)){if(Math.abs(s.w-W)>.01){s.x=layR(s.x-s.w/2+W/2);s.w=W;}}
+      else if(s.type==='text'&&s.wrapW&&!s.vert)s.wrapW=W;
+    }else if(s.type==='rect'||isFrame(s)){
+      const H=Math.max(1,layR(f.h-pad[0]-pad[2]-m[0]-m[2]));
+      if(Math.abs(s.h-H)>.01){s.y=layR(s.y-s.h/2+H/2);s.h=H;}
+    }
+  });
+  const bs=items.map(layBox),mgs=items.map(it=>q4(it.m[0].mg));
+  const main=bs.map((b,i)=>v?b.h+mgs[i][0]+mgs[i][2]:b.w+mgs[i][3]+mgs[i][1]);
+  const cross=bs.map((b,i)=>v?b.w+mgs[i][3]+mgs[i][1]:b.h+mgs[i][0]+mgs[i][2]);
+  const total=main.reduce((a,b)=>a+b,0)+gap*Math.max(0,items.length-1);
+  /* 中身に合わせる(中身が無い時は今の大きさのまま) */
+  const n=items.length,hugM=n&&(v?hug.h:hug.w),hugC=n&&(v?hug.w:hug.h);
+  let W=f.w,H=f.h;
+  if(v){if(hugM)H=total+pad[0]+pad[2];if(hugC)W=Math.max(...cross)+pad[1]+pad[3];}
+  else{if(hugM)W=total+pad[3]+pad[1];if(hugC)H=Math.max(...cross)+pad[0]+pad[2];}
+  W=layR(Math.max(1,W));H=layR(Math.max(1,H));
+  if(W!==f.w){f.x=layR(fx+W/2);f.w=W;}
+  if(H!==f.h){f.y=layR(fy+H/2);f.h=H;}
+  const iw=W-pad[1]-pad[3],ih=H-pad[0]-pad[2],room=(v?ih:iw)-total;
+  let pos=0,g2=gap;
+  if(!hugM){
+    if(L.jc==='center')pos=room/2;
+    else if(L.jc==='end')pos=room;
+    else if(L.jc==='between'&&n>1)g2=gap+room/(n-1);
+  }
+  items.forEach((it,i)=>{
+    const b=bs[i],m=mgs[i];
+    let tx,ty;
+    if(v){
+      const cs=iw-(b.w+m[1]+m[3]);
+      ty=fy+pad[0]+pos+m[0];tx=fx+pad[3]+m[3]+(L.ai==='center'?cs/2:L.ai==='end'?cs:0);
+    }else{
+      const cs=ih-(b.h+m[0]+m[2]);
+      tx=fx+pad[3]+pos+m[3];ty=fy+pad[0]+m[0]+(L.ai==='center'?cs/2:L.ai==='end'?cs:0);
+    }
+    pos+=main[i]+g2;
+    layMove(sh,it,tx-b.x,ty-b.y);
+  });
+}
+/* 自動で並べるフレームを、内側(深い方)から順に並べ直す。変わったら true */
+function layAll(d){
+  const sh=d.shapes;
+  if(!sh.some(s=>s.lay&&isFrame(s)))return false;
+  const key=()=>sh.map(s=>s.x+','+s.y+','+s.w+','+s.h+','+(s.wrapW||'')).join(';');
+  const before=key();
+  /* 外側で広げた(いっぱい)後に内側を並べ直すため、2回通す */
+  for(let pass=0;pass<2;pass++){
+    const par=layParents(sh);
+    const depth=sh.map((s,i)=>{let k=0,p=par[i];while(p&&k<50){k++;p=par[sh.indexOf(p)];}return k;});
+    sh.map((s,i)=>i).filter(i=>isFrame(sh[i])&&sh[i].lay&&!sh[i].hidden).sort((a,b)=>depth[b]-depth[a]).forEach(i=>layFrame(sh,sh[i],par));
+  }
+  return key()!==before;
+}
+/* 図形の並び(配列)の中で、まとまりを移す。before=この図形の前へ(無ければ index の位置へ) */
+function layMoveBlock(sh,block,before,index){
+  block=sh.filter(x=>block.includes(x));
+  block.forEach(x=>sh.splice(sh.indexOf(x),1));
+  const at=before?sh.indexOf(before):index;
+  sh.splice(at<0?sh.length:at,0,...block);
+}
+const layAfterLast=(sh,f)=>{const ds=frameDescendants(sh,f);return sh.indexOf(ds.length?ds[ds.length-1]:f)+1;};
+/* キャンバスで動かして離した時: 自動で並べるフレームの上なら、落とした位置の順番に入れる。
+   後から作ったフレームの上に落とした時も、そのフレームの中身にする。
+   入れ子は「動かす前の位置」で求める(重ねて落とした時に、隣のセクションの中へ入ったと誤らないように) */
+function layDrop(dgItems){
+  const sh=curShapes();if(!sh)return false;
+  const moved=dgItems.map(it=>it.s),now=dgItems.map(it=>[it.s.x,it.s.y]);
+  dgItems.forEach(it=>{it.s.x=it.x0;it.s.y=it.y0;});
+  const par0=layParents(sh),pm=new Map(sh.map((x,i)=>[x,par0[i]]));
+  dgItems.forEach((it,i)=>{it.s.x=now[i][0];it.s.y=now[i][1];});
+  const set=new Set(moved);
+  const tops=moved.filter(s=>{let p=pm.get(s);while(p){if(set.has(p))return false;p=pm.get(p);}return true;});
+  const seenG=new Set();let changed=false;
+  tops.forEach(s=>{
+    const grp=s.gid&&!isFrame(s);
+    if(grp){if(seenG.has(s.gid))return;seenG.add(s.gid);}
+    const block=grp?sh.filter(x=>x.gid===s.gid):layBlock(sh,s);
+    const bset=new Set(block);
+    const bb=grp?unionWorldBox(block):null;
+    const c=grp?{x:bb.x+bb.w/2,y:bb.y+bb.h/2}:{x:s.x,y:s.y};
+    /* セクションはページの直下にしか入れない(ほかのセクションの中へ入れない) */
+    const secOnly=isFrame(s)&&(s.role==='section'||(!s.role&&pm.get(s)&&!pm.get(pm.get(s))));
+    let T=null;
+    sh.forEach(f=>{if(isFrame(f)&&!f.hidden&&!bset.has(f)&&inFrame(f,c)&&(!secOnly||!pm.get(f)))T=f;});
+    if(!T)return;
+    const first=sh.indexOf(block[0]);
+    if(T.lay){
+      const v=T.lay.d!=='h';
+      const parArr=()=>sh.map(x=>pm.has(x)?pm.get(x):null);
+      const sibs=layItems(sh,T,parArr()).filter(it=>!it.m.some(x=>bset.has(x)));
+      const k=sibs.find(it=>{const b=layBox(it);return v?c.y<b.y+b.h/2:c.x<b.x+b.w/2;});
+      const kFirst=k?sh[Math.min(...k.m.map(x=>sh.indexOf(x)))]:null;
+      if(kFirst)layMoveBlock(sh,block,kFirst);
+      else{block.forEach(x=>sh.splice(sh.indexOf(x),1));sh.splice(layAfterLast(sh,T),0,...block);}
+      /* 入れ子を保ったまま、まずこの入れ物だけ並べ直す(位置がそろえば、あとは普段どおり) */
+      (grp?block:[s]).forEach(x=>pm.set(x,T));
+      layFrame(sh,T,parArr());
+      changed=true;
+    }else if(sh.indexOf(T)>first){
+      block.forEach(x=>sh.splice(sh.indexOf(x),1));
+      sh.splice(layAfterLast(sh,T),0,...block);
+      changed=true;
+    }
+  });
+  return changed;
+}
+/* ---- ページ・セクション・コンテナを足す ---- */
+function layTopFrames(sh){const par=layParents(sh);return sh.filter((s,i)=>isFrame(s)&&!par[i]);}
+function layAddPage(){
+  const d=curDoc();if(!d||!d.shapes)return;
+  const name=prompt('ページの名前(例: トップ、会社概要、お問い合わせ)','');
+  if(name===null)return;
+  const sh=d.shapes,tops=layTopFrames(sh);
+  pushUndo();
+  const x0=tops.length?Math.max(...tops.map(f=>f.x+f.w/2))+200:s2w(viewW()/2,viewH()/2).x-600;
+  const y0=tops.length?Math.min(...tops.map(f=>f.y-f.h/2)):s2w(viewW()/2,viewH()/2).y-400;
+  const f={id:uid(),type:'frame',x:x0+600,y:y0+400,w:1200,h:800,rot:0,name:name.trim()||'ページ',fill:'#FFFFFF',noStroke:true,r:0,clip:true,
+    role:'page',lay:{d:'v',gap:0,pad:[0,0,0,0],ai:'stretch',jc:'start',hug:{h:true}}};
+  sh.unshift(f);
+  /* ホームページのページ一覧にも足す(まだPCのフレームが決まっていないページがあれば、そこに入れる) */
+  const c=siteCfg(d);
+  const empty=c.pages.find(p=>!p.pc&&!p.tab&&!p.sp);
+  if(empty){empty.pc=f.id;if(!empty.title)empty.title=f.name;}
+  else{
+    const used=new Set(c.pages.map(p=>p.file));
+    let n=c.pages.length+1;while(used.has(`page${n}.html`))n++;
+    c.pages.push({id:uid(),file:used.has('index.html')?`page${n}.html`:'index.html',title:f.name,desc:'',pc:f.id,tab:null,sp:null});
+  }
+  wireSel=[f.id];selAnchor=null;
+  save();renderWire();focusFrame(f);renderLayerPanel();
+  toast(`ページ「${f.name}」を作りました。「＋ セクション」で中身を足していきます`);
+}
+function layAddSection(){
+  const d=curDoc();if(!d||!d.shapes)return;
+  const sh=d.shapes,par=layParents(sh);
+  let p=selShapes()[0]||null;
+  while(p&&par[sh.indexOf(p)])p=par[sh.indexOf(p)];
+  if(!p||!isFrame(p)){
+    const c=siteCfg(d),ids=c.pages.map(x=>x.pc).filter(Boolean);
+    p=sh.find(s=>ids.includes(s.id))||layTopFrames(sh)[0]||null;
+  }
+  if(!p){toast('先に「＋ ページ」でページを作ってください');return;}
+  const name=prompt('セクションの名前(例: about、menu、access)。リンク先(#名前)にも使えます','');
+  if(name===null)return;
+  pushUndo();
+  const kids=layItems(sh,p,par);
+  const bottom=kids.length?Math.max(...kids.map(it=>{const b=layBox(it);return b.y+b.h;})):p.y-p.h/2;
+  const s={id:uid(),type:'frame',x:p.x,y:0,w:p.w,h:480,rot:0,name:name.trim()||'section',noStroke:true,r:0,clip:true,role:'section'};
+  /* いちばん下の中身のさらに下に置き、ページが足りなければ下へ伸ばす(ほかのセクションの中に入らないように) */
+  s.y=bottom+240;
+  const need=bottom+480-(p.y-p.h/2);
+  if(need>p.h){p.y=p.y-p.h/2+need/2;p.h=need;}
+  sh.splice(layAfterLast(sh,p),0,s);
+  wireSel=[s.id];selAnchor=null;
+  save();renderWire();renderLayerPanel();
+  toast(`セクション「${s.name}」を足しました(リンクは #${s.name})`);
+}
+function layAddBox(){
+  const d=curDoc();if(!d||!d.shapes)return;
+  const sh=d.shapes;
+  const ss=selShapes().filter(s=>!s.locked);
+  pushUndo();
+  if(ss.length&&!(ss.length===1&&isFrame(ss[0]))){
+    /* 選んだ物をコンテナで囲む。並びの向きは今の配置から決め、その順に並べる */
+    const all=[...new Set(ss.flatMap(s=>s.gid&&!isFrame(s)?sh.filter(x=>x.gid===s.gid):layBlock(sh,s)))];
+    const b=unionWorldBox(all),pad=16;
+    const items=[];const seen=new Set();
+    ss.forEach(s=>{const k=s.gid&&!isFrame(s)?'g'+s.gid:s.id;if(seen.has(k))return;seen.add(k);items.push(s.gid&&!isFrame(s)?sh.filter(x=>x.gid===s.gid):layBlock(sh,s));});
+    const cs=items.map(m=>{const u=unionWorldBox(m);return{m,x:u.x+u.w/2,y:u.y+u.h/2};});
+    const sx=Math.max(...cs.map(c=>c.x))-Math.min(...cs.map(c=>c.x)),sy=Math.max(...cs.map(c=>c.y))-Math.min(...cs.map(c=>c.y));
+    const dir=sx>sy*1.2?'h':'v';
+    cs.sort((a,b)=>dir==='h'?a.x-b.x:a.y-b.y);
+    const box={id:uid(),type:'frame',x:b.x+b.w/2,y:b.y+b.h/2,w:b.w+pad*2,h:b.h+pad*2,rot:0,noStroke:true,r:0,clip:false,role:'box',
+      lay:{d:dir,gap:16,pad:[pad,pad,pad,pad],ai:'start',jc:'start',hug:{w:true,h:true}}};
+    const at=Math.min(...all.map(x=>sh.indexOf(x)));
+    all.forEach(x=>sh.splice(sh.indexOf(x),1));
+    sh.splice(at,0,box,...cs.flatMap(c=>c.m));
+    wireSel=[box.id];
+    toast(`${ss.length}つをコンテナで囲みました(${dir==='h'?'横':'縦'}に並べています)`);
+  }else{
+    /* 空のコンテナ: 選んでいるフレームの中(無ければ画面の真ん中) */
+    const p=ss.length===1&&isFrame(ss[0])?ss[0]:null;
+    let c=p?{x:p.x,y:p.y}:s2w(viewW()/2,viewH()/2);
+    if(p){
+      /* 中身の下の空いた所に置く(ほかのコンテナの中に入らないように)。足りなければフレームを下へ伸ばす */
+      const par=layParents(sh),its=layItems(sh,p,par);
+      const bottom=its.length?Math.max(...its.map(it=>{const b=layBox(it);return b.y+b.h;})):p.y-p.h/2+24;
+      c={x:p.x,y:bottom+16+100};
+      const need=bottom+16+200+24-(p.y-p.h/2);
+      if(need>p.h){p.y=p.y-p.h/2+need/2;p.h=need;}
+    }
+    const box={id:uid(),type:'frame',x:c.x,y:c.y,w:p?Math.min(480,p.w-48):480,h:200,rot:0,noStroke:true,r:0,clip:false,role:'box',
+      lay:{d:'v',gap:16,pad:[24,24,24,24],ai:'start',jc:'start',hug:{h:true}}};
+    if(p)sh.splice(layAfterLast(sh,p),0,box);else sh.push(box);
+    wireSel=[box.id];
+    toast('コンテナを足しました。中に図形を入れると、縦に並びます(並べ方はスタイルの「ホームページ」→「配置」)');
+  }
+  selAnchor=null;
+  save();renderWire();renderLayerPanel();
+}
+function layAddDispatch(k){
+  hideMenus();
+  if(k==='page')layAddPage();
+  else if(k==='section')layAddSection();
+  else layAddBox();
+}
+$('#wireBoxBtn').onclick=e=>openBarMenu($('#boxMenu'),e.currentTarget);
+$('#boxMenu').addEventListener('click',e=>{const b=e.target.closest('[data-add]');if(b)layAddDispatch(b.dataset.add);});
+$('#layerAdd').addEventListener('click',e=>{const b=e.target.closest('[data-add]');if(b)layAddDispatch(b.dataset.add);});
+/* ---- 「配置」パネル: 並べ方・間隔・パディング・そろえ方・大きさ・マージン ---- */
+function layDefault(sh,f,d){
+  const k=layKind(sh,f);
+  return{d,gap:k==='page'?0:16,pad:k==='page'?[0,0,0,0]:[24,24,24,24],ai:k==='page'?'stretch':'start',jc:'start',hug:{w:d==='h'&&k==='box',h:true}};
+}
+function layQuadSet(box,vals){box.querySelectorAll('input').forEach((inp,i)=>{if(document.activeElement!==inp)inp.value=vals[i];});}
+function layPanelUpdate(ss){
+  const one=ss.length===1?ss[0]:null,sh=curShapes();
+  const fr=one&&isFrame(one)&&!one.device;
+  $('#layRow').style.display=fr?'block':'none';
+  let mgOn=false;
+  if(one&&sh){const p=parentFrameAt(sh,sh.indexOf(one));mgOn=!!(p&&p.lay);}
+  $('#mgRow').style.display=mgOn?'block':'none';
+  if(mgOn)layQuadSet($('#mgRow .layQuad'),q4(one.mg));
+  if(!fr)return;
+  const k=layKind(sh,one);
+  $('#layKindRow').style.display=(k==='section'||k==='box')?'block':'none';
+  document.querySelectorAll('#layKind .seg').forEach(b=>b.classList.toggle('active',b.dataset.k===k));
+  const L=one.lay;
+  document.querySelectorAll('#layDir .seg').forEach(b=>b.classList.toggle('active',b.dataset.d===(L?L.d:'')));
+  $('#layOpts').style.display=L?'block':'none';
+  if(!L)return;
+  if(document.activeElement!==$('#layGap'))$('#layGap').value=+L.gap||0;
+  layQuadSet($('#layRow .layQuad'),q4(L.pad));
+  document.querySelectorAll('#layAi .seg').forEach(b=>b.classList.toggle('active',b.dataset.v===(L.ai||'start')));
+  document.querySelectorAll('#layJc .seg').forEach(b=>b.classList.toggle('active',b.dataset.v===(L.jc||'start')));
+  const hug=L.hug||{};
+  document.querySelectorAll('#layHug .seg').forEach(b=>b.classList.toggle('active',!!hug[b.dataset.h]));
+  $('#layHugW').textContent=L.d==='h'?'幅を中身に合わせる':'幅を中身に合わせる';
+}
+function layEdit(fn){
+  const one=selShapes()[0];if(!one)return;
+  pushUndo();fn(one);save();renderWire();updateStyleMenu();renderLayerPanel();
+}
+$('#layKind').addEventListener('click',e=>{const b=e.target.closest('.seg');if(b)layEdit(s=>{s.role=b.dataset.k;if(b.dataset.k==='box'&&s.clip===undefined)s.clip=false;});});
+$('#layDir').addEventListener('click',e=>{
+  const b=e.target.closest('.seg');if(!b)return;
+  layEdit(s=>{
+    if(!b.dataset.d){delete s.lay;return;}
+    s.lay=s.lay?{...s.lay,d:b.dataset.d}:layDefault(curShapes(),s,b.dataset.d);
+  });
+});
+$('#layAi').addEventListener('click',e=>{const b=e.target.closest('.seg');if(b)layEdit(s=>{if(s.lay)s.lay.ai=b.dataset.v;});});
+$('#layJc').addEventListener('click',e=>{const b=e.target.closest('.seg');if(b)layEdit(s=>{if(s.lay)s.lay.jc=b.dataset.v;});});
+$('#layHug').addEventListener('click',e=>{const b=e.target.closest('.seg');if(b)layEdit(s=>{if(!s.lay)return;const h={...(s.lay.hug||{})};h[b.dataset.h]=!h[b.dataset.h];s.lay.hug=h;});});
+$('#layGap').addEventListener('change',()=>layEdit(s=>{if(s.lay)s.lay.gap=Math.max(0,+$('#layGap').value||0);}));
+document.querySelectorAll('#layRow .layQuad input,#mgRow .layQuad input').forEach((inp,i)=>{
+  inp.addEventListener('pointerdown',e=>e.stopPropagation());
+  inp.addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter')inp.blur();});
+  inp.addEventListener('change',()=>{
+    const q=inp.closest('.layQuad'),vals=[...q.querySelectorAll('input')].map(x=>Math.max(-2000,+x.value||0));
+    layEdit(s=>{if(q.dataset.q==='pad'){if(s.lay)s.lay.pad=vals;}else{if(vals.some(Boolean))s.mg=vals;else delete s.mg;}});
+  });
+});
+['#layGap'].forEach(sel=>{$(sel).addEventListener('pointerdown',e=>e.stopPropagation());$(sel).addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter')e.target.blur();});});
+/* ---- コンテナ・セクションの目印(編集画面だけ。書き出しには出ない) ---- */
+function layOverlaySvg(d){
+  const sh=d.shapes,par=layParents(sh);let h='';
+  sh.forEach((s,i)=>{
+    if(!isFrame(s)||s.hidden||s.device)return;
+    const k=layKind(sh,s,par);
+    if(k!=='box'&&k!=='section')return;
+    const sel=wireSel.includes(s.id),sw=1/wz;
+    const col=k==='box'?'#8C7BFF':'#2EA8C8';
+    h+=`<g transform="translate(${s.x} ${s.y}) rotate(${s.rot||0})" pointer-events="none">`;
+    h+=`<rect x="${-s.w/2}" y="${-s.h/2}" width="${s.w}" height="${s.h}" fill="none" stroke="${col}" stroke-opacity="${sel?.9:.45}" stroke-width="${sw}" stroke-dasharray="${4/wz} ${3/wz}"/>`;
+    /* 選んでいる時は、パディングの部分を薄く塗って見せる */
+    if(sel&&s.lay){
+      const p=q4(s.lay.pad),x=-s.w/2,y=-s.h/2;
+      const r=(rx,ry,rw,rh)=>rw>0&&rh>0?`<rect x="${rx}" y="${ry}" width="${rw}" height="${rh}" fill="${col}" fill-opacity=".12"/>`:'';
+      h+=r(x,y,s.w,p[0])+r(x,y+s.h-p[2],s.w,p[2])+r(x,y+p[0],p[3],s.h-p[0]-p[2])+r(x+s.w-p[1],y+p[0],p[1],s.h-p[0]-p[2]);
+    }
+    h+='</g>';
+  });
+  return h;
+}
+
 /* ============================================================
    クライアント(制作の工程)
    クライアントごとに、クライアント情報 → ヒアリング → ペルソナ → デザインルール → 掲載内容 →
