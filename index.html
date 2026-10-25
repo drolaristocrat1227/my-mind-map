@@ -17,45 +17,50 @@
 /* ============================================================
    NT-D — デザイントークン
    ============================================================ */
+/* ライト=生成りの紙と墨色・差し色は深い緑(A案)/ ダーク=黒とアイコンの赤(C案)。クライアントの画面と同じ配色 */
 :root{
-  --bg:#F5F3EE;
-  --dot:rgba(40,48,59,.10);
-  --ink:#28303B;
-  --ink-soft:#6B7482;
-  --node-bg:#FFFFFF;
-  --root-bg:#2B3442;
-  --root-text:#F7F9FC;
-  --panel:rgba(255,255,255,.86);
-  --panel-border:rgba(40,48,59,.08);
-  --panel-shadow:0 8px 32px rgba(40,48,59,.10);
-  --btn-hover:rgba(40,48,59,.06);
-  --btn-active:rgba(40,48,59,.10);
-  --accent:#4A7DE8;
-  --danger:#E05252;
-  --node-shadow:0 1px 4px rgba(40,48,59,.07), 0 4px 14px rgba(40,48,59,.05);
-  --root-shadow:0 4px 18px rgba(43,52,66,.30);
+  --bg:#F4F0E8;
+  --dot:rgba(31,29,26,.11);
+  --ink:#1F1D1A;
+  --ink-soft:#6B655C;
+  --node-bg:#FFFDF8;
+  --root-bg:#1F1D1A;
+  --root-text:#F4F0E8;
+  --panel:rgba(251,249,244,.92);
+  --panel-border:rgba(31,29,26,.12);
+  --panel-shadow:0 8px 32px rgba(60,45,20,.10);
+  --btn-hover:rgba(31,29,26,.06);
+  --btn-active:rgba(31,29,26,.10);
+  --accent:#2E5B4F;
+  --danger:#C2412E;
+  --node-shadow:0 1px 4px rgba(60,45,20,.07), 0 4px 14px rgba(60,45,20,.05);
+  --root-shadow:0 4px 18px rgba(31,29,26,.28);
+  --ui-font:"Zen Kaku Gothic New",system-ui,-apple-system,"Segoe UI","Hiragino Sans","Yu Gothic UI","Meiryo",sans-serif;
 }
 :root[data-theme="dark"]{
-  --bg:#15181F;
-  --dot:rgba(232,234,240,.09);
+  --bg:#0D0E12;
+  --dot:rgba(232,234,240,.08);
   --ink:#E8EAF0;
-  --ink-soft:#8B93A3;
-  --node-bg:#242A36;
+  --ink-soft:#9097A6;
+  --node-bg:#1A1C23;
   --root-bg:#E8EAF0;
-  --root-text:#1B2029;
-  --panel:rgba(30,35,45,.85);
+  --root-text:#0D0E12;
+  --panel:rgba(21,23,29,.92);
   --panel-border:rgba(232,234,240,.09);
-  --panel-shadow:0 8px 32px rgba(0,0,0,.40);
-  --btn-hover:rgba(232,234,240,.08);
-  --btn-active:rgba(232,234,240,.13);
-  --node-shadow:0 1px 4px rgba(0,0,0,.25), 0 4px 14px rgba(0,0,0,.18);
-  --root-shadow:0 4px 20px rgba(0,0,0,.45);
+  --panel-shadow:0 8px 32px rgba(0,0,0,.50);
+  --btn-hover:rgba(232,234,240,.07);
+  --btn-active:rgba(232,234,240,.12);
+  --accent:#FF2E5E;
+  --danger:#FF6B5A;
+  --node-shadow:0 1px 4px rgba(0,0,0,.30), 0 4px 14px rgba(0,0,0,.22);
+  --root-shadow:0 4px 20px rgba(0,0,0,.55);
+  --ui-font:Inter,"Noto Sans JP",system-ui,-apple-system,"Segoe UI","Hiragino Sans","Yu Gothic UI","Meiryo",sans-serif;
 }
 
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 html,body{height:100%;overflow:hidden;}
 body{
-  font-family:system-ui,-apple-system,"Segoe UI","Hiragino Sans","Yu Gothic UI","Meiryo",sans-serif;
+  font-family:var(--ui-font);
   background:var(--bg);color:var(--ink);
   transition:background .3s;
   -webkit-touch-callout:none;
@@ -2710,7 +2715,7 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-25.8';
+const APP_VERSION='2026-10-25.9';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -3907,6 +3912,9 @@ layoutMenu.addEventListener('click',e=>{
 /* テーマ */
 function applyTheme(){
   document.documentElement.dataset.theme=doc.theme;
+  /* 画面の文字(ライト=Zen角ゴシック、ダーク=Inter)を読み込み、クライアントの画面も同じ明るさにする */
+  stLoadUiFont(doc.theme==='light'?'light':'dark');
+  const st=$('#studio');if(st)st.dataset.theme=doc.theme==='light'?'light':'dark';
   $('#themeIcon').innerHTML=doc.theme==='dark'
     ?'<circle cx="12" cy="12" r="4.5"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6L17 7M7 17l-1.4 1.4"/>'
     :'<path d="M20 13.5A8 8 0 0 1 10.5 4 8 8 0 1 0 20 13.5z"/>';
@@ -17294,11 +17302,14 @@ const stStat=(c,i)=>(c.st||{})[ST_STEPS[i].k]||'';
 const stDoneN=c=>ST_STEPS.filter((_,i)=>['done','skip'].includes(stStat(c,i))).length;
 const stFirstOpen=c=>{const i=ST_STEPS.findIndex((_,j)=>!['done','skip'].includes(stStat(c,j)));return i<0?ST_STEPS.length-1:i;};
 const stDate=t=>{const d=new Date(t);return`${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`;};
-/* ライト/ダーク。使う方のフォントだけを読み込む */
-function stTheme(){try{return localStorage.getItem('ntd-st-theme')==='light'?'light':'dark';}catch(e){return'dark';}}
+/* ライト/ダーク(アプリ全体の明るさと同じ)。使う方のフォントだけを読み込む */
+function stTheme(){return doc&&doc.theme==='light'?'light':'dark';}
 function stApplyTheme(){
   const t=stTheme();
   stEl().dataset.theme=t;
+  stLoadUiFont(t);
+}
+function stLoadUiFont(t){
   const id='stFont-'+t;
   if(!document.getElementById(id)){
     const l=document.createElement('link');l.rel='stylesheet';l.id=id;
@@ -17610,7 +17621,7 @@ stEl().addEventListener('click',e=>{
   const b=e.target.closest('[data-act]');if(!b||!stEl().contains(b))return;
   const act=b.dataset.act,c=stClient();
   if(act==='close'){stClose();return;}
-  if(act==='theme'){try{localStorage.setItem('ntd-st-theme',b.dataset.v);}catch(err){}stApplyTheme();stRender();return;}
+  if(act==='theme'){doc.theme=b.dataset.v;applyTheme();clearTimeout(saveTimer);saveTimer=setTimeout(doSave,250);stRender();return;}
   if(act==='home'){stView='home';stRender();return;}
   if(act==='new'){
     const n=stNewClient();stClients().unshift(n);stSave(n);
