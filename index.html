@@ -2030,11 +2030,13 @@ kbd{
 .st-saved{font-size:12px;color:var(--st-muted)}
 .st-in{animation:stIn .35s ease both}
 @keyframes stIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
-.st-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:var(--st-gap)}
+/* 入力欄は1列に縦に並べる(広げすぎると読みにくいので、幅はほどほどに) */
+.st-fields{display:flex;flex-direction:column;gap:var(--st-gap);max-width:760px}
 #studio[data-theme="light"] .st-fields{border-top:1px solid var(--st-ink)}
 .st-f{display:flex;flex-direction:column;gap:8px;padding:16px 18px;border:1px solid var(--st-line);border-radius:var(--st-r);background:var(--st-panel);position:relative}
 #studio[data-theme="light"] .st-f{border-width:0 0 1px;background:transparent;padding:20px 18px 20px 0}
 .st-f:focus-within{border-color:var(--st-accent)}
+.st-f input:focus-visible,.st-f textarea:focus-visible{outline:none}
 .st-f .lb{font-size:12px;color:var(--st-muted);letter-spacing:.04em}
 .st-f input.lb{border:0;background:transparent;padding:0;outline:0}
 .st-f textarea,.st-f input.v{border:0;background:transparent;resize:vertical;font-size:16px;line-height:1.6;padding:0;outline:0;min-height:1.6em}
@@ -2678,7 +2680,7 @@ kbd{
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-25.2';
+const APP_VERSION='2026-10-25.3';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -17375,10 +17377,10 @@ const stField=(path,label,val,multi)=>`<label class="st-f"><span class="lb">${es
   ?`<textarea rows="2" data-f="${path}">${escXml(val||'')}</textarea>`
   :`<input class="v" type="text" data-f="${path}" value="${escXml(val||'')}">`}</label>`;
 /* 質問(見出し)も書き換えられる一覧(ヒアリング・掲載内容) */
-function stQaHtml(c,key,addLabel,ph){
+function stQaHtml(c,key,addLabel){
   return`<div class="st-fields">${c[key].map(r=>`<div class="st-f">
       <input class="lb" type="text" data-qa="${key}" data-id="${r.id}" data-part="q" value="${escXml(r.q)}" aria-label="見出し">
-      <textarea rows="2" data-qa="${key}" data-id="${r.id}" data-part="a" placeholder="${escXml(ph)}" aria-label="${escXml(r.q)}">${escXml(r.a)}</textarea>
+      <textarea rows="2" data-qa="${key}" data-id="${r.id}" data-part="a" aria-label="${escXml(r.q)}">${escXml(r.a)}</textarea>
       <button type="button" class="rm" data-act="qa-del" data-key="${key}" data-id="${r.id}" aria-label="この項目を削除" title="この項目を削除">${ST_SVG.x.replace('<svg','<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"')}</button>
     </div>`).join('')}</div>
     <div class="st-tools"><button type="button" class="st-chip" data-act="qa-add" data-key="${key}">＋ ${addLabel}</button>
@@ -17388,8 +17390,8 @@ function stPaneHtml(c,k){
   if(k==='info')return`<div class="st-fields">${ST_INFO.map(([f,l])=>stField('info.'+f,l,f==='name'?c.name:c.info[f],f==='memo'||f==='addr')).join('')}</div>`;
   if(k==='persona')return`<div class="st-fields">${ST_PERSONA.map(([f,l])=>stField('persona.'+f,l,c.persona[f],!['name','age','device'].includes(f))).join('')}</div>
     <p class="st-note">ヒアリングの「主なお客さま」を見ながら、1人の人物として具体的に書くと、デザインの判断がしやすくなります。</p>`;
-  if(k==='hearing')return stQaHtml(c,'hearing','質問を追加','答えを書きます');
-  if(k==='content')return stQaHtml(c,'content','ページ・項目を追加','載せる文章・写真');
+  if(k==='hearing')return stQaHtml(c,'hearing','質問を追加');
+  if(k==='content')return stQaHtml(c,'content','ページ・項目を追加');
   if(k==='rules')return stRulesHtml(c);
   return stCanvasHtml(c,k);
 }
