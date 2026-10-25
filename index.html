@@ -222,6 +222,27 @@ body.wire-mode .menu .map-only{display:none;}
 #posSec>.collBody>.menu-label{grid-column:1/-1}
 #sizeSec .numRow,#posSec .numRow{padding:4px 6px 4px 14px;gap:6px}
 #sizeSec .numRow .radLbl,#posSec .numRow .radLbl{min-width:0;width:auto}
+/* 操作の見直し(第2段階): 色を1行に(見本・色の番号・透明度)。見本を押すと色の一覧が開く */
+#colorLine{display:flex;align-items:center;gap:8px;padding:6px 14px}
+#fillMenu #colorLine>.radRow{padding:0;margin:0;gap:6px;min-width:0}
+#colorLine>#hexRow{flex:1.25}
+#colorLine>#alphaRow{flex:1}
+#colorLine #alphaRow .radLbl{width:auto;min-width:0;font-size:11.5px}
+#colorLine #hexRow input{height:32px;font-size:13.5px;padding:0 8px}
+#colorChip{flex:none;width:32px;height:32px;padding:0;border-radius:7px;border:1px solid var(--panel-border);cursor:pointer;position:relative;overflow:hidden;
+  background:repeating-conic-gradient(#ccc 0 25%,#fff 0 50%) 0 0/10px 10px}
+#colorChip>i{position:absolute;inset:0;background:var(--chip,transparent)}
+#colorChip:hover{border-color:var(--accent)}
+#colorChip[aria-expanded="true"]{box-shadow:0 0 0 2px var(--accent)}
+#palBox:not(.open){display:none}
+/* 操作の見直し(第3段階): 使っていない設定は見出しと「＋」だけ。使っている時は「−」で外す */
+.collHead .collAdd{margin-left:auto;margin-right:6px;width:28px;height:28px;flex:none;border:none;border-radius:6px;background:transparent;color:var(--ink-soft);font:inherit;font-size:19px;line-height:1;cursor:pointer;display:grid;place-items:center}
+.collHead .collAdd:hover{background:var(--btn-active);color:var(--accent)}
+.collHead .collAdd[hidden]{display:none}
+.coll.unused>.collBody{display:none!important}
+.coll.unused>.collHead .collChev{visibility:hidden}
+.coll.unused>.collHead>span{color:var(--ink-soft)}
+#strokeSec.addable #strokeOnOffRow,#shadowSec.addable #shOnRow{display:none!important}
 /* 色とスタイル: 読みやすい大きさ・押しやすい間隔 */
 #fillMenu .menu-label{font-size:12px;padding:6px 14px 0}
 #fillMenu .radLbl{font-size:12.5px;width:48px}
@@ -1908,16 +1929,20 @@ kbd{
     <button class="seg" data-pt="ol2">ふち2</button>
   </div>
   <div class="menu-label" id="fillLabel">塗り / 文字色</div>
-  <div class="swatches" id="fillSwatches"></div>
+  <div id="colorLine">
+    <button type="button" id="colorChip" title="色の見本を開く / 閉じる" aria-expanded="false"><i></i></button>
+    <div class="radRow" id="hexRow">
+      <input type="text" id="hexInput" spellcheck="false" autocomplete="off" placeholder="#4A7DE8" maxlength="7" aria-label="色の番号(HEX)">
+    </div>
+    <div class="radRow" id="alphaRow"><span class="radLbl">透明度</span><input type="range" id="alphaIn" min="0" max="100" step="1" value="100"><span class="radNum" id="alphaV">100%</span></div>
+  </div>
   <div id="ruleBox"></div>
+  <div id="palBox">
+  <div class="swatches" id="fillSwatches"></div>
   <div class="brandHead"><span>ブランドカラー</span><span class="brandHint">＋で保存 / 右クリックで削除</span></div>
   <div id="brandBox"></div>
-  <input type="color" id="brandPick" style="position:absolute;width:0;height:0;opacity:0;pointer-events:none">
-  <div class="radRow" id="hexRow">
-    <span class="radLbl">HEX</span>
-    <input type="text" id="hexInput" spellcheck="false" autocomplete="off" placeholder="#4A7DE8" maxlength="7">
   </div>
-  <div class="radRow"><span class="radLbl">透明度</span><input type="range" id="alphaIn" min="0" max="100" step="1" value="100"><span class="radNum" id="alphaV">100%</span></div>
+  <input type="color" id="brandPick" style="position:absolute;width:0;height:0;opacity:0;pointer-events:none">
   </div>
   <div id="gradSec">
     <hr>
@@ -2914,7 +2939,7 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-27.6';
+const APP_VERSION='2026-10-27.8';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -12817,6 +12842,7 @@ function updateGradUI(){
   const hex=currentColorHex();
   const hi=$('#hexInput');
   if(document.activeElement!==hi)hi.value=hex||'';
+  chipSync();
   const pk=$('#fillSwatches .sw-picker');
   if(pk&&/^#[0-9a-fA-F]{6}$/.test(hex))pk.value=hex;
   /* まとめて1つとして */
@@ -12897,6 +12923,23 @@ $('#gradUnify').addEventListener('click',()=>{
   const g=refGrad();
   setGradUnified(!(g&&g.box));
 });
+/* 色の見本: 今の色を表示し、押すと色の一覧(見本・ブランドカラー)を開く/閉じる。開いた状態は覚えておく */
+function chipSync(){
+  const hex=currentColorHex(),ok=/^#[0-9a-fA-F]{6}$/.test(hex||'');
+  const ch=$('#colorChip');if(!ch)return;
+  ch.style.setProperty('--chip',ok?hex:'transparent');
+  const a=+$('#alphaIn').value;ch.firstElementChild.style.opacity=isNaN(a)?1:a/100;
+}
+(function(){
+  const ch=$('#colorChip'),box=$('#palBox');
+  const set=o=>{box.classList.toggle('open',o);ch.setAttribute('aria-expanded',o?'true':'false');try{localStorage.setItem('ntd-palOpen',o?'1':'0');}catch(e){}};
+  let o=false;try{o=localStorage.getItem('ntd-palOpen')==='1';}catch(e){}
+  set(o);
+  ch.addEventListener('pointerdown',e=>e.stopPropagation());
+  ch.addEventListener('click',()=>set(!box.classList.contains('open')));
+  $('#alphaIn').addEventListener('input',chipSync);
+  $('#hexInput').addEventListener('input',chipSync);
+})();
 /* HEX入力: 打った瞬間に反映(Undoは1操作にまとめる) */
 (function(){
   const hi=$('#hexInput');
@@ -19271,6 +19314,43 @@ function ctxArrange(){
   more.style.display=vis?'block':'none';
   more.querySelector('.mCnt').textContent=vis?'('+vis+')':'';
 }
+/* ---- 操作の見直し(第3段階): 使っていない設定は「＋」で足す ----
+   元の「あり/なし」ボタンをそのまま押して切り替える(元に戻す・保存はこれまでと同じ)。
+   あり/なしを切り替えられない物(線など)の時は、これまで通りの表示にする */
+const ADD_SECS=[
+  {sec:'strokeSec',rows:['strokeOnOffRow'],key:'stroke',name:'枠線'},
+  {sec:'shadowSec',rows:['shOnRow'],key:'sh',name:'シャドウ'},
+  {sec:'txOlSec',rows:['olOnRow','ol2OnRow'],key:'ol',name:'ふちどり'}
+];
+function addSync(){
+  ADD_SECS.forEach(d=>{
+    const sec=$('#'+d.sec);if(!sec)return;
+    const head=sec.querySelector(':scope>.collHead');if(!head)return;
+    let btn=head.querySelector('.collAdd');
+    if(!btn){
+      btn=document.createElement('button');btn.type='button';btn.className='collAdd';
+      head.insertBefore(btn,head.querySelector('.collChev'));
+      btn.addEventListener('click',e=>{
+        e.stopPropagation();
+        const rows=d.rows.map(id=>$('#'+id)).filter(Boolean);
+        if(sec.classList.contains('unused')){
+          const b=rows[0]&&rows[0].querySelector('[data-'+d.key+'="on"]');if(b)b.click();
+          sec.classList.remove('closed');collState[d.sec]=true;
+        }else{
+          rows.forEach(rw=>{if(rw.querySelector('[data-'+d.key+'="on"].active')){const b=rw.querySelector('[data-'+d.key+'="off"]');if(b)b.click();}});
+        }
+        addSync();
+      });
+    }
+    const rows=d.rows.map(id=>$('#'+id)).filter(Boolean);
+    const usable=rows.length&&rows[0].style.display!=='none';
+    if(!usable){sec.classList.remove('addable','unused');btn.hidden=true;return;}
+    const on=rows.some(rw=>rw.querySelector('[data-'+d.key+'="on"].active'));
+    sec.classList.add('addable');sec.classList.toggle('unused',!on);
+    btn.hidden=false;btn.textContent=on?'−':'＋';
+    btn.title=on?d.name+'を外す':d.name+'を足す';btn.setAttribute('aria-label',btn.title);
+  });
+}
 /* ---- 操作の見直し(第1段階): スライダーの代わりに「見出しを左右にドラッグ」と数値の欄 ----
    元のスライダーはそのまま(隠して)使い、値を変えたら元のスライダーの input / change を起こす。
    なので、それぞれの設定の処理(元に戻す・描き直しなど)はこれまでと同じに動く */
@@ -19350,7 +19430,7 @@ let rngDrag=false;
 {
   const _usm=updateStyleMenu;
   let usmQ=0;
-  const run=()=>{const r=_usm();try{ctxArrange();scrubSync($('#fillMenu'));}catch(e){console.error(e);}return r;};
+  const run=()=>{const r=_usm();try{ctxArrange();scrubSync($('#fillMenu'));addSync();}catch(e){console.error(e);}return r;};
   updateStyleMenu=function(){
     if(rngDrag){if(!usmQ)usmQ=requestAnimationFrame(()=>{usmQ=0;run();});return;}
     return run();
