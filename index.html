@@ -838,7 +838,9 @@ body:not(.wire-mode) #layerPanel{display:none;}
 .btnHint{font-size:11px;line-height:1.6;color:var(--ink-soft);margin:6px 0 8px}
 #btnFields .numRow input[type=text]{flex:1;min-width:0}
 #btnFields .radLbl{flex:none;width:7.2em;white-space:normal;line-height:1.3}
-#btnFields .radRow input[type=range]{flex:1;min-width:60px}
+#btnFields .radRow input[type=range]{flex:1;min-width:60px;touch-action:none}
+#btnFields .btnNum{width:58px;flex:none;padding:4px 6px;border-radius:8px;border:1px solid var(--panel-border);background:var(--node-bg);color:var(--ink);font:inherit;font-size:12px;text-align:right}
+#btnFields .btnNum:disabled{opacity:.35}
 #btnFields .btnRow{flex-wrap:wrap;row-gap:4px}
 #btnFields input[type=color]:disabled{opacity:.35}
 #btnFields input[type=range]:disabled{opacity:.35}
@@ -2845,7 +2847,7 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-26.9';
+const APP_VERSION='2026-10-27.1';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -17935,7 +17937,7 @@ function btnLook(s,hover){
     t:(hover&&h.t)?h.t:b.t,fs:b.fs,fw:b.fw,ff:b.ff||docFont(),tc:pick('tc'),bg:pick('bg'),bc:pick('bc'),bw:pick('bw')||0,
     shape:pick('shape'),r:pick('r'),ic:b.ic||'none',gap:b.gap!==undefined?b.gap:12,
     ar:{st:ar.st||'line',len:hover&&h.alen!==undefined?h.alen:(ar.len||22),th:ar.th||1.5,hd:ar.hd||6,
-      ang:(hover&&h.aang!==undefined?h.aang:(ar.ang||0))+(b.ic==='left'?180:0),
+      ang:b.ic==='left'?180:0,
       col:(hover&&h.ac)?h.ac:(ar.col||pick('tc')),dx:hover?(h.adx||0)*(b.ic==='left'?-1:1):0}
   };
 }
@@ -17949,6 +17951,7 @@ function btnTextW(L){
 function btnArrowGeo(a){
   const L=a.len,H=a.hd;
   if(a.st==='chev')return{w:H,shaft:'',head:`M0 ${-H}L${H} 0L0 ${H}`,fillHead:false};
+  if(a.st==='half')return{w:L,shaft:`M0 0H${L}`,head:`M${L-H} ${-H*0.85}L${L} 0`,fillHead:false};
   if(a.st==='tri')return{w:L,shaft:`M0 0H${Math.max(0,L-H*1.4)}`,head:`M${L} 0L${L-H*1.4} ${-H}L${L-H*1.4} ${H}Z`,fillHead:true};
   return{w:L,shaft:`M0 0H${L}`,head:`M${L-H} ${-H*0.85}L${L} 0L${L-H} ${H*0.85}`,fillHead:false};
 }
@@ -18010,7 +18013,7 @@ function siteBtn(s,o){
   if(L.ic!=='none'){
     const a=L.ar,g=btnArrowGeo(a),ah=a.hd*2+a.th*2;
     const k=h.alen?h.alen/Math.max(1,a.len):1,dl=h.alen&&a.st!=='chev'?h.alen-a.len:0;
-    const ang=a.ang,angH=h.aang!==undefined?h.aang+(b.ic==='left'?180:0):ang;
+    const ang=a.ang,angH=ang;
     v.push(`--aang:${cssNum(ang)}deg`,`--aangh:${cssNum(angH)}deg`,`--adx:${cssNum((h.adx||0)*(b.ic==='left'?-1:1))}px`,`--ak:${cssNum(k)}`,`--adl:${cssNum(dl)}px`);
     const st=[b.ar&&b.ar.col?`color:${cssCol(b.ar.col)}`:'',h.ac?`--ach:${cssCol(h.ac)}`:''].filter(Boolean).join(';');
     arrow=`<svg class="nt-ba${h.ac?' nt-bach':''}" aria-hidden="true" width="${cssNum(g.w)}" height="${cssNum(ah)}" viewBox="0 ${cssNum(-ah/2)} ${cssNum(g.w)} ${cssNum(ah)}"${st?` style="${st}"`:''}>`
@@ -18052,11 +18055,10 @@ const BTN_FIELDS={
     ['shape','形','seg',[['square','四角'],['round','角丸'],['pill','丸い']]],['r','角の丸み','range',0,40,1,{if:b=>b.shape==='round'}],
     ['bc','枠の色','color'],['bw','枠の太さ','range',0,8,0.5],
     ['ic','矢印','seg',[['none','なし'],['right','文字の右'],['left','文字の左']]],
-    ['ar.st','矢印の形','seg',[['line','線の矢印'],['chev','くの字'],['tri','三角']],{if:b=>b.ic!=='none'}],
+    ['ar.st','矢印の形','seg',[['line','線の矢印'],['half','線の矢印(下なし)'],['chev','くの字'],['tri','三角']],{if:b=>b.ic!=='none'}],
     ['ar.len','矢印の長さ','range',4,80,1,{if:b=>b.ic!=='none'&&(b.ar||{}).st!=='chev'}],
     ['ar.th','矢印の細さ','range',0.5,6,0.25,{if:b=>b.ic!=='none'&&(b.ar||{}).st!=='tri'}],
     ['ar.hd','先の大きさ','range',2,20,0.5,{if:b=>b.ic!=='none'}],
-    ['ar.ang','矢印の角度','range',-180,180,5,{if:b=>b.ic!=='none'}],
     ['ar.col','矢印の色','color',{if:b=>b.ic!=='none',same:'文字と同じ'}],
     ['gap','文字との間','range',0,40,1,{if:b=>b.ic!=='none'}]
   ],
@@ -18068,7 +18070,6 @@ const BTN_FIELDS={
     ['hv.t','ホバー時の文字','text',{ph:'空欄=同じ文字'}],
     ['hv.ac','矢印の色','color',{if:b=>b.ic!=='none',same:'変えない'}],
     ['hv.adx','矢印が動く距離','range',-24,24,1,{if:b=>b.ic!=='none'}],
-    ['hv.aang','矢印の角度','range',-180,180,5,{if:b=>b.ic!=='none',same:'変えない',base:'ar.ang'}],
     ['hv.alen','矢印の長さ','range',4,80,1,{if:b=>b.ic!=='none'&&(b.ar||{}).st!=='chev',same:'変えない',base:'ar.len'}],
     ['hv.dur','変化の速さ(秒)','range',0.05,1.2,0.05,{base0:0.3}]
   ]
@@ -18093,7 +18094,7 @@ function btnFieldHtml(f,b){
   }
   /* range */
   const base=opt.base?btnGet(b,opt.base):undefined,val=on?v:(base!==undefined?base:(opt.base0!==undefined?opt.base0:f[3]));
-  return`<div class="radRow btnRow"><span class="radLbl">${label}</span><input type="range" data-bk="${k}" min="${f[3]}" max="${f[4]}" step="${f[5]}" value="${val}"${opt.same&&!on?' disabled':''}><span class="radNum">${val}</span>${sameBox}</div>`;
+  return`<div class="radRow btnRow"><span class="radLbl">${label}</span><input type="range" data-bk="${k}" min="${f[3]}" max="${f[4]}" step="${f[5]}" value="${val}"${opt.same&&!on?' disabled':''}><input type="number" class="btnNum" data-bkn="${k}" min="${f[3]}" max="${f[4]}" step="${f[5]}" value="${val}"${opt.same&&!on?' disabled':''} aria-label="${escXml(label)}(数値)">${sameBox}</div>`;
 }
 function renderBtnPart(){
   const ss=selShapes().filter(s=>s.type==='btn');
@@ -18115,12 +18116,29 @@ $('#btnFields').addEventListener('click',e=>{
   const sg=e.target.closest('[data-bseg]');
   if(sg){pushUndo();const k=sg.dataset.bseg,v=sg.dataset.v;btnSet(s.btn,k,/^-?\d+(\.\d+)?$/.test(v)?+v:v);save();renderWire();renderBtnPart();}
 });
+/* 描き直しは1コマに1回だけ(スライダーを動かしている間も滑らかに) */
+let btnRaf=0;
+const btnRedraw=()=>{if(btnRaf)return;btnRaf=requestAnimationFrame(()=>{btnRaf=0;renderWire();});};
 $('#btnFields').addEventListener('input',e=>{
-  const s=btnSel(),t=e.target;if(!s||!t.dataset.bk)return;
+  const s=btnSel(),t=e.target;if(!s)return;
+  if(t.dataset.bkn){
+    /* 数値の欄: 範囲の中に収めて、スライダーも合わせる */
+    if(t.value==='')return;
+    const v=clamp(+t.value,+t.min,+t.max);if(isNaN(v))return;
+    btnSet(s.btn,t.dataset.bkn,v);
+    const rg=t.parentElement.querySelector('input[type=range]');if(rg)rg.value=v;
+    save();btnRedraw();return;
+  }
+  if(!t.dataset.bk)return;
   const v=t.type==='range'?+t.value:t.value;
   btnSet(s.btn,t.dataset.bk,v);
-  if(t.type==='range'){const n=t.parentElement.querySelector('.radNum');if(n)n.textContent=v;}
-  save();renderWire();
+  if(t.type==='range'){const n=t.parentElement.querySelector('.btnNum');if(n)n.value=v;}
+  save();btnRedraw();
+});
+$('#btnFields').addEventListener('focusout',e=>{
+  const t=e.target;if(!t.dataset||!t.dataset.bkn)return;
+  const s=btnSel();if(!s)return;
+  const v=btnGet(s.btn,t.dataset.bkn);if(v!==undefined)t.value=v;
 });
 $('#btnFields').addEventListener('change',e=>{
   const s=btnSel(),t=e.target;if(!s)return;
@@ -18388,8 +18406,34 @@ function pvSetWidth(w){
   document.querySelectorAll('#pvBar [data-w]').forEach(b=>b.classList.toggle('on',b.dataset.w===w));
   pvFit();
 }
+/* タブレット・スマホのスクロールバー: 端末と同じく幅を取らない。スクロールしている間だけ、右端に細い印を重ねて出す */
+function pvScrollbar(){
+  const fr=$('#pvFrame'),dev=!!PV_DEV[$('#pvWrap').dataset.w];
+  let doc;try{doc=fr.contentDocument;}catch(e){return;}
+  if(!doc||!doc.documentElement)return;
+  let st=doc.getElementById('nt-pv-sb');
+  if(dev&&!st){
+    st=doc.createElement('style');st.id='nt-pv-sb';
+    st.textContent='html{scrollbar-width:none}html::-webkit-scrollbar{width:0;height:0}'
+      +'#nt-pv-ind{position:fixed;right:2px;width:3px;border-radius:3px;background:rgba(0,0,0,.45);box-shadow:0 0 0 1px rgba(255,255,255,.5);z-index:2147483647;opacity:0;transition:opacity .4s;pointer-events:none}';
+    doc.head.appendChild(st);
+    const ind=doc.createElement('div');ind.id='nt-pv-ind';doc.body.appendChild(ind);
+    let t=0;
+    const show=()=>{
+      const de=doc.documentElement,vh=fr.contentWindow.innerHeight,H=de.scrollHeight;
+      if(H<=vh+1)return;
+      const h=Math.max(30,vh*vh/H);ind.style.height=h+'px';ind.style.top=(fr.contentWindow.scrollY/(H-vh))*(vh-h)+'px';
+      ind.style.opacity='1';clearTimeout(t);t=setTimeout(()=>{ind.style.opacity='0';},700);
+    };
+    fr.contentWindow.addEventListener('scroll',show,{passive:true});
+  }else if(!dev&&st){st.remove();const ind=doc.getElementById('nt-pv-ind');if(ind)ind.remove();}
+  /* スクロールバーの分だけ変わった幅に、ページを合わせ直す */
+  try{fr.contentWindow.dispatchEvent(new Event('resize'));}catch(e){}
+}
+$('#pvFrame').addEventListener('load',pvScrollbar);
 function pvFit(){
   const w=$('#pvWrap').dataset.w,fr=$('#pvFrame'),box=$('#pvDev'),d=PV_DEV[w];
+  pvScrollbar();
   if(!d){fr.style.width=fr.style.height=fr.style.transform='';box.style.width=box.style.height='';return;}
   const k=Math.min(1,(innerHeight-70)/d.h,(innerWidth-40)/d.w);
   fr.style.width=d.w+'px';fr.style.height=d.h+'px';fr.style.transform=`scale(${k})`;
