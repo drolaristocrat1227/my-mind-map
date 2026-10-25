@@ -2041,9 +2041,10 @@ kbd{
 .st-f:focus-within{border-color:var(--st-accent)}
 .st-f input:focus-visible,.st-f textarea:focus-visible{outline:none}
 .st-f .lb{font-size:12px;color:var(--st-muted);letter-spacing:.04em}
-.st-f input.lb{border:0;background:transparent;padding:0;outline:0}
-.st-f textarea,.st-f input.v{border:0;background:transparent;resize:vertical;font-size:16px;line-height:1.6;padding:0;outline:0;min-height:1.6em}
-#studio[data-theme="light"] .st-f textarea,#studio[data-theme="light"] .st-f input.v{font-family:var(--st-head);font-size:18px}
+.st-f textarea.lb{border:0;background:transparent;padding:0;outline:0;font-size:12px;color:var(--st-muted);letter-spacing:.04em;min-height:0;line-height:1.6}
+/* 文章の量に合わせて高さが伸びる(field-sizing が使えない画面は stGrow で合わせる) */
+.st-f textarea{border:0;background:transparent;resize:none;overflow:hidden;font-size:16px;line-height:1.6;padding:0;outline:0;min-height:1.6em;field-sizing:content}
+#studio[data-theme="light"] .st-f textarea:not(.lb){font-family:var(--st-head);font-size:18px}
 .st-f .rm{position:absolute;top:8px;right:8px;width:28px;height:28px;border:0;border-radius:var(--st-r);background:transparent;color:var(--st-muted);opacity:0;transition:opacity .15s}
 .st-f:hover .rm,.st-f:focus-within .rm{opacity:1}
 .st-tools{display:flex;flex-wrap:wrap;gap:8px}
@@ -2683,7 +2684,7 @@ kbd{
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-25.4';
+const APP_VERSION='2026-10-25.5';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -17376,13 +17377,11 @@ function stClientHtml(){
       </main>
     </div>`;
 }
-const stField=(path,label,val,multi)=>`<label class="st-f"><span class="lb">${escXml(label)}</span>${multi
-  ?`<textarea rows="2" data-f="${path}">${escXml(val||'')}</textarea>`
-  :`<input class="v" type="text" data-f="${path}" value="${escXml(val||'')}">`}</label>`;
+const stField=(path,label,val,multi)=>`<label class="st-f"><span class="lb">${escXml(label)}</span><textarea rows="${multi?2:1}" data-f="${path}">${escXml(val||'')}</textarea></label>`;
 /* 質問(見出し)も書き換えられる一覧(ヒアリング・掲載内容) */
 function stQaHtml(c,key,addLabel){
   return`<div class="st-fields">${c[key].map(r=>`<div class="st-f">
-      <input class="lb" type="text" data-qa="${key}" data-id="${r.id}" data-part="q" value="${escXml(r.q)}" aria-label="見出し">
+      <textarea class="lb" rows="1" data-qa="${key}" data-id="${r.id}" data-part="q" aria-label="見出し">${escXml(r.q)}</textarea>
       <textarea rows="2" data-qa="${key}" data-id="${r.id}" data-part="a" aria-label="${escXml(r.q)}">${escXml(r.a)}</textarea>
       <button type="button" class="rm" data-act="qa-del" data-key="${key}" data-id="${r.id}" aria-label="この項目を削除" title="この項目を削除">${ST_SVG.x.replace('<svg','<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"')}</button>
     </div>`).join('')}</div>
@@ -17438,9 +17437,12 @@ function stCanvasHtml(c,k){
       ${w?'':'<p class="st-note">ワイヤーフレームとデザインカンプは、同じデザインを使います。</p>'}
     </div></div>`;
 }
+/* 入力欄の高さを文章に合わせる */
+function stGrow(t){if(CSS.supports('field-sizing','content'))return;t.style.height='auto';t.style.height=t.scrollHeight+'px';}
 /* 描いた後: キャンバスの見本画像・ルールのフォントを読み込む */
 async function stAfterRender(){
   const c=stClient();if(!c)return;
+  stEl().querySelectorAll('.st-f textarea').forEach(stGrow);
   const k=ST_STEPS[stStepI].k;
   if(k==='rules'){
     const url=webFontCssUrl([c.rules.head,c.rules.body]);
@@ -17545,6 +17547,7 @@ stEl().addEventListener('input',e=>{
   const t=e.target;
   if(t.id==='stQ'){stQuery=t.value;const pos=t.selectionStart;stRender();const q=$('#stQ');if(q){q.focus();try{q.setSelectionRange(pos,pos);}catch(err){}}return;}
   const c=stClient();if(!c)return;
+  if(t.tagName==='TEXTAREA')stGrow(t);
   if(t.dataset.f){
     const [grp,key]=t.dataset.f.split('.');
     if(grp==='info'&&key==='name'){
@@ -17560,6 +17563,10 @@ stEl().addEventListener('input',e=>{
     if(t.dataset.part==='c'){const sw=t.closest('.st-swc');sw.querySelector('label.c').style.background=t.value;sw.querySelector('code').textContent=t.value.toUpperCase();}
     stTouch(c);return;
   }
+});
+/* 名前や質問の見出しは1行(Enterで改行しない) */
+stEl().addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&!e.isComposing&&(e.target.matches('textarea.lb')||e.target.dataset.f==='info.name'))e.preventDefault();
 });
 stEl().addEventListener('change',e=>{
   const t=e.target,c=stClient();
