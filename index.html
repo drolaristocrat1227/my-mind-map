@@ -768,8 +768,12 @@ body:not(.wire-mode) #fsBtn{display:none;}
 #pvWrap.on{display:block}
 #pvStage{position:absolute;inset:0;display:flex;justify-content:center;overflow:auto}
 #pvFrame{border:0;background:#fff;width:100%;height:100%;flex:none;transition:width .25s ease}
-#pvWrap[data-w="tab"] #pvFrame{width:820px;max-width:100%;box-shadow:0 0 0 1px rgba(255,255,255,.08),0 20px 60px rgba(0,0,0,.5)}
-#pvWrap[data-w="sp"] #pvFrame{width:390px;max-width:100%;box-shadow:0 0 0 1px rgba(255,255,255,.08),0 20px 60px rgba(0,0,0,.5)}
+#pvDev{width:100%;height:100%;flex:none;position:relative;overflow:hidden}
+#pvWrap:not([data-w="pc"]) #pvStage{align-items:center}
+#pvWrap:not([data-w="pc"]) #pvDev{border-radius:18px;box-shadow:0 0 0 8px #0D0E12,0 0 0 9px rgba(255,255,255,.12),0 24px 70px rgba(0,0,0,.55)}
+#pvWrap:not([data-w="pc"]) #pvFrame{position:absolute;left:0;top:0;transform-origin:0 0}
+#pvSize{position:absolute;left:50%;bottom:8px;translate:-50% 0;color:#9097A6;font:600 11px var(--ui-font);display:none}
+#pvWrap:not([data-w="pc"]) #pvSize{display:block}
 #pvBar{position:absolute;top:10px;right:10px;z-index:2;display:flex;align-items:center;gap:6px;padding:5px;border-radius:12px;background:rgba(21,23,29,.92);color:#E8EAF0;
   font:600 12px/1.2 var(--ui-font);box-shadow:0 6px 24px rgba(0,0,0,.35);opacity:.25;transition:opacity .2s ease}
 #pvBar:hover,#pvBar:focus-within,#pvWrap.bar #pvBar{opacity:1}
@@ -2240,7 +2244,8 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
 </style>
 <div id="studio" data-theme="dark" role="dialog" aria-label="クライアント"></div>
 <div id="pvWrap" role="dialog" aria-label="ページの確認">
-  <div id="pvStage"><iframe id="pvFrame" title="ページの確認"></iframe></div>
+  <div id="pvStage"><div id="pvDev"><iframe id="pvFrame" title="ページの確認"></iframe></div></div>
+  <div id="pvSize"></div>
   <div id="pvLoading">表示を準備しています…</div>
   <div id="pvBar">
     <select id="pvPage" aria-label="確認するページ"></select>
@@ -2840,7 +2845,7 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-26.8';
+const APP_VERSION='2026-10-26.9';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -11454,7 +11459,9 @@ const txRange=s=>(txSel&&txSel.sid===s.id&&txSel.b>=txSel.a)?txSel:null;
 function renderWire(){
   const d=curDoc();if(!d.shapes)return;
   if(!(wDrag&&/^(move|resize|rotate|gresize)$/.test(wDrag.mode))){
-    const a=vhEditorAll(d),b=layAll(d);
+    /* 区画を外へ出した時は入れ子が変わるので、数え直して何回か通す */
+    let a=false;for(let k=0;k<4&&vhEditorAll(d);k++)a=true;
+    const b=layAll(d);
     if(a||b)save();
   }
   wireViewApply();
@@ -18263,6 +18270,16 @@ function vhEditorAll(d){
     if(!isFrame(sec)||!sec.vh||sec.hidden)return;
     const page=par[i];if(!page||par[sh.indexOf(page)])return;   /* ページ直下の区画だけ */
     const kids=sh.filter((x,j)=>j>i&&par[j]===sec&&!x.hidden);
+    /* 伸びた区画の中に入ってしまったセクション(以前の版で起きた)を、区画の下へ出す。その下の物も同じだけ下げる */
+    const trapped=kids.filter(x=>isFrame(x)&&x.role==='section');
+    if(trapped.length){
+      const minTop=Math.min(...trapped.map(x=>x.y-x.h/2)),need=sec.y+sec.h/2-minTop;
+      const others=sh.filter((x,j)=>par[j]===page&&x!==sec&&(isFrame(x)?x.y-x.h/2:unionWorldBox([x]).y)>=minTop-1);
+      [...trapped,...others].forEach(x=>layBlock(sh,x).forEach(y=>{y.y+=need;}));
+      page.y+=need/2;page.h+=need;
+      changed=true;
+      return;   /* 入れ子が変わったので、続きは数え直してから */
+    }
     const isFill=x=>!isFrame(x)&&x.type!=='text'&&!x.fr&&!x.nw&&!x.gid&&!x.href&&x.w>=sec.w*0.9&&x.h>=sec.h*0.8;
     /* ページ全体に固定する区画(ヘッダーなど)は、書き出したページと同じく動かさない */
     const fills=kids.filter(isFill),rest=kids.filter(x=>!isFill(x)&&!(isFrame(x)&&(x.pin==='top'||x.pin==='bottom')));
@@ -18279,8 +18296,8 @@ function vhEditorAll(d){
     if(Math.abs(dH)<1)return;
     const shift=sec.vh==='top'?0:sec.vh==='bottom'?dH:dH/2;
     const oldBottom=top+sec.h;
-    /* 区画の下にある物(ページの中)を、伸びた分だけずらす。並べるページは自動で並び直るので動かさない */
-    if(!page.lay){
+    /* 区画の下にある物(ページの中)を、伸びた分だけずらす(下のセクションが伸びた区画の後ろに潜らないように) */
+    {
       const below=sh.filter((x,j)=>par[j]===page&&x!==sec&&(isFrame(x)?x.y-x.h/2:unionWorldBox([x]).y)>=oldBottom-1);
       below.forEach(x=>layBlock(sh,x).forEach(y=>{y.y+=dH;}));
       /* 下の物も同じだけずれたので、ページも同じだけ伸ばす(縮める) */
@@ -18364,10 +18381,22 @@ function closePreview(){
   $('#pvFrame').src='about:blank';
   if(pvUrl){URL.revokeObjectURL(pvUrl);pvUrl=null;}
 }
+/* 端末の大きさ(CSSのpx)。ページの中の幅はこの大きさのまま、画面に収まるように見た目だけ縮める */
+const PV_DEV={tab:{w:820,h:1180,n:'タブレット'},sp:{w:390,h:844,n:'スマホ'}};
 function pvSetWidth(w){
   $('#pvWrap').dataset.w=w;
   document.querySelectorAll('#pvBar [data-w]').forEach(b=>b.classList.toggle('on',b.dataset.w===w));
+  pvFit();
 }
+function pvFit(){
+  const w=$('#pvWrap').dataset.w,fr=$('#pvFrame'),box=$('#pvDev'),d=PV_DEV[w];
+  if(!d){fr.style.width=fr.style.height=fr.style.transform='';box.style.width=box.style.height='';return;}
+  const k=Math.min(1,(innerHeight-70)/d.h,(innerWidth-40)/d.w);
+  fr.style.width=d.w+'px';fr.style.height=d.h+'px';fr.style.transform=`scale(${k})`;
+  box.style.width=d.w*k+'px';box.style.height=d.h*k+'px';
+  $('#pvSize').textContent=`${d.n} ${d.w}×${d.h}${k<1?'(画面に合わせて'+Math.round(k*100)+'%で表示)':''}`;
+}
+addEventListener('resize',()=>{if($('#pvWrap').classList.contains('on'))pvFit();});
 $('#fsBtn').onclick=openPreview;
 $('#pvClose').onclick=closePreview;
 $('#pvPage').addEventListener('change',()=>pvShow(+$('#pvPage').value));
