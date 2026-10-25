@@ -1273,6 +1273,11 @@ kbd{
 @media (max-width:560px){
   #topbar{top:10px;left:10px;right:10px;}
   #nodeCount{display:none;}
+  /* ボタンが多くて入りきらない時は、上のバーを指で横にずらして押せるようにする */
+  #topbar{overflow-x:auto;overflow-y:hidden;scrollbar-width:none;overscroll-behavior-x:contain;}
+  #topbar::-webkit-scrollbar{display:none;}
+  #topbar>*{flex-shrink:0;}
+  #mapTitle{width:96px;min-width:96px;}
   #toolbar,#wireBar,#docBar{bottom:calc(10px + env(safe-area-inset-bottom,0px));gap:1px;padding:6px;}
   #toolbar .m-hide,#wireBar .m-hide,#docBar .m-hide{display:none;}
   #toolbar .iconbtn,#wireBar .iconbtn,#docBar .iconbtn{width:44px;height:44px;}
@@ -1325,6 +1330,9 @@ kbd{
   </button>
   <button class="iconbtn" id="exportBtn" title="エクスポート">
     <svg viewBox="0 0 24 24"><path d="M12 4v11m0 0l-4.5-4.5M12 15l4.5-4.5M4 19h16"/></svg>
+  </button>
+  <button class="iconbtn" id="fsBtn" title="画面いっぱいに表示(もう一度押すと戻る)" aria-label="画面いっぱいに表示">
+    <svg viewBox="0 0 24 24" id="fsIcon"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg>
   </button>
   <button class="iconbtn" id="helpBtn" title="ヘルプ">
     <svg viewBox="0 0 24 24"><path d="M9.3 9.2a2.8 2.8 0 1 1 3.9 3c-.9.5-1.2 1-1.2 2M12 17.5v.1"/><circle cx="12" cy="12" r="9.2"/></svg>
@@ -2799,7 +2807,7 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-26.5';
+const APP_VERSION='2026-10-26.6';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -18188,6 +18196,31 @@ $('#mapOpen').onclick=()=>{
 };
 $('#boxMenu').addEventListener('click',e=>{if(e.target.closest('[data-add="gmap"]'))gmapAdd();});
 /* ============================================================
+   画面いっぱい(全画面)で表示する。ブラウザの全画面の機能を使う(Esc か、もう一度押すと戻る)
+   ============================================================ */
+const isFullscreen=()=>!!(document.fullscreenElement||document.webkitFullscreenElement);
+function toggleFullscreen(){
+  const el=document.documentElement;
+  if(isFullscreen()){(document.exitFullscreen||document.webkitExitFullscreen).call(document);return;}
+  const req=el.requestFullscreen||el.webkitRequestFullscreen;
+  if(!req){toast('この端末では画面いっぱいにできません(ホーム画面に追加して開くと、広く使えます)');return;}
+  try{const p=req.call(el,{navigationUI:'hide'});if(p&&p.catch)p.catch(()=>toast('画面いっぱいにできませんでした'));}
+  catch(e){toast('画面いっぱいにできませんでした');}
+}
+function syncFullscreen(){
+  const on=isFullscreen();
+  $('#fsIcon').innerHTML=on?'<path d="M9 4v5H4M15 4v5h5M15 20v-5h5M9 20v-5H4"/>':'<path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/>';
+  $('#fsBtn').title=on?'画面いっぱいをやめる(Esc)':'画面いっぱいに表示(もう一度押すと戻る)';
+  $('#fsBtn').setAttribute('aria-label',on?'画面いっぱいをやめる':'画面いっぱいに表示');
+  $('#fsBtn').classList.toggle('active',on);
+  document.querySelectorAll('#studio [data-act="fs"]').forEach(b=>{b.innerHTML='<svg viewBox="0 0 24 24">'+(on?'<path d="M9 4v5H4M15 4v5h5M15 20v-5h5M9 20v-5H4"/>':'<path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/>')+'</svg>';b.title=b.ariaLabel=on?'画面いっぱいをやめる':'画面いっぱいに表示';});
+  /* 画面の広さが変わるので、表示を合わせ直す */
+  requestAnimationFrame(()=>{try{applyView();}catch(e){}});
+}
+$('#fsBtn').onclick=toggleFullscreen;
+document.addEventListener('fullscreenchange',syncFullscreen);
+document.addEventListener('webkitfullscreenchange',syncFullscreen);
+/* ============================================================
    クライアント(制作の工程)
    クライアントごとに、クライアント情報 → ヒアリング → ペルソナ → デザインルール → 掲載内容 →
    ワイヤーフレーム → デザインカンプ の順に進める。データは doc.clients に保存する。
@@ -18265,6 +18298,10 @@ function stClose(){
   try{localStorage.removeItem('ntd-st-open');}catch(e){}
   stSyncBack();
 }
+function stFsBtn(){
+  const on=isFullscreen();
+  return`<button type="button" class="st-x" data-act="fs" aria-label="${on?'画面いっぱいをやめる':'画面いっぱいに表示'}" title="${on?'画面いっぱいをやめる':'画面いっぱいに表示'}"><svg viewBox="0 0 24 24">${on?'<path d="M9 4v5H4M15 4v5h5M15 20v-5h5M9 20v-5H4"/>':'<path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/>'}</svg></button>`;
+}
 function stThemeSeg(){
   const t=stTheme();
   return`<div class="st-seg" role="group" aria-label="画面の明るさ">
@@ -18307,6 +18344,7 @@ function stHomeHtml(){
       <label class="st-search">${ST_SVG.search}<input type="search" id="stQ" placeholder="クライアントを探す" aria-label="クライアントを探す" value="${escXml(stQuery)}"></label>
       <span class="st-sp"></span>
       ${stThemeSeg()}
+      ${stFsBtn()}
       <button type="button" class="st-btn pri" data-act="new">＋ 新しいクライアント</button>
       <button type="button" class="st-x" data-act="close" aria-label="マップ・デザインの画面へ" title="マップ・デザインの画面へ">${ST_SVG.x}</button>
     </header>
@@ -18347,6 +18385,7 @@ function stClientHtml(){
       <span class="st-crumb">/ <b id="stCrumbName">${escXml(c.name)}</b></span>
       <span class="st-sp"></span>
       ${stThemeSeg()}
+      ${stFsBtn()}
       <button type="button" class="st-x" data-act="close" aria-label="マップ・デザインの画面へ" title="マップ・デザインの画面へ">${ST_SVG.x}</button>
     </header>
     <div class="st-body">
@@ -18550,6 +18589,7 @@ stEl().addEventListener('click',e=>{
   const b=e.target.closest('[data-act]');if(!b||!stEl().contains(b))return;
   const act=b.dataset.act,c=stClient();
   if(act==='close'){stClose();return;}
+  if(act==='fs'){toggleFullscreen();return;}
   if(act==='theme'){doc.theme=b.dataset.v;applyTheme();clearTimeout(saveTimer);saveTimer=setTimeout(doSave,250);stRender();return;}
   if(act==='home'){stView='home';stRender();return;}
   if(act==='new'){
