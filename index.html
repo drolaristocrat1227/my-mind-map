@@ -810,6 +810,15 @@ body:not(.wire-mode) #layerPanel{display:none;}
 #layerAdd{display:flex;gap:4px;padding:0 8px 6px;flex:none}
 #layerAdd button{flex:1;padding:5px 4px;border-radius:8px;font-size:11px;font-weight:700;color:var(--ink);background:var(--btn-hover)}
 #layerAdd button:hover{background:var(--btn-active)}
+/* ボタンの設定 */
+.btnChk{display:inline-flex;align-items:center;gap:3px;font-size:11px;color:var(--ink-soft);margin-left:6px;white-space:nowrap;cursor:pointer}
+.btnHint{font-size:11px;line-height:1.6;color:var(--ink-soft);margin:6px 0 8px}
+#btnFields .numRow input[type=text]{flex:1;min-width:0}
+#btnFields .radLbl{flex:none;width:7.2em;white-space:normal;line-height:1.3}
+#btnFields .radRow input[type=range]{flex:1;min-width:60px}
+#btnFields .btnRow{flex-wrap:wrap;row-gap:4px}
+#btnFields input[type=color]:disabled{opacity:.35}
+#btnFields input[type=range]:disabled{opacity:.35}
 /* パディング・マージン(上・右・下・左) */
 .layQuad{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin:4px 0 8px}
 .layQuad label{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10px;color:var(--ink-soft)}
@@ -1681,6 +1690,13 @@ kbd{
     </div>
     </div>
   </div>
+  <div id="btnPart">
+    <hr>
+    <div class="menu-label">ボタン</div>
+    <div class="segRow" id="btnTabs"><button class="seg" data-st="n">ふだん</button><button class="seg" data-st="h">ホバー(タップ)時</button></div>
+    <div id="btnFields"></div>
+    <div class="segRow"><button class="seg" id="btnPrev">編集画面でホバーの見た目を見る</button></div>
+  </div>
   <div id="icoPart">
     <hr>
     <div class="menu-label">アイコン <span id="icoName" style="font-weight:400"></span></div>
@@ -1955,10 +1971,11 @@ kbd{
   <button class="mi" data-h="6"><b class="hlv">H6</b>見出し6<span class="px">16px</span></button>
 </div>
 <div id="boxMenu" class="menu glass">
-  <div class="menu-label">ページ・セクション・コンテナ</div>
+  <div class="menu-label">ページ・セクション・コンテナ・ボタン</div>
   <button class="mi" data-add="page"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>ページを足す(トップ・会社概要など)</button>
   <button class="mi" data-add="section"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M3 15h18"/></svg>セクションを足す(about・menuなど)</button>
   <button class="mi" data-add="box"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" stroke-dasharray="3 2"/><rect x="7" y="7" width="10" height="4" rx="1"/><rect x="7" y="13" width="10" height="4" rx="1"/></svg>コンテナ(選んだ物を囲む / 空で足す)</button>
+  <button class="mi" data-add="btn"><svg viewBox="0 0 24 24"><rect x="2.5" y="7" width="19" height="10" rx="5"/><path d="M13 12h5M16 10l2 2-2 2"/></svg>ボタンを足す(形・色・矢印・ホバー)</button>
 </div>
 <div id="partsMenu" class="menu glass">
   <div class="menu-label">UIパーツを追加</div>
@@ -2764,7 +2781,7 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-26.1';
+const APP_VERSION='2026-10-26.2';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -6475,6 +6492,7 @@ function siteMedia(s,o){
 /* 1つの図形 → 要素(リンク・動きは付けない) */
 function siteShapeEl(s,o,tagOf){
   if(s.media)return siteAttrs(siteMedia(s,o),s);
+  if(s.type==='btn')return siteAttrs(siteBtn(s,o),s);
   if(s.type==='text'&&siteTextOk(s))return siteAttrs(siteText(s,o,tagOf(s)),s);
   const el=siteAttrs((s.type==='image'?siteImage(s,o):siteCssBox(s,o))||siteSvg(s,o),s);
   /* 図として描いた文字は、検索エンジン・読み上げソフト向けに、見えない本物の文字(見出しなら見出し)を添える */
@@ -6808,6 +6826,22 @@ img{display:block;max-width:none}
 .nt-svg{overflow:visible}
 /* 中身に合わせて伸ばす区画の文字(幅を超えたら折り返す) */
 .nt-flow{white-space:pre-wrap;overflow-wrap:anywhere}
+/* ボタン(ふだん/ホバー。スマホはタップで .nt-hov が付く) */
+.nt-button{display:flex;align-items:center;justify-content:center;box-sizing:border-box;background:var(--bg);border:var(--bw) solid var(--bc);border-radius:var(--r);color:var(--tc);cursor:pointer;white-space:nowrap;overflow:hidden;line-height:1.2;transition:background-color var(--d),border-color var(--d),border-width var(--d),border-radius var(--d),color var(--d)}
+.nt-button:hover,.nt-button.nt-hov{background:var(--bgh,var(--bg));border-color:var(--bch,var(--bc));border-width:var(--bwh,var(--bw));border-radius:var(--rh,var(--r));color:var(--tch,var(--tc))}
+.nt-bi{display:flex;align-items:center;gap:var(--gap)}
+.nt-bt{display:grid;overflow:hidden}
+.nt-bt>span{grid-area:1/1;transition:opacity var(--d),translate var(--d)}
+.nt-bt2{opacity:0;translate:0 70%}
+.nt-btx:hover .nt-bt1,.nt-btx.nt-hov .nt-bt1{opacity:0;translate:0 -70%}
+.nt-btx:hover .nt-bt2,.nt-btx.nt-hov .nt-bt2{opacity:1;translate:0 0}
+.nt-ba{flex:none;overflow:visible;rotate:var(--aang,0deg);transition:color var(--d),translate var(--d),rotate var(--d)}
+.nt-ba .nt-sh{transform-box:fill-box;transform-origin:0 50%;transition:scale var(--d)}
+.nt-ba .nt-hd{transition:translate var(--d)}
+.nt-button:hover .nt-ba,.nt-button.nt-hov .nt-ba{translate:var(--adx,0px) 0;rotate:var(--aangh,var(--aang,0deg))}
+.nt-button:hover .nt-bach,.nt-button.nt-hov .nt-bach{color:var(--ach)}
+.nt-button:hover .nt-sh,.nt-button.nt-hov .nt-sh{scale:var(--ak,1) 1}
+.nt-button:hover .nt-hd,.nt-button.nt-hov .nt-hd{translate:var(--adl,0px) 0}
 /* 高さを画面いっぱいにする区画(js/main.js が高さを決める) */
 .nt-vhin{position:absolute;left:0;top:0;width:100%}
 .nt-vhfill img{object-fit:cover}
@@ -9744,6 +9778,8 @@ async function makeWireCanvas(w,opt){
       doFill(()=>ctx.fill(p2));
       drawImgFill(p2);
       if(!s.noStroke&&strokeW(s)>0)doStroke(spaint,sa,()=>ctx.stroke(p2));
+    }else if(s.type==='btn'){
+      btnCanvas(ctx,s);
     }else if(s.type==='icon'){
       const ic=iconGeo(s);
       if(ic){
@@ -11043,6 +11079,7 @@ function devPartsCanvas(ctx,parts){
 }
 
 function shapeSvg(s){
+  if(s.type==='btn')return btnSvg(s);
   const tr=`transform="translate(${s.x} ${s.y}) rotate(${s.rot||0})"`;
   const paint=paintOf(s);
   const fill=paint||'transparent';
@@ -11129,6 +11166,18 @@ function textCharsSvg(s,L,extraFn){
 }
 /* フレームの名前とピクセル数(上に表示)。図形で覆われても
    ここを押せばフレーム自体を選べる(Figmaと同じ) */
+/* フレームの名札: ページ・セクション・コンテナは種類を添える(コンテナは紫、セクションは水色) */
+function frameLabelText(f){
+  const k=typeof layKind==='function'?layKind(curShapes(),f):'';
+  if(k==='box')return f.name?'コンテナ: '+f.name:'コンテナ';
+  if(k==='section')return'セクション: '+(f.name||'(名前なし)');
+  if(k==='page')return'ページ: '+(f.name||'');
+  return f.name||'フレーム';
+}
+function frameLabelCol(f){
+  const k=typeof layKind==='function'?layKind(curShapes(),f):'';
+  return k==='box'?'#8C7BFF':k==='section'?'#2EA8C8':'var(--ink-soft)';
+}
 function frameLabelSvg(f){
   /* 選択枠(図形の 5〜6/wz 上)と重ならない高さに置く。デバイスは外装の上に出す */
   const top=f.device?frameFullLocalBox(f).y1:-f.h/2;
@@ -11136,7 +11185,7 @@ function frameLabelSvg(f){
   const on=wireSel.includes(f.id);
   return`<g data-id="${f.id}" transform="translate(${f.x} ${f.y}) rotate(${f.rot||0})" style="cursor:pointer">
     <rect x="${-f.w/2}" y="${y-fs}" width="${f.w}" height="${fs+4/wz}" fill="transparent"/>
-    <text x="${-f.w/2}" y="${y}" font-size="${fs}" font-weight="700" fill="${on?'var(--accent)':'var(--ink-soft)'}" style="user-select:none">${escXml(f.name||'フレーム')}<tspan dx="${8/wz}" font-weight="600" opacity=".7">${Math.round(f.w)} × ${Math.round(f.h)}</tspan></text>
+    <text x="${-f.w/2}" y="${y}" font-size="${fs}" font-weight="700" fill="${on?'var(--accent)':frameLabelCol(f)}" style="user-select:none">${escXml(frameLabelText(f))}<tspan dx="${8/wz}" font-weight="600" opacity=".7">${Math.round(f.w)} × ${Math.round(f.h)}</tspan></text>
   </g>`;
 }
 /* グリッド(列組みの目安)。f.grid={on,cols,margin,gutter,color}。
@@ -12052,7 +12101,7 @@ function addDeviceFrame(k){
   addFrame(d.w,d.h,d.n,true,{device:{kind:d.kind},r:d.r});
 }
 /* ---------- 大きさ(px)をパネルから指定 ---------- */
-const sizeableShape=s=>['rect','ellipse','path','line','image','icon'].includes(s.type);
+const sizeableShape=s=>['rect','ellipse','path','line','image','icon','btn'].includes(s.type);
 let szLink=true;   /* 縦横比を保つ(既定ON) */
 /* 中心を保ったまま大きさを変える。パスは点も比率で拡縮 */
 function resizeShapeTo(s,nw,nh){
@@ -15297,7 +15346,7 @@ $('#wireBarToggleBtn').onclick=toggleWireBar;
 applyWireBar();
 
 /* ---------- レイヤーパネル ---------- */
-const SHAPE_TYPE_LABEL={rect:'四角',ellipse:'丸',line:'線',text:'テキスト',image:'画像',path:'パス',frame:'フレーム',icon:'アイコン'};
+const SHAPE_TYPE_LABEL={btn:'ボタン',rect:'四角',ellipse:'丸',line:'線',text:'テキスト',image:'画像',path:'パス',frame:'フレーム',icon:'アイコン'};
 function shapeLabel(s){
   if(s.name)return s.name;
   if(s.role&&LAY_KIND[s.role])return LAY_KIND[s.role];
@@ -15338,7 +15387,7 @@ function renderLayerPanel(){
     out.push(`<div class="layerRow${sel?' sel':''}${s.hidden?' hidden-shape':''}" data-idx="${i}" data-id="${s.id}" data-pid="${par[i]?par[i].id:''}" style="padding-left:${6+depth*12}px">
       <span class="lr-grip" title="ドラッグで並び替え(同じ入れ物の中)"><svg viewBox="0 0 10 16"><circle cx="2" cy="2" r="1"/><circle cx="8" cy="2" r="1"/><circle cx="2" cy="8" r="1"/><circle cx="8" cy="8" r="1"/><circle cx="2" cy="14" r="1"/><circle cx="8" cy="14" r="1"/></svg></span>
       ${ch.length?`<button class="lr-fold${s.fold?'':' open'}" data-act="fold" title="開く / 閉じる"><svg viewBox="0 0 10 10"><path d="M3 1.5L7 5 3 8.5"/></svg></button>`:'<span class="lr-fold"></span>'}
-      <span class="lr-icon">${layerIconFor(s)}</span>
+      <span class="lr-icon">${layIcon(s,k)}</span>
       <input class="lr-name" data-id="${s.id}" value="${escXml(shapeLabel(s))}" spellcheck="false" autocomplete="off">
       ${k&&k!=='frame'?`<span class="lr-kind ${k}">${LAY_KIND[k]}${s.lay?(s.lay.d==='h'?' ⇢':' ⇣'):''}</span>`:''}
       <button class="lr-btn lr-eye${s.hidden?'':' active'}" data-act="eye" title="表示 / 非表示">${s.hidden?EYE_OFF_SVG:EYE_ON_SVG}</button>
@@ -16036,6 +16085,7 @@ function updateStyleMenu(){
     if(document.activeElement!==$('#blurAmtV'))$('#blurAmtV').value=b0;
   }
   renderIcoPart();
+  renderBtnPart();
   $('#textSec').style.display=texts.length?'block':'none';
   if(texts.length){
     const t0=texts[0];
@@ -17497,6 +17547,14 @@ function layDrop(dgItems){
   });
   return changed;
 }
+/* レイヤーの印(ページ・セクション・コンテナ・ボタンは専用の形) */
+const LAY_ICONS={
+  page:'<svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8.5 8h7M8.5 12h7M8.5 16h4"/></svg>',
+  section:'<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M3 15h18"/></svg>',
+  box:'<svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="2" stroke-dasharray="3 2.4"/><rect x="7.5" y="7.5" width="9" height="3.5" rx="1"/><rect x="7.5" y="13" width="9" height="3.5" rx="1"/></svg>',
+  btn:'<svg viewBox="0 0 24 24"><rect x="2.5" y="7" width="19" height="10" rx="5"/><path d="M13 12h5M16 10l2 2-2 2"/></svg>'
+};
+function layIcon(s,k){return LAY_ICONS[s.type==='btn'?'btn':k]||layerIconFor(s);}
 /* ---- ページ・セクション・コンテナを足す ---- */
 function layTopFrames(sh){const par=layParents(sh);return sh.filter((s,i)=>isFrame(s)&&!par[i]);}
 function layAddPage(){
@@ -17505,9 +17563,10 @@ function layAddPage(){
   if(name===null)return;
   const sh=d.shapes,tops=layTopFrames(sh);
   pushUndo();
-  const x0=tops.length?Math.max(...tops.map(f=>f.x+f.w/2))+200:s2w(viewW()/2,viewH()/2).x-600;
-  const y0=tops.length?Math.min(...tops.map(f=>f.y-f.h/2)):s2w(viewW()/2,viewH()/2).y-400;
-  const f={id:uid(),type:'frame',x:x0+600,y:y0+400,w:1200,h:800,rot:0,name:name.trim()||'ページ',fill:'#FFFFFF',noStroke:true,r:0,clip:true,
+  const x0=tops.length?Math.max(...tops.map(f=>f.x+f.w/2))+200:s2w(viewW()/2,viewH()/2).x-720;
+  const y0=tops.length?Math.min(...tops.map(f=>f.y-f.h/2)):s2w(viewW()/2,viewH()/2).y-450;
+  /* ホームページの幅(PC 1440px)。高さはセクションを足すと自動で伸びる(空の間は1画面ぶん) */
+  const f={id:uid(),type:'frame',x:x0+720,y:y0+450,w:1440,h:900,rot:0,name:name.trim()||'ページ',fill:'#FFFFFF',noStroke:true,r:0,clip:true,
     role:'page',lay:{d:'v',gap:0,pad:[0,0,0,0],ai:'stretch',jc:'start',hug:{h:true}}};
   sh.unshift(f);
   /* ホームページのページ一覧にも足す(まだPCのフレームが決まっていないページがあれば、そこに入れる) */
@@ -17595,7 +17654,7 @@ function layAddDispatch(k){
   hideMenus();
   if(k==='page')layAddPage();
   else if(k==='section')layAddSection();
-  else layAddBox();
+  else if(k==='box')layAddBox();
 }
 $('#wireBoxBtn').onclick=e=>openBarMenu($('#boxMenu'),e.currentTarget);
 $('#boxMenu').addEventListener('click',e=>{const b=e.target.closest('[data-add]');if(b)layAddDispatch(b.dataset.add);});
@@ -17676,6 +17735,231 @@ function layOverlaySvg(d){
   });
   return h;
 }
+
+/* ============================================================
+   ボタン(type:'btn')。形・枠・色・文字・矢印と、ホバー(スマホはタップ)した時の変化を、それぞれ別に決められる。
+   s.btn={t,fs,fw,ff,tc,bg,bc,bw,shape:'square'|'round'|'pill',r,ic:'none'|'right'|'left',gap,
+     ar:{st:'line'|'chev'|'tri',len,th,hd,ang,col},
+     hv:{bg,tc,bc,bw,shape,r,t,ac,adx,aang,alen,dur}}   hv の項目が無い時は「ふだんと同じ」
+   リンクは s.href(ほかの図形と同じ)
+   ============================================================ */
+const BTN_DEF={t:'詳しく見る',fs:16,fw:700,tc:'#FFFFFF',bg:'#1F1D1A',bc:'#1F1D1A',bw:0,shape:'pill',r:8,ic:'right',gap:12,
+  ar:{st:'line',len:22,th:1.5,hd:6,ang:0},hv:{bg:'#2E5B4F',bc:'#2E5B4F',adx:6,dur:0.3}};
+let btnHoverPrev=null;   /* 編集画面で「ホバーの見た目」を見ているボタンのid */
+const btnGet=(o,k)=>k.split('.').reduce((a,x)=>a==null?undefined:a[x],o);
+function btnSet(o,k,v){
+  const ks=k.split('.'),last=ks.pop();
+  const t=ks.reduce((a,x)=>(a[x]=a[x]||{}),o);
+  if(v===undefined||v===null||v==='')delete t[last];else t[last]=v;
+}
+/* いま見せる値(ホバーを見ている時はホバーの値を重ねる) */
+function btnLook(s,hover){
+  const b=s.btn,h=hover?(b.hv||{}):{},ar=b.ar||{};
+  const pick=(k,hk)=>h[hk||k]!==undefined?h[hk||k]:b[k];
+  return{
+    t:(hover&&h.t)?h.t:b.t,fs:b.fs,fw:b.fw,ff:b.ff||docFont(),tc:pick('tc'),bg:pick('bg'),bc:pick('bc'),bw:pick('bw')||0,
+    shape:pick('shape'),r:pick('r'),ic:b.ic||'none',gap:b.gap!==undefined?b.gap:12,
+    ar:{st:ar.st||'line',len:hover&&h.alen!==undefined?h.alen:(ar.len||22),th:ar.th||1.5,hd:ar.hd||6,
+      ang:(hover&&h.aang!==undefined?h.aang:(ar.ang||0))+(b.ic==='left'?180:0),
+      col:(hover&&h.ac)?h.ac:(ar.col||pick('tc')),dx:hover?(h.adx||0)*(b.ic==='left'?-1:1):0}
+  };
+}
+const btnRadius=(L,h)=>L.shape==='pill'?h/2:L.shape==='round'?(L.r||0):0;
+/* 文字の幅(テキストと同じ測り方。Webフォントは読み込んでから測り直す) */
+function btnTextW(L){
+  const p={type:'text',text:L.t||' ',fs:L.fs,fw:L.fw,ff:L.ff,ls:0};
+  try{wfNeed(p);return textLayout(p).w;}catch(e){return(L.t||'').length*L.fs;}
+}
+/* 矢印の形(右向き・原点は矢印の左端の中央)。shaft=軸、head=先 */
+function btnArrowGeo(a){
+  const L=a.len,H=a.hd;
+  if(a.st==='chev')return{w:H,shaft:'',head:`M0 ${-H}L${H} 0L0 ${H}`,fillHead:false};
+  if(a.st==='tri')return{w:L,shaft:`M0 0H${Math.max(0,L-H*1.4)}`,head:`M${L} 0L${L-H*1.4} ${-H}L${L-H*1.4} ${H}Z`,fillHead:true};
+  return{w:L,shaft:`M0 0H${L}`,head:`M${L-H} ${-H*0.85}L${L} 0L${L-H} ${H*0.85}`,fillHead:false};
+}
+/* 中身の並び: [矢印][間][文字] か [文字][間][矢印] を真ん中に */
+function btnLayoutX(L){
+  const tw=btnTextW(L),hasA=L.ic!=='none',aw=hasA?btnArrowGeo({...L.ar,len:L.ar.len}).w:0;
+  const total=tw+(hasA?L.gap+aw:0),x0=-total/2;
+  return{tw,aw,textX:L.ic==='left'?x0+aw+L.gap:x0,arrowX:L.ic==='left'?x0:x0+tw+L.gap};
+}
+function btnArrowSvgInner(a,stroke){
+  const g=btnArrowGeo(a);
+  return(g.shaft?`<path d="${g.shaft}" fill="none" stroke="${stroke}" stroke-width="${a.th}" stroke-linecap="round"/>`:'')
+    +(g.fillHead?`<path d="${g.head}" fill="${stroke}"/>`:`<path d="${g.head}" fill="none" stroke="${stroke}" stroke-width="${a.th}" stroke-linecap="round" stroke-linejoin="round"/>`);
+}
+function btnSvg(s){
+  const L=btnLook(s,btnHoverPrev===s.id),X=btnLayoutX(L);
+  const rr=Math.min(btnRadius(L,s.h),s.h/2,s.w/2);
+  const tr=`transform="translate(${s.x} ${s.y}) rotate(${s.rot||0})"`;
+  const bw=L.bw||0;
+  let h=`<g data-id="${s.id}" ${tr}>`;
+  h+=`<rect x="${-s.w/2+bw/2}" y="${-s.h/2+bw/2}" width="${Math.max(0,s.w-bw)}" height="${Math.max(0,s.h-bw)}" rx="${Math.max(0,rr-bw/2)}" fill="${L.bg&&L.bg!=='none'?L.bg:'transparent'}" stroke="${bw?L.bc:'none'}" stroke-width="${bw}"/>`;
+  h+=`<text x="${X.textX}" y="0" dominant-baseline="central" font-size="${L.fs}" font-weight="${L.fw}" font-family="${escXml(cssFont(L.ff))}" fill="${L.tc}" style="white-space:pre">${escXml(L.t||'')}</text>`;
+  if(L.ic!=='none'){
+    const cx=X.arrowX+X.aw/2;
+    h+=`<g transform="translate(${X.arrowX+L.ar.dx} 0) rotate(${L.ar.ang} ${X.aw/2} 0)">${btnArrowSvgInner(L.ar,L.ar.col)}</g>`;
+  }
+  return h+'</g>';
+}
+/* 画像(PNG・PDF)に書き出す時 */
+function btnCanvas(ctx,s){
+  const L=btnLook(s,false),X=btnLayoutX(L),rr=Math.min(btnRadius(L,s.h),s.h/2,s.w/2),bw=L.bw||0;
+  const p=new Path2D();p.roundRect(-s.w/2+bw/2,-s.h/2+bw/2,Math.max(0,s.w-bw),Math.max(0,s.h-bw),Math.max(0,rr-bw/2));
+  if(L.bg&&L.bg!=='none'){ctx.fillStyle=L.bg;ctx.fill(p);}
+  if(bw){ctx.strokeStyle=L.bc;ctx.lineWidth=bw;ctx.stroke(p);}
+  ctx.fillStyle=L.tc;ctx.textBaseline='middle';ctx.textAlign='left';
+  ctx.font=`${L.fw} ${L.fs}px ${cssFont(L.ff)}`;ctx.fillText(L.t||'',X.textX,0);
+  if(L.ic!=='none'){
+    const g=btnArrowGeo(L.ar);
+    ctx.save();ctx.translate(X.arrowX,0);ctx.translate(X.aw/2,0);ctx.rotate(L.ar.ang*Math.PI/180);ctx.translate(-X.aw/2,0);
+    ctx.strokeStyle=L.ar.col;ctx.fillStyle=L.ar.col;ctx.lineWidth=L.ar.th;ctx.lineCap='round';ctx.lineJoin='round';
+    if(g.shaft)ctx.stroke(new Path2D(g.shaft));
+    if(g.fillHead)ctx.fill(new Path2D(g.head));else ctx.stroke(new Path2D(g.head));
+    ctx.restore();
+  }
+}
+/* ホームページに書き出す: 本物の文字と、CSSの変数で「ふだん」と「ホバー」を持たせる */
+function siteBtn(s,o){
+  const b=s.btn,h=b.hv||{},L=btnLook(s,false);
+  const rad=(shape,r)=>shape==='pill'?'999px':shape==='round'?cssNum(r||0)+'px':'0px';
+  const v=[siteBox(s,o,s.w,s.h),`font-family:${cssFont(L.ff)}`,`font-size:${cssNum(L.fs)}px`,`font-weight:${L.fw}`,
+    `--tc:${cssCol(L.tc)}`,`--bg:${L.bg&&L.bg!=='none'?cssCol(L.bg):'transparent'}`,`--bc:${cssCol(L.bc||'#000000')}`,`--bw:${cssNum(L.bw)}px`,
+    `--r:${rad(L.shape,L.r)}`,`--gap:${cssNum(L.gap)}px`,`--d:${cssNum(h.dur||0.3)}s`];
+  if(h.tc)v.push(`--tch:${cssCol(h.tc)}`);
+  if(h.bg)v.push(`--bgh:${h.bg==='none'?'transparent':cssCol(h.bg)}`);
+  if(h.bc)v.push(`--bch:${cssCol(h.bc)}`);
+  if(h.bw!==undefined)v.push(`--bwh:${cssNum(h.bw)}px`);
+  if(h.shape)v.push(`--rh:${rad(h.shape,h.r!==undefined?h.r:L.r)}`);
+  let arrow='';
+  if(L.ic!=='none'){
+    const a=L.ar,g=btnArrowGeo(a),ah=a.hd*2+a.th*2;
+    const k=h.alen?h.alen/Math.max(1,a.len):1,dl=h.alen&&a.st!=='chev'?h.alen-a.len:0;
+    const ang=a.ang,angH=h.aang!==undefined?h.aang+(b.ic==='left'?180:0):ang;
+    v.push(`--aang:${cssNum(ang)}deg`,`--aangh:${cssNum(angH)}deg`,`--adx:${cssNum((h.adx||0)*(b.ic==='left'?-1:1))}px`,`--ak:${cssNum(k)}`,`--adl:${cssNum(dl)}px`);
+    const st=[b.ar&&b.ar.col?`color:${cssCol(b.ar.col)}`:'',h.ac?`--ach:${cssCol(h.ac)}`:''].filter(Boolean).join(';');
+    arrow=`<svg class="nt-ba${h.ac?' nt-bach':''}" aria-hidden="true" width="${cssNum(g.w)}" height="${cssNum(ah)}" viewBox="0 ${cssNum(-ah/2)} ${cssNum(g.w)} ${cssNum(ah)}"${st?` style="${st}"`:''}>`
+      +(g.shaft?`<path class="nt-sh" d="${g.shaft}" fill="none" stroke="currentColor" stroke-width="${a.th}" stroke-linecap="round"/>`:'')
+      +`<g class="nt-hd">`+(g.fillHead?`<path d="${g.head}" fill="currentColor"/>`:`<path d="${g.head}" fill="none" stroke="currentColor" stroke-width="${a.th}" stroke-linecap="round" stroke-linejoin="round"/>`)+'</g></svg>';
+  }
+  const two=!!(h.t&&h.t!==b.t);
+  const txt=two?`<span class="nt-bt"><span class="nt-bt1">${escXml(b.t||'')}</span><span class="nt-bt2" aria-hidden="true">${escXml(h.t)}</span></span>`:`<span class="nt-bt"><span class="nt-bt1">${escXml(b.t||'')}</span></span>`;
+  const inner=b.ic==='left'?arrow+txt:txt+arrow;
+  return`<span class="nt-e nt-button nt-h${two?' nt-btx':''}" style="${v.join(';')}"><span class="nt-bi">${inner}</span></span>`;
+}
+/* ---- 足す ---- */
+function btnAdd(){
+  const d=curDoc();if(!d||!d.shapes)return;
+  hideMenus();
+  const sh=d.shapes,sel=selShapes();
+  pushUndo();
+  const s={id:uid(),type:'btn',x:0,y:0,w:220,h:56,rot:0,btn:JSON.parse(JSON.stringify(BTN_DEF))};
+  const p=sel.length===1&&isFrame(sel[0])?sel[0]:null;
+  if(p){
+    const par=layParents(sh),its=layItems(sh,p,par);
+    const bottom=its.length?Math.max(...its.map(it=>{const b=layBox(it);return b.y+b.h;})):p.y-p.h/2+24;
+    s.x=p.x;s.y=bottom+16+28;
+    const need=bottom+16+56+24-(p.y-p.h/2);
+    if(need>p.h){p.y=p.y-p.h/2+need/2;p.h=need;}
+    sh.splice(layAfterLast(sh,p),0,s);
+  }else{const c=s2w(viewW()/2,viewH()/2);s.x=c.x;s.y=c.y;sh.push(s);}
+  wireSel=[s.id];selAnchor=null;
+  save();renderWire();openStyleMenu();updateStyleMenu();renderLayerPanel();
+  toast('ボタンを足しました。「色とスタイル」の「ボタン」で、ふだんとホバーの見た目を決めます');
+}
+/* ---- パネル ---- */
+let btnTab='n';
+/* [項目, 見出し, 種類, ...] 種類: text / range(最小,最大,刻み) / color / seg([[値,見出し]]) 。opt=「変えない」「なし」の切り替え */
+const BTN_FIELDS={
+  n:[
+    ['t','文字','text'],['fs','文字の大きさ','range',8,72,1],['fw','太さ','seg',[[400,'ふつう'],[500,'中'],[700,'太字'],[900,'極太']]],
+    ['tc','文字の色','color'],['bg','塗り','color',{none:'塗りなし'}],
+    ['shape','形','seg',[['square','四角'],['round','角丸'],['pill','丸い']]],['r','角の丸み','range',0,40,1,{if:b=>b.shape==='round'}],
+    ['bc','枠の色','color'],['bw','枠の太さ','range',0,8,0.5],
+    ['ic','矢印','seg',[['none','なし'],['right','文字の右'],['left','文字の左']]],
+    ['ar.st','矢印の形','seg',[['line','線の矢印'],['chev','くの字'],['tri','三角']],{if:b=>b.ic!=='none'}],
+    ['ar.len','矢印の長さ','range',4,80,1,{if:b=>b.ic!=='none'&&(b.ar||{}).st!=='chev'}],
+    ['ar.th','矢印の細さ','range',0.5,6,0.25,{if:b=>b.ic!=='none'&&(b.ar||{}).st!=='tri'}],
+    ['ar.hd','先の大きさ','range',2,20,0.5,{if:b=>b.ic!=='none'}],
+    ['ar.ang','矢印の角度','range',-180,180,5,{if:b=>b.ic!=='none'}],
+    ['ar.col','矢印の色','color',{if:b=>b.ic!=='none',same:'文字と同じ'}],
+    ['gap','文字との間','range',0,40,1,{if:b=>b.ic!=='none'}]
+  ],
+  h:[
+    ['hv.bg','塗り','color',{same:'変えない',none:'塗りなし'}],['hv.tc','文字の色','color',{same:'変えない'}],
+    ['hv.bc','枠の色','color',{same:'変えない'}],['hv.bw','枠の太さ','range',0,8,0.5,{same:'変えない',base:'bw'}],
+    ['hv.shape','形','seg',[['','変えない'],['square','四角'],['round','角丸'],['pill','丸い']]],
+    ['hv.r','角の丸み','range',0,40,1,{if:b=>(b.hv||{}).shape==='round',same:'変えない',base:'r'}],
+    ['hv.t','ホバー時の文字','text',{ph:'空欄=同じ文字'}],
+    ['hv.ac','矢印の色','color',{if:b=>b.ic!=='none',same:'変えない'}],
+    ['hv.adx','矢印が動く距離','range',-24,24,1,{if:b=>b.ic!=='none'}],
+    ['hv.aang','矢印の角度','range',-180,180,5,{if:b=>b.ic!=='none',same:'変えない',base:'ar.ang'}],
+    ['hv.alen','矢印の長さ','range',4,80,1,{if:b=>b.ic!=='none'&&(b.ar||{}).st!=='chev',same:'変えない',base:'ar.len'}],
+    ['hv.dur','変化の速さ(秒)','range',0.05,1.2,0.05,{base0:0.3}]
+  ]
+};
+function btnFieldHtml(f,b){
+  const [k,label,type]=f,opt=(type==='range'?f[6]:type==='seg'?f[4]:f[3])||{};
+  if(opt.if&&!opt.if(b))return'';
+  const v=btnGet(b,k);
+  if(type==='text')return`<div class="numRow"><span class="radLbl">${label}</span><input type="text" data-bk="${k}" value="${escXml(v||'')}" placeholder="${escXml(opt.ph||'')}" spellcheck="false" autocomplete="off"></div>`;
+  if(type==='seg')return`<div class="menu-label">${label}</div><div class="segRow mWrap">${f[3].map(([val,l])=>`<button class="seg${String(v===undefined?'':v)===String(val)?' active':''}" data-bseg="${k}" data-v="${val}">${l}</button>`).join('')}</div>`;
+  const on=v!==undefined&&v!==null;
+  const sameBox=opt.same?`<label class="btnChk"><input type="checkbox" data-bon="${k}"${on?' checked':''}>変える</label>`:'';
+  if(type==='color'){
+    /* opt.same=「変えない」(ホバー)/ 矢印の色は「文字と同じ」が基本で、印を付けると自分で選べる */
+    const isNone=v==='none',optional=!!opt.same;
+    const fallback=k==='ar.col'?b.tc:(btnGet(b,k.replace('hv.',''))||'#000000');
+    const cur=on&&!isNone?v:fallback;
+    const onBox=optional?`<label class="btnChk"><input type="checkbox" data-bon="${k}"${on?' checked':''}>${k==='ar.col'?'自分で選ぶ':'変える'}</label>`:'';
+    const noneBox=opt.none?`<label class="btnChk"><input type="checkbox" data-bnone="${k}"${isNone?' checked':''}>${opt.none}</label>`:'';
+    const off=(optional&&!on)||isNone;
+    return`<div class="numRow btnRow"><span class="radLbl">${label}</span><input type="color" data-bk="${k}" value="${escXml(normHex(cur)||'#000000')}"${off?' disabled':''}>${onBox}${noneBox}</div>`;
+  }
+  /* range */
+  const base=opt.base?btnGet(b,opt.base):undefined,val=on?v:(base!==undefined?base:(opt.base0!==undefined?opt.base0:f[3]));
+  return`<div class="radRow btnRow"><span class="radLbl">${label}</span><input type="range" data-bk="${k}" min="${f[3]}" max="${f[4]}" step="${f[5]}" value="${val}"${opt.same&&!on?' disabled':''}><span class="radNum">${val}</span>${sameBox}</div>`;
+}
+function renderBtnPart(){
+  const ss=selShapes().filter(s=>s.type==='btn');
+  $('#btnPart').style.display=ss.length===1?'block':'none';
+  if(ss.length!==1)return;
+  const b=ss[0].btn;
+  document.querySelectorAll('#btnTabs .seg').forEach(x=>x.classList.toggle('active',x.dataset.st===btnTab));
+  $('#btnFields').innerHTML=(btnTab==='h'?'<p class="btnHint">「変える」に印を付けた項目だけ、ホバー(スマホはタップ)した時に変わります</p>':'')+BTN_FIELDS[btnTab].map(f=>btnFieldHtml(f,b)).join('');
+  $('#btnPrev').classList.toggle('active',btnHoverPrev===ss[0].id);
+}
+const btnSel=()=>selShapes().find(s=>s.type==='btn');
+$('#btnTabs').addEventListener('click',e=>{const x=e.target.closest('.seg');if(!x)return;btnTab=x.dataset.st;renderBtnPart();});
+$('#btnPrev').addEventListener('click',()=>{const s=btnSel();if(!s)return;btnHoverPrev=btnHoverPrev===s.id?null:s.id;renderWire();renderBtnPart();});
+$('#btnFields').addEventListener('pointerdown',e=>{e.stopPropagation();if(e.target.matches('input,select'))pushUndo();});
+$('#btnFields').addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter'&&e.target.matches('input[type=text]'))e.target.blur();});
+$('#btnFields').addEventListener('focusin',e=>{if(e.target.matches('input[type=text]'))pushUndo();});
+$('#btnFields').addEventListener('click',e=>{
+  const s=btnSel();if(!s)return;
+  const sg=e.target.closest('[data-bseg]');
+  if(sg){pushUndo();const k=sg.dataset.bseg,v=sg.dataset.v;btnSet(s.btn,k,/^-?\d+(\.\d+)?$/.test(v)?+v:v);save();renderWire();renderBtnPart();}
+});
+$('#btnFields').addEventListener('input',e=>{
+  const s=btnSel(),t=e.target;if(!s||!t.dataset.bk)return;
+  const v=t.type==='range'?+t.value:t.value;
+  btnSet(s.btn,t.dataset.bk,v);
+  if(t.type==='range'){const n=t.parentElement.querySelector('.radNum');if(n)n.textContent=v;}
+  save();renderWire();
+});
+$('#btnFields').addEventListener('change',e=>{
+  const s=btnSel(),t=e.target;if(!s)return;
+  if(t.dataset.bon){
+    const k=t.dataset.bon,row=t.closest('.btnRow'),inp=row.querySelector('[data-bk]');
+    btnSet(s.btn,k,t.checked?(inp.type==='range'?+inp.value:inp.value):undefined);
+    save();renderWire();renderBtnPart();
+  }else if(t.dataset.bnone){
+    const k=t.dataset.bnone,row=t.closest('.btnRow'),inp=row.querySelector('[data-bk]');
+    btnSet(s.btn,k,t.checked?'none':(k.startsWith('hv.')?undefined:inp.value));
+    save();renderWire();renderBtnPart();
+  }
+});
+$('#boxMenu').addEventListener('click',e=>{if(e.target.closest('[data-add="btn"]'))btnAdd();});
 
 /* ============================================================
    クライアント(制作の工程)
