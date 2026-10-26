@@ -203,6 +203,8 @@ body.wire-mode .menu .map-only{display:none;}
 @media (min-width:900px){
   #fillMenu{left:auto!important;right:12px!important;top:76px!important;bottom:84px!important;max-height:none!important;cursor:default}
   #layerPanel{left:12px!important;top:76px!important;bottom:84px!important;max-height:none!important}
+  /* クライアントの工程から開いた時は左下に「工程へ」のボタンが出るので、その上までにする */
+  body:has(#stCanvasBar.on) #layerPanel{bottom:136px!important}
   #menuGrip span{display:none}
 }
 #fillMenu input[type=range].scrubbed{display:none}
@@ -2973,7 +2975,7 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-28.7';
+const APP_VERSION='2026-10-28.8';
 /* ============================================================
    ユーティリティ
    ============================================================ */
