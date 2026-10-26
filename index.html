@@ -254,6 +254,14 @@ body.wire-mode .menu .map-only{display:none;}
   background:linear-gradient(to right,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00)}
 #cpSV i,#cpHue i{position:absolute;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.45),0 1px 4px rgba(0,0,0,.4);pointer-events:none}
 #cpHue i{top:50%}
+#cpAlphaRow{display:none;align-items:center;gap:6px;margin-top:10px}
+#cpPop.alpha #cpAlphaRow{display:flex}
+#cpAlpha{position:relative;flex:1;height:14px;border-radius:7px;cursor:ew-resize;touch-action:none;background:repeating-conic-gradient(#ccc 0 25%,#fff 0 50%) 0 0/10px 10px}
+#cpAlpha b{position:absolute;inset:0;border-radius:7px}
+#cpAlpha i{position:absolute;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.45),0 1px 4px rgba(0,0,0,.4);pointer-events:none}
+#cpAlphaN{width:52px;height:26px;padding:0 4px;border-radius:7px;border:1px solid var(--panel-border);background:var(--node-bg);color:var(--ink);font:inherit;font-size:12.5px;text-align:right}
+#cpAlphaRow span{font-size:12px;color:var(--ink-soft)}
+#cpNow{background-image:none}
 #cpRow{display:flex;gap:6px;align-items:center;margin-top:10px}
 #cpNow{flex:none;width:30px;height:30px;border-radius:7px;border:1px solid var(--panel-border)}
 #cpFmt{flex:none;height:30px;border-radius:7px;border:1px solid var(--panel-border);background:var(--node-bg);color:var(--ink);font:inherit;font-size:12px;padding:0 4px}
@@ -943,6 +951,8 @@ body:not(.wire-mode) #layerPanel{display:none;}
 #btnFields .btnNum:disabled{opacity:.35}
 #btnFields .btnRow{flex-wrap:wrap;row-gap:4px}
 #btnFields input[type=color]:disabled{opacity:.35}
+#btnFields .btnHvHead{margin:12px 12px 2px;padding:8px 2px 0;border-top:1px dashed var(--panel-border);font-size:12px;font-weight:700;color:var(--accent)}
+#btnFields .btnHvHead::after{content:"「変える」に印を付けた項目だけ変わります";display:block;font-weight:500;font-size:11px;color:var(--ink-soft);margin-top:2px}
 #btnFields input[type=range]:disabled{opacity:.35}
 /* パディング・マージン(上・右・下・左) */
 .layQuad{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin:4px 0 8px}
@@ -1847,7 +1857,7 @@ kbd{
   <div id="btnPart">
     <hr>
     <div class="menu-label">ボタン</div>
-    <div class="segRow" id="btnTabs"><button class="seg" data-st="b">ボタン</button><button class="seg" data-st="t">文字</button><button class="seg" data-st="a">矢印</button><button class="seg" data-st="h" title="マウスを乗せた時(スマホはタップした時)">ホバー</button></div>
+    <div class="segRow" id="btnTabs"><button class="seg" data-st="b">ボタン</button><button class="seg" data-st="t">文字</button><button class="seg" data-st="a">矢印</button></div>
     <div id="btnFields"></div>
     <div class="segRow"><button class="seg" id="btnPrev">編集画面でホバーの見た目を見る</button></div>
   </div>
@@ -2975,7 +2985,7 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-29.1';
+const APP_VERSION='2026-10-29.2';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -14999,14 +15009,14 @@ function renderMedia(ss){
     h+=num('fs','文字の大きさ',m.fs||22,8,120,1,'px')+num('speed','1周の時間',m.speed||14,1,120,1,'秒');
     h+=`<div class="segRow">${seg('dir','cw','右回り')}${seg('dir','ccw','左回り')}</div>`;
     h+=`<div class="segRow">${['400','700','900'].map(w=>`<button class="seg${String(m.fw||700)===w?' active':''}" data-mset="fw" data-v="${w}">${{400:'ふつう',700:'太字',900:'極太'}[w]}</button>`).join('')}</div>`;
-    h+=`<div class="numRow"><span class="radLbl mpl">文字の色</span><input type="color" data-mcol="fc" value="${hex6(m.fc||'#1F2A44')}"></div>`;
+    h+=`<div class="numRow"><span class="radLbl mpl">文字の色</span><input type="color" data-mcol="fc" data-a="1" data-full="${escXml(m.fc||'#1F2A44')}" value="${hex6((m.fc||'#1F2A44').slice(0,7))}"></div>`;
     h+='<div class="motNote">ロゴやボタンの周りに重ねると、くるくる回るバッジになります</div>';
   }else if(m.kind==='swap'){
     const items=m.items||[];
     h+=`<div class="mItems">${items.map((it,i)=>`<div class="numRow"><span class="mThumbS" style="background-image:url('${imgHref(it.img)}')"></span><input type="text" data-mcap="${i}" value="${escXml(it.t||'')}" placeholder="説明(省略可)" spellcheck="false" autocomplete="off">
       <button class="fm-ico" data-mmove="${i}" data-d="-1"${i?'':' disabled'}>↑</button><button class="fm-ico" data-mmove="${i}" data-d="1"${i<items.length-1?'':' disabled'}>↓</button><button class="fm-ico fm-del" data-mdel="${i}">×</button></div>`).join('')}</div>`;
     h+=`<div class="segRow"><button class="seg" data-act="simg">＋ 画像を追加(まとめて選べます)</button></div>`;
-    h+=num('fs','説明の大きさ',m.fs||22,10,80,1,'px')+`<div class="numRow"><span class="radLbl mpl">説明の色</span><input type="color" data-mcol="fc" value="${hex6(m.fc||'#FFFFFF')}"></div>`;
+    h+=num('fs','説明の大きさ',m.fs||22,10,80,1,'px')+`<div class="numRow"><span class="radLbl mpl">説明の色</span><input type="color" data-mcol="fc" data-a="1" data-full="${escXml(m.fc||'#FFFFFF')}" value="${hex6((m.fc||'#FFFFFF').slice(0,7))}"></div>`;
     h+=sceneHeightRow(s);
   }else if(m.kind==='wave'||m.kind==='tunnel'){
     const imgs=m.imgs||[];
@@ -15031,7 +15041,7 @@ function renderMedia(ss){
     h+=`<div class="segRow">${seg('dir','left','左へ流れる')}${seg('dir','right','右へ流れる')}</div>`;
     h+=`<div class="segRow mWrap">${tog('pause','マウスを乗せたら止める',m.pause!==false)}${tog('invert','文字色を反転(下の色に合わせる)',m.invert)}</div>`;
     if(items.some(it=>!it.img))h+=num('fs','文字の大きさ',m.fs||32,8,200,1,'px')
-      +`<div class="numRow"><span class="radLbl mpl">文字の色</span><input type="color" data-mcol="fc" value="${hex6(m.fc||'#1F2A44')}"><span class="radLbl mpl">背景</span><input type="color" data-mcol="bgc" value="${hex6(m.bgc||'#FFFFFF')}"></div>`;
+      +`<div class="numRow"><span class="radLbl mpl">文字の色</span><input type="color" data-mcol="fc" data-a="1" data-full="${escXml(m.fc||'#1F2A44')}" value="${hex6((m.fc||'#1F2A44').slice(0,7))}"><span class="radLbl mpl">背景</span><input type="color" data-mcol="bgc" data-a="1" data-full="${escXml(m.bgc||'#FFFFFF')}" value="${hex6((m.bgc||'#FFFFFF').slice(0,7))}"></div>`;
   }
   box.innerHTML=h;
 }
@@ -18440,7 +18450,13 @@ const BTN_FIELDS={
   b:[
     ['bg','塗り','color',{none:'塗りなし'}],
     ['shape','形','seg',[['square','四角'],['round','角丸'],['pill','丸い']]],['r','角の丸み','range',0,40,1,{if:b=>b.shape==='round'}],
-    ['bc','枠の色','color'],['bw','枠の太さ','range',0,8,0.5]
+    ['bc','枠の色','color'],['bw','枠の太さ','range',0,8,0.5],
+    ['-','ホバー時(マウスを乗せた時・スマホはタップした時)','head'],
+    ['hv.bg','塗り','color',{same:'変えない',none:'塗りなし'}],
+    ['hv.bc','枠の色','color',{same:'変えない'}],['hv.bw','枠の太さ','range',0,8,0.5,{same:'変えない',base:'bw'}],
+    ['hv.shape','形','seg',[['','変えない'],['square','四角'],['round','角丸'],['pill','丸い']]],
+    ['hv.r','角の丸み','range',0,40,1,{if:b=>(b.hv||{}).shape==='round',same:'変えない',base:'r'}],
+    ['hv.dur','変化の速さ(秒)','range',0.05,1.2,0.05,{base0:0.3}]
   ],
   /* 文字(改行もできる) */
   t:[
@@ -18449,7 +18465,10 @@ const BTN_FIELDS={
     ['tc','文字の色','color'],
     ['tsp','文字詰め','seg',[['','詰めない'],['punct','約物だけ'],['palt','全体を詰める']]],
     ['ls','文字間隔','range',-5,30,0.5],['lh','行間','range',0.8,3,0.05,{base0:1.3}],
-    ['tx','文字の位置(横)','range',-150,150,1],['ty','文字の位置(縦)','range',-60,60,1]
+    ['tx','文字の位置(横)','range',-150,150,1],['ty','文字の位置(縦)','range',-60,60,1],
+    ['-','ホバー時(マウスを乗せた時・スマホはタップした時)','head'],
+    ['hv.tc','文字の色','color',{same:'変えない'}],
+    ['hv.t','ホバー時の文字','text',{ph:'空欄=同じ文字'}]
   ],
   /* 矢印 */
   a:[
@@ -18461,24 +18480,19 @@ const BTN_FIELDS={
     ['ar.col','矢印の色','color',{if:b=>b.ic!=='none',same:'文字と同じ'}],
     ['ar.dir','矢印の向き','seg',[['right','→ 右'],['left','← 左'],['up','↑ 上'],['down','↓ 下']],{if:b=>b.ic!=='none'}],
     ['gap','文字との間','range',0,40,1,{if:b=>b.ic!=='none'}],
-    ['ax','矢印の位置(横)','range',-150,150,1,{if:b=>b.ic!=='none'}],['ay','矢印の位置(縦)','range',-60,60,1,{if:b=>b.ic!=='none'}]
-  ],
-  h:[
-    ['hv.bg','塗り','color',{same:'変えない',none:'塗りなし'}],['hv.tc','文字の色','color',{same:'変えない'}],
-    ['hv.bc','枠の色','color',{same:'変えない'}],['hv.bw','枠の太さ','range',0,8,0.5,{same:'変えない',base:'bw'}],
-    ['hv.shape','形','seg',[['','変えない'],['square','四角'],['round','角丸'],['pill','丸い']]],
-    ['hv.r','角の丸み','range',0,40,1,{if:b=>(b.hv||{}).shape==='round',same:'変えない',base:'r'}],
-    ['hv.t','ホバー時の文字','text',{ph:'空欄=同じ文字'}],
+    ['ax','矢印の位置(横)','range',-150,150,1,{if:b=>b.ic!=='none'}],['ay','矢印の位置(縦)','range',-60,60,1,{if:b=>b.ic!=='none'}],
+    ['-','ホバー時(マウスを乗せた時・スマホはタップした時)','head',{if:b=>b.ic!=='none'}],
     ['hv.ac','矢印の色','color',{if:b=>b.ic!=='none',same:'変えない'}],
     ['hv.adx','矢印が動く距離','range',-24,24,1,{if:b=>b.ic!=='none'}],
-    ['hv.alen','矢印の長さ','range',4,80,1,{if:b=>b.ic!=='none'&&(b.ar||{}).st!=='chev',same:'変えない',base:'ar.len'}],
-    ['hv.dur','変化の速さ(秒)','range',0.05,1.2,0.05,{base0:0.3}]
-  ]
+    ['hv.alen','矢印の長さ','range',4,80,1,{if:b=>b.ic!=='none'&&(b.ar||{}).st!=='chev',same:'変えない',base:'ar.len'}]
+  ],
 };
 function btnFieldHtml(f,b){
   const [k,label,type]=f,opt=(type==='range'?f[6]:type==='seg'?f[4]:f[3])||{};
+  if(type==='head'&&opt.if&&!opt.if(b))return'';
   if(opt.if&&!opt.if(b))return'';
   const v=btnGet(b,k);
+  if(type==='head')return`<div class="btnHvHead">${label}</div>`;
   if(type==='textarea')return`<div class="menu-label">${label}</div><div class="numRow"><textarea data-bk="${k}" rows="2" spellcheck="false" style="flex:1;min-width:0;resize:vertical;font:inherit;font-size:14px;padding:6px 8px;border-radius:7px;border:1px solid var(--panel-border);background:var(--node-bg);color:var(--ink)">${escXml(v||'')}</textarea></div>`;
   if(type==='font'){const f=WFONTS.find(x=>x.k===(v||docFont()))||WFONTS[0];return`<div class="numRow"><span class="radLbl">${label}</span><button type="button" class="fontBtn" data-bfont="${k}" style="font-family:${escXml(f.f)}">${escXml(f.n)}</button></div>`;}
   if(type==='text')return`<div class="numRow"><span class="radLbl">${label}</span><input type="text" data-bk="${k}" value="${escXml(v||'')}" placeholder="${escXml(opt.ph||'')}" spellcheck="false" autocomplete="off"></div>`;
@@ -18493,7 +18507,7 @@ function btnFieldHtml(f,b){
     const onBox=optional?`<label class="btnChk"><input type="checkbox" data-bon="${k}"${on?' checked':''}>${k==='ar.col'?'自分で選ぶ':'変える'}</label>`:'';
     const noneBox=opt.none?`<label class="btnChk"><input type="checkbox" data-bnone="${k}"${isNone?' checked':''}>${opt.none}</label>`:'';
     const off=(optional&&!on)||isNone;
-    return`<div class="numRow btnRow"><span class="radLbl">${label}</span><input type="color" data-bk="${k}" value="${escXml(normHex(cur)||'#000000')}"${off?' disabled':''}>${onBox}${noneBox}</div>`;
+    return`<div class="numRow btnRow"><span class="radLbl">${label}</span><input type="color" data-bk="${k}" data-a="1" data-full="${escXml(String(cur||''))}" value="${escXml(normHex(String(cur||'').slice(0,7))||'#000000')}"${off?' disabled':''}>${onBox}${noneBox}</div>`;
   }
   /* range */
   const base=opt.base?btnGet(b,opt.base):undefined,val=on?v:(base!==undefined?base:(opt.base0!==undefined?opt.base0:f[3]));
@@ -18508,7 +18522,8 @@ function renderBtnPart(){
   const b=ss[0].btn;
   document.querySelectorAll('#btnTabs .seg').forEach(x=>x.classList.toggle('active',x.dataset.st===btnTab));
   if(panelTyping('#btnFields'))return;   /* 数字や文字を入れている途中は描き直さない(入力欄から外れないように) */
-  $('#btnFields').innerHTML=(btnTab==='h'?'<p class="btnHint">「変える」に印を付けた項目だけ、ホバー(スマホはタップ)した時に変わります</p>':'')+BTN_FIELDS[btnTab].map(f=>btnFieldHtml(f,b)).join('');
+  if(!BTN_FIELDS[btnTab])btnTab='b';
+  $('#btnFields').innerHTML=BTN_FIELDS[btnTab].map(f=>btnFieldHtml(f,b)).join('');
   $('#btnPrev').classList.toggle('active',btnHoverPrev===ss[0].id);
 }
 const btnSel=()=>selShapes().find(s=>s.type==='btn');
@@ -19064,7 +19079,7 @@ function renderUiPart(){
     const [k,label,type]=f,v=u[k];
     if(type==='text')return`<div class="numRow"><span class="radLbl">${label}</span><input type="text" data-uk="${k}" value="${escXml(v==null?'':v)}" spellcheck="false" autocomplete="off"></div>`;
     if(type==='textarea')return`<div class="menu-label">${label}</div><div class="numRow"><textarea data-uk="${k}" rows="3" spellcheck="false" style="flex:1;min-width:0;resize:vertical">${escXml(v||'')}</textarea></div>`;
-    if(type==='color')return`<div class="numRow btnRow"><span class="radLbl">${label}</span><input type="color" data-uk="${k}" value="${escXml(normHex(v)||'#000000')}"></div>`;
+    if(type==='color')return`<div class="numRow btnRow"><span class="radLbl">${label}</span><input type="color" data-uk="${k}" data-a="1" data-full="${escXml(String(v||''))}" value="${escXml(normHex(String(v||'').slice(0,7))||'#000000')}"></div>`;
     if(type==='bool')return`<div class="numRow btnRow"><span class="radLbl">${label}</span><label class="btnChk" style="margin:0"><input type="checkbox" data-ub="${k}"${v?' checked':''}>${v?'あり':'なし'}</label></div>`;
     if(type==='img')return`<div class="segRow"><button class="seg" data-uimg="1">${v?'画像を替える':'＋ 画像を選ぶ'}</button>${v?'<button class="seg" data-uimgx="1">画像を外す</button>':''}</div>`;
     return`<div class="radRow btnRow"><span class="radLbl">${label}</span><input type="range" data-uk="${k}" min="${f[3]}" max="${f[4]}" step="${f[5]}" value="${v}"><input type="number" class="btnNum" data-ukn="${k}" min="${f[3]}" max="${f[4]}" step="${f[5]}" value="${v}" aria-label="${escXml(label)}(数値)"></div>`;
@@ -19834,6 +19849,7 @@ if('serviceWorker' in navigator){
 <div id="cpPop" class="glass" role="dialog" aria-label="色を選ぶ">
   <div id="cpSV"><i></i></div>
   <div id="cpHue"><i></i></div>
+  <div id="cpAlphaRow"><div id="cpAlpha"><b></b><i></i></div><input type="number" id="cpAlphaN" min="0" max="100" step="1" aria-label="透明度(%)"><span>%</span></div>
   <div id="cpRow">
     <span id="cpNow"></span>
     <select id="cpFmt" aria-label="色の表し方"><option value="hex">HEX</option><option value="rgb">RGB</option><option value="hsl">HSL</option></select>
@@ -19842,6 +19858,15 @@ if('serviceWorker' in navigator){
   </div>
 </div>
 <script>
+(function(){
+  const d=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value');
+  Object.defineProperty(HTMLInputElement.prototype,'value',{configurable:true,enumerable:d.enumerable,
+    get(){const v=d.get.call(this);return this.type==='color'&&this.__full&&this.__full.slice(0,7).toLowerCase()===v.toLowerCase()?this.__full:v;},
+    set(v){
+      if(this.type==='color'){const t=String(v==null?'':v);if(/^#[0-9a-f]{8}$/i.test(t)){this.__full=t.toUpperCase();d.set.call(this,t.slice(0,7));return;}this.__full=null;}
+      d.set.call(this,v);
+    }});
+})();
 /* ============================================================
    色選び(自前)。アプリ内の input[type=color] を押すと、ブラウザ標準の窓の代わりにこれを開く。
    ・四角と色相のバーはドラッグで選び続けられる(押した瞬間に決まって閉じない)
@@ -19853,7 +19878,8 @@ if('serviceWorker' in navigator){
 (function(){
   const pop=document.getElementById('cpPop'),sv=document.getElementById('cpSV'),hue=document.getElementById('cpHue');
   const fmtSel=document.getElementById('cpFmt'),fields=document.getElementById('cpFields'),now=document.getElementById('cpNow'),eye=document.getElementById('cpEye');
-  let target=null,sel='',orig='',H=0,S=0,V=0,raf=0,lastXY={x:innerWidth/2,y:innerHeight/2};
+  const al=document.getElementById('cpAlpha'),alN=document.getElementById('cpAlphaN');
+  let target=null,sel='',orig='',H=0,S=0,V=0,A=1,useA=false,raf=0,lastXY={x:innerWidth/2,y:innerHeight/2};
   window.cpActive=false;window.cpPushed=false;
   let fmt='hex';try{fmt=localStorage.getItem('ntd-cpFmt')||'hex';}catch(e){}
   fmtSel.value=fmt;
@@ -19868,6 +19894,8 @@ if('serviceWorker' in navigator){
   function hsl2rgb(h,s,l){s/=100;l/=100;const a=s*Math.min(l,1-l),f=n=>{const k=(n+h/30)%12;return(l-a*Math.max(-1,Math.min(k-3,9-k,1)))*255;};return[f(0),f(8),f(4)];}
   const rgbNow=()=>hsv2rgb(H,S,V);
   const hexNow=()=>'#'+rgbNow().map(hex2).join('').toUpperCase();
+  /* 透明度つき(100%未満の時だけ #RRGGBBAA) */
+  const fullNow=()=>useA&&A<1?hexNow()+hex2(A*255).toUpperCase():hexNow();
   function parseHex(v){v=String(v||'').trim().replace(/^#/,'');if(/^[0-9a-f]{3}$/i.test(v))v=v.split('').map(c=>c+c).join('');return/^[0-9a-f]{6}$/i.test(v)?[0,2,4].map(i=>parseInt(v.substr(i,2),16)):null;}
   /* 白・黒・灰色では色相が決まらないので、今の色相を残す(バーが勝手に赤へ戻らないように) */
   function setFromRgb(rgb){const h=rgb2hsv(...rgb);if(h[1]>0&&h[2]>0)H=h[0];S=h[1];V=h[2];}
@@ -19875,7 +19903,7 @@ if('serviceWorker' in navigator){
   function selOf(el){
     if(el.id)return'#'+CSS.escape(el.id);
     let q='input[type=color]',n=0;
-    for(const a of el.attributes)if(a.name.startsWith('data-')){q+='['+a.name+'="'+CSS.escape(a.value)+'"]';n++;}
+    for(const a of el.attributes)if(a.name.startsWith('data-')&&a.name!=='data-full'){q+='['+a.name+'="'+CSS.escape(a.value)+'"]';n++;}
     return n?q:'';
   }
   function tgt(){if(target&&target.isConnected)return target;const el=sel&&document.querySelector(sel);if(el)target=el;return target;}
@@ -19883,7 +19911,8 @@ if('serviceWorker' in navigator){
     sv.style.backgroundColor='#'+hsv2rgb(H,1,1).map(hex2).join('');
     sv.firstElementChild.style.left=(S*100)+'%';sv.firstElementChild.style.top=((1-V)*100)+'%';
     hue.firstElementChild.style.left=(H/360*100)+'%';
-    now.style.background=hexNow();
+    now.style.background=useA?`linear-gradient(${fullNow()},${fullNow()}),repeating-conic-gradient(#ccc 0 25%,#fff 0 50%) 0 0/8px 8px`:hexNow();
+    if(useA){al.firstElementChild.style.background=`linear-gradient(to right,transparent,${hexNow()})`;al.lastElementChild.style.left=(A*100)+'%';if(document.activeElement!==alN)alN.value=Math.round(A*100);}
     if(!skipFields)drawFields();
   }
   function drawFields(){
@@ -19896,13 +19925,16 @@ if('serviceWorker' in navigator){
       fields.innerHTML=v.map((x,i)=>'<input type="number" data-c="'+i+'" min="0" max="'+mx[i]+'" aria-label="'+lb[i]+'" title="'+lb[i]+'" value="'+x+'">').join('');
     }
   }
-  function send(){const el=tgt();if(!el)return;el.value=hexNow().toLowerCase();el.dispatchEvent(new Event('input',{bubbles:true}));}
+  function send(){const el=tgt();if(!el)return;el.value=useA?fullNow():hexNow().toLowerCase();el.dispatchEvent(new Event('input',{bubbles:true}));}
   /* 元の input へ送る(1コマに1回) */
   function emit(){if(raf)return;raf=requestAnimationFrame(()=>{raf=0;send();});}
   function open(el){
     if(target)close();
-    target=el;sel=selOf(el);orig=(el.value||'#000000').toLowerCase();
-    setFromRgb(parseHex(orig)||[0,0,0]);
+    target=el;sel=selOf(el);useA=el.dataset.a==='1';window.__cpEl=el;
+    orig=String(el.__full||el.dataset.full||el.value||'#000000');
+    const a8=/^#[0-9a-f]{8}$/i.test(orig)?parseInt(orig.slice(7,9),16)/255:1;A=useA?a8:1;
+    setFromRgb(parseHex(orig.slice(0,7))||[0,0,0]);
+    pop.classList.toggle('alpha',useA);
     window.cpActive=true;window.cpPushed=false;
     pop.classList.add('on');paint();
     /* 位置: input の横(右端のパネルなら左側)。見えない input の時は押した位置 */
@@ -19918,7 +19950,7 @@ if('serviceWorker' in navigator){
     const el=tgt();
     pop.classList.remove('on');
     target=null;window.cpActive=false;
-    if(el&&el.value.toLowerCase()!==orig)el.dispatchEvent(new Event('change',{bubbles:true}));
+    if(el&&String(el.value).toLowerCase()!==orig.toLowerCase())el.dispatchEvent(new Event('change',{bubbles:true}));
   }
   window.cpClose=close;
   /* ブラウザ標準の窓を開かせず、こちらを開く */
@@ -19939,10 +19971,11 @@ if('serviceWorker' in navigator){
   pop.addEventListener('pointerdown',e=>e.stopPropagation());
   pop.addEventListener('keydown',e=>{
     e.stopPropagation();
-    if(e.key==='Escape'){setFromRgb(parseHex(orig)||[0,0,0]);if(raf){cancelAnimationFrame(raf);raf=0;}const el=tgt();if(el){el.value=orig;el.dispatchEvent(new Event('input',{bubbles:true}));}target&&close();}
+    if(e.key==='Escape'){setFromRgb(parseHex(orig.slice(0,7))||[0,0,0]);if(raf){cancelAnimationFrame(raf);raf=0;}const el=tgt();if(el){el.value=orig;el.dispatchEvent(new Event('input',{bubbles:true}));}target&&close();}
     else if(e.key==='Enter'){e.preventDefault();if(document.activeElement)document.activeElement.blur();close();}
   });
-  addEventListener('keydown',e=>{if(e.key==='Escape'&&pop.classList.contains('on')&&!pop.contains(document.activeElement))close();});
+  /* Esc で閉じる(ほかの Esc の処理より先に。キャンバスの選択は外さない) */
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&pop.classList.contains('on')&&!pop.contains(document.activeElement)){e.stopPropagation();e.preventDefault();close();}},true);
   /* ドラッグ */
   function drag(el,fn){
     el.addEventListener('pointerdown',e=>{
@@ -19955,6 +19988,9 @@ if('serviceWorker' in navigator){
   }
   drag(sv,e=>{const r=sv.getBoundingClientRect();S=cl((e.clientX-r.left)/r.width,0,1);V=1-cl((e.clientY-r.top)/r.height,0,1);paint();emit();});
   drag(hue,e=>{const r=hue.getBoundingClientRect();H=cl((e.clientX-r.left)/r.width,0,1)*359.9;paint();emit();});
+  drag(al,e=>{const r=al.getBoundingClientRect();A=Math.round(cl((e.clientX-r.left)/r.width,0,1)*100)/100;paint();emit();});
+  alN.addEventListener('input',()=>{if(alN.value==='')return;A=cl(+alN.value||0,0,100)/100;paint(true);emit();});
+  alN.addEventListener('focusout',()=>{alN.value=Math.round(A*100);});
   /* HEX・数値の欄 */
   fields.addEventListener('input',e=>{
     if(fmt==='hex'){const rgb=parseHex(e.target.value);if(!rgb)return;setFromRgb(rgb);}
