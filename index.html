@@ -243,6 +243,24 @@ body.wire-mode .menu .map-only{display:none;}
 .coll.unused>.collHead .collChev{visibility:hidden}
 .coll.unused>.collHead>span{color:var(--ink-soft)}
 #strokeSec.addable #strokeOnOffRow,#shadowSec.addable #shOnRow{display:none!important}
+/* 色選び(自前)。ブラウザ標準の窓の代わり: ドラッグで色が変わり続け、離しても閉じない。表示は最初HEX */
+#cpPop{position:fixed;z-index:3000;width:248px;padding:12px;border-radius:14px;display:none;user-select:none;-webkit-user-select:none}
+#cpPop.on{display:block}
+#cpSV{position:relative;height:150px;border-radius:8px;cursor:crosshair;touch-action:none;
+  background-image:linear-gradient(to top,#000,transparent),linear-gradient(to right,#fff,transparent)}
+#cpHue{position:relative;height:14px;margin-top:10px;border-radius:7px;cursor:ew-resize;touch-action:none;
+  background:linear-gradient(to right,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00)}
+#cpSV i,#cpHue i{position:absolute;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.45),0 1px 4px rgba(0,0,0,.4);pointer-events:none}
+#cpHue i{top:50%}
+#cpRow{display:flex;gap:6px;align-items:center;margin-top:10px}
+#cpNow{flex:none;width:30px;height:30px;border-radius:7px;border:1px solid var(--panel-border)}
+#cpFmt{flex:none;height:30px;border-radius:7px;border:1px solid var(--panel-border);background:var(--node-bg);color:var(--ink);font:inherit;font-size:12px;padding:0 4px}
+#cpFields{flex:1;display:flex;gap:4px;min-width:0}
+#cpFields input{flex:1;min-width:0;width:100%;height:30px;padding:0 6px;border-radius:7px;border:1px solid var(--panel-border);background:var(--node-bg);color:var(--ink);font:inherit;font-size:12.5px;text-align:center}
+#cpFields input:focus{outline:none;border-color:var(--accent)}
+#cpEye{flex:none;width:30px;height:30px;border-radius:7px;border:1px solid var(--panel-border);background:var(--node-bg);color:var(--ink);cursor:pointer;display:grid;place-items:center;padding:0}
+#cpEye[hidden]{display:none}
+#cpEye svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 /* 色とスタイル: 読みやすい大きさ・押しやすい間隔 */
 #fillMenu .menu-label{font-size:12px;padding:6px 14px 0}
 #fillMenu .radLbl{font-size:12.5px;width:48px}
@@ -2950,7 +2968,7 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-28.2';
+const APP_VERSION='2026-10-28.3';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -3210,6 +3228,7 @@ function snapshot(){
   return JSON.stringify({root:d.root,sel:selectedId});
 }
 function pushUndo(snap){
+  if(window.cpActive){if(window.cpPushed)return;window.cpPushed=true;}
   const h=histOf();
   h.undo.push(snap||snapshot());
   if(h.undo.length>120)h.undo.shift();
@@ -19622,6 +19641,146 @@ if('serviceWorker' in navigator){
     navigator.serviceWorker.register('./sw.js').catch(()=>{});
   });
 }
+</script>
+<div id="cpPop" class="glass" role="dialog" aria-label="色を選ぶ">
+  <div id="cpSV"><i></i></div>
+  <div id="cpHue"><i></i></div>
+  <div id="cpRow">
+    <span id="cpNow"></span>
+    <select id="cpFmt" aria-label="色の表し方"><option value="hex">HEX</option><option value="rgb">RGB</option><option value="hsl">HSL</option></select>
+    <div id="cpFields"></div>
+    <button type="button" id="cpEye" title="画面から色を拾う" hidden><svg viewBox="0 0 24 24"><path d="M14.5 5.5l4 4M17 3l4 4-3 3-4-4zM14 6l-9 9-1 5 5-1 9-9"/></svg></button>
+  </div>
+</div>
+<script>
+/* ============================================================
+   色選び(自前)。アプリ内の input[type=color] を押すと、ブラウザ標準の窓の代わりにこれを開く。
+   ・四角と色相のバーはドラッグで選び続けられる(押した瞬間に決まって閉じない)
+   ・動かしている間は元の input に input を送り(描き直しは1コマに1回)、閉じた時に change を送る
+   ・元に戻すは、開いている間の変更を1回にまとめる
+   ・設定の欄が描き直されて input が作り直されても、同じ id / data-* の input を探して送り先を付け替える
+   ・表示は最初 HEX。RGB / HSL に切り替えた時は、その選択を覚える
+   ============================================================ */
+(function(){
+  const pop=document.getElementById('cpPop'),sv=document.getElementById('cpSV'),hue=document.getElementById('cpHue');
+  const fmtSel=document.getElementById('cpFmt'),fields=document.getElementById('cpFields'),now=document.getElementById('cpNow'),eye=document.getElementById('cpEye');
+  let target=null,sel='',orig='',H=0,S=0,V=0,raf=0,lastXY={x:innerWidth/2,y:innerHeight/2};
+  window.cpActive=false;window.cpPushed=false;
+  let fmt='hex';try{fmt=localStorage.getItem('ntd-cpFmt')||'hex';}catch(e){}
+  fmtSel.value=fmt;
+  if(window.EyeDropper)eye.hidden=false;
+  const cl=(v,a,b)=>Math.min(b,Math.max(a,v));
+  const hex2=n=>Math.round(n).toString(16).padStart(2,'0');
+  function hsv2rgb(h,s,v){const f=n=>{const k=(n+h/60)%6;return v-v*s*Math.max(0,Math.min(k,4-k,1));};return[f(5)*255,f(3)*255,f(1)*255];}
+  function rgb2hsv(r,g,b){r/=255;g/=255;b/=255;const mx=Math.max(r,g,b),mn=Math.min(r,g,b),d=mx-mn;let h=0;
+    if(d){h=mx===r?((g-b)/d)%6:mx===g?(b-r)/d+2:(r-g)/d+4;h*=60;if(h<0)h+=360;}return[h,mx?d/mx:0,mx];}
+  function rgb2hsl(r,g,b){r/=255;g/=255;b/=255;const mx=Math.max(r,g,b),mn=Math.min(r,g,b),l=(mx+mn)/2,d=mx-mn;let h=0,s=0;
+    if(d){s=d/(1-Math.abs(2*l-1));h=mx===r?((g-b)/d)%6:mx===g?(b-r)/d+2:(r-g)/d+4;h*=60;if(h<0)h+=360;}return[h,s*100,l*100];}
+  function hsl2rgb(h,s,l){s/=100;l/=100;const a=s*Math.min(l,1-l),f=n=>{const k=(n+h/30)%12;return(l-a*Math.max(-1,Math.min(k-3,9-k,1)))*255;};return[f(0),f(8),f(4)];}
+  const rgbNow=()=>hsv2rgb(H,S,V);
+  const hexNow=()=>'#'+rgbNow().map(hex2).join('').toUpperCase();
+  function parseHex(v){v=String(v||'').trim().replace(/^#/,'');if(/^[0-9a-f]{3}$/i.test(v))v=v.split('').map(c=>c+c).join('');return/^[0-9a-f]{6}$/i.test(v)?[0,2,4].map(i=>parseInt(v.substr(i,2),16)):null;}
+  /* 白・黒・灰色では色相が決まらないので、今の色相を残す(バーが勝手に赤へ戻らないように) */
+  function setFromRgb(rgb){const h=rgb2hsv(...rgb);if(h[1]>0&&h[2]>0)H=h[0];S=h[1];V=h[2];}
+  /* 送り先: 作り直されていたら、同じ印の input を探し直す */
+  function selOf(el){
+    if(el.id)return'#'+CSS.escape(el.id);
+    let q='input[type=color]',n=0;
+    for(const a of el.attributes)if(a.name.startsWith('data-')){q+='['+a.name+'="'+CSS.escape(a.value)+'"]';n++;}
+    return n?q:'';
+  }
+  function tgt(){if(target&&target.isConnected)return target;const el=sel&&document.querySelector(sel);if(el)target=el;return target;}
+  function paint(skipFields){
+    sv.style.backgroundColor='#'+hsv2rgb(H,1,1).map(hex2).join('');
+    sv.firstElementChild.style.left=(S*100)+'%';sv.firstElementChild.style.top=((1-V)*100)+'%';
+    hue.firstElementChild.style.left=(H/360*100)+'%';
+    now.style.background=hexNow();
+    if(!skipFields)drawFields();
+  }
+  function drawFields(){
+    const act=document.activeElement;if(act&&fields.contains(act))return;
+    const rgb=rgbNow();
+    if(fmt==='hex')fields.innerHTML='<input data-c="hex" maxlength="7" spellcheck="false" autocomplete="off" aria-label="HEX" value="'+hexNow()+'">';
+    else{
+      const v=fmt==='rgb'?rgb.map(Math.round):rgb2hsl(...rgb).map(Math.round);
+      const lb=fmt==='rgb'?['R','G','B']:['H','S','L'],mx=fmt==='rgb'?[255,255,255]:[360,100,100];
+      fields.innerHTML=v.map((x,i)=>'<input type="number" data-c="'+i+'" min="0" max="'+mx[i]+'" aria-label="'+lb[i]+'" title="'+lb[i]+'" value="'+x+'">').join('');
+    }
+  }
+  function send(){const el=tgt();if(!el)return;el.value=hexNow().toLowerCase();el.dispatchEvent(new Event('input',{bubbles:true}));}
+  /* 元の input へ送る(1コマに1回) */
+  function emit(){if(raf)return;raf=requestAnimationFrame(()=>{raf=0;send();});}
+  function open(el){
+    if(target)close();
+    target=el;sel=selOf(el);orig=(el.value||'#000000').toLowerCase();
+    setFromRgb(parseHex(orig)||[0,0,0]);
+    window.cpActive=true;window.cpPushed=false;
+    pop.classList.add('on');paint();
+    /* 位置: input の横(右端のパネルなら左側)。見えない input の時は押した位置 */
+    const r=el.getBoundingClientRect(),pw=pop.offsetWidth,ph=pop.offsetHeight;
+    const ax=r.width?r:{left:lastXY.x,right:lastXY.x,top:lastXY.y};
+    let x=ax.left-pw-10;if(x<8)x=ax.right+10;if(x+pw>innerWidth-8)x=innerWidth-pw-8;
+    const y=cl(ax.top-20,8,innerHeight-ph-8);
+    pop.style.left=x+'px';pop.style.top=y+'px';
+  }
+  function close(){
+    if(!target)return;
+    if(raf){cancelAnimationFrame(raf);raf=0;send();}
+    const el=tgt();
+    pop.classList.remove('on');
+    target=null;window.cpActive=false;
+    if(el&&el.value.toLowerCase()!==orig)el.dispatchEvent(new Event('change',{bubbles:true}));
+  }
+  window.cpClose=close;
+  /* ブラウザ標準の窓を開かせず、こちらを開く */
+  document.addEventListener('pointerdown',e=>{lastXY={x:e.clientX,y:e.clientY};},true);
+  document.addEventListener('click',e=>{
+    const el=e.target;
+    if(!(el instanceof HTMLInputElement)||el.type!=='color'||el.disabled)return;
+    e.preventDefault();
+    if(target===el&&pop.classList.contains('on')){close();return;}
+    open(el);
+  },true);
+  /* 外を押したら閉じる */
+  document.addEventListener('pointerdown',e=>{
+    if(!pop.classList.contains('on')||pop.contains(e.target))return;
+    if(e.target instanceof HTMLInputElement&&e.target.type==='color')return;
+    close();
+  },true);
+  pop.addEventListener('pointerdown',e=>e.stopPropagation());
+  pop.addEventListener('keydown',e=>{
+    e.stopPropagation();
+    if(e.key==='Escape'){setFromRgb(parseHex(orig)||[0,0,0]);if(raf){cancelAnimationFrame(raf);raf=0;}const el=tgt();if(el){el.value=orig;el.dispatchEvent(new Event('input',{bubbles:true}));}target&&close();}
+    else if(e.key==='Enter'){e.preventDefault();if(document.activeElement)document.activeElement.blur();close();}
+  });
+  addEventListener('keydown',e=>{if(e.key==='Escape'&&pop.classList.contains('on')&&!pop.contains(document.activeElement))close();});
+  /* ドラッグ */
+  function drag(el,fn){
+    el.addEventListener('pointerdown',e=>{
+      e.preventDefault();
+      if(document.activeElement&&fields.contains(document.activeElement))document.activeElement.blur();
+      el.setPointerCapture(e.pointerId);fn(e);
+      const mv=ev=>fn(ev),up=()=>{el.removeEventListener('pointermove',mv);el.removeEventListener('pointerup',up);el.removeEventListener('pointercancel',up);};
+      el.addEventListener('pointermove',mv);el.addEventListener('pointerup',up);el.addEventListener('pointercancel',up);
+    });
+  }
+  drag(sv,e=>{const r=sv.getBoundingClientRect();S=cl((e.clientX-r.left)/r.width,0,1);V=1-cl((e.clientY-r.top)/r.height,0,1);paint();emit();});
+  drag(hue,e=>{const r=hue.getBoundingClientRect();H=cl((e.clientX-r.left)/r.width,0,1)*359.9;paint();emit();});
+  /* HEX・数値の欄 */
+  fields.addEventListener('input',e=>{
+    if(fmt==='hex'){const rgb=parseHex(e.target.value);if(!rgb)return;setFromRgb(rgb);}
+    else{
+      const v=[...fields.querySelectorAll('input')].map(x=>+x.value||0);
+      setFromRgb(fmt==='rgb'?v.map(x=>cl(x,0,255)):hsl2rgb(cl(v[0],0,360)%360,cl(v[1],0,100),cl(v[2],0,100)));
+    }
+    paint(true);emit();
+  });
+  fields.addEventListener('focusout',()=>setTimeout(()=>{if(pop.classList.contains('on'))drawFields();},0));
+  fmtSel.addEventListener('change',()=>{fmt=fmtSel.value;try{localStorage.setItem('ntd-cpFmt',fmt);}catch(e){}drawFields();});
+  eye.addEventListener('click',async()=>{
+    try{const r=await new EyeDropper().open();const rgb=parseHex(r.sRGBHex);if(rgb){setFromRgb(rgb);paint();emit();}}catch(e){}
+  });
+})();
 </script>
 </body>
 </html>
