@@ -1764,7 +1764,7 @@ kbd{
       </div>
     </div>
     <div id="webGrowRow">
-      <div class="menu-label">中身に合わせて縦に伸ばす(ページ直下の区画)</div>
+      <div class="menu-label">中身に合わせて縦に伸ばす(セクション・コンテナ)</div>
       <div class="segRow" id="webGrow" role="radiogroup">
         <button class="seg" data-fit="" role="radio">しない</button>
         <button class="seg" data-fit="1" role="radio">する(文章が長くなったら下へ広げる)</button>
@@ -2968,7 +2968,7 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-28.5';
+const APP_VERSION='2026-10-28.6';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -6916,7 +6916,7 @@ function sitePageHtml(f,ranges,top){
   /* 中身に合わせて伸ばす区画(ページ直下だけ)の中の文字は、折り返せる文字(.nt-flow)にする */
   const section=(u,o,top)=>{
     const done=siteMarkUnit(u.m),pf=siteFlow,x=u.m[0];
-    siteFlow=!!(top&&x.grow&&!x.vh&&!x.scene&&!pageWide(x));
+    siteFlow=!!((top||pf)&&x.grow&&!x.vh&&!x.scene&&!pageWide(x));
     try{return section0(u,o,top);}finally{done();siteFlow=pf;}
   };
   const section0=(u,o,top)=>{
@@ -6959,7 +6959,7 @@ function sitePageHtml(f,ranges,top){
       return siteWrapUnit(mm,siteAttrs(`<${tg} class="nt-e"${sec}${vh} style="${st}">`,s)
         +`\n${fillCls(siteFrameBg(s,io))}\n${fillCls(inner(s,io,isFill))}\n<div class="nt-vhin" style="height:${cssNum(s.h)}px">\n${inner(s,io,k=>!isFill(k))}\n</div>\n</${tg}>`,o);
     }
-    const grow=siteFlow?` data-grow="1" data-gh="${cssNum(s.h)}"`:'';
+    const grow=siteFlow?` data-grow="1" data-gh="${cssNum(s.h)}"${top?'':` data-fh="${cssNum(s.h)}"`}`:'';
     return siteWrapUnit(mm,siteAttrs(`<${tg} class="nt-e"${sec}${pin}${grow} style="${st}">`,s)+`\n${siteFrameBg(s,io)}\n${inner(s,io)}${spot}\n</${tg}>`,o);
   };
   /* frの直接の中身を、frの左上(o)を原点にして並べる */
@@ -7472,8 +7472,11 @@ function siteJs(){
       var e=c.offsetHeight?c:c.querySelector('.nt-e');
       items.push({el:c,top:e?topIn(e,page):0});
     });
+    /* 入れ子の深さ(伸ばす区画の中の伸ばすコンテナ)。内側から順に伸ばす */
+    var depth=function(s){var d=0,p=s.parentElement&&s.parentElement.closest('[data-grow],[data-vh]');while(p&&page.contains(p)){d++;p=p.parentElement&&p.parentElement.closest('[data-grow],[data-vh]');}return d;};
+    list=list.map(function(s,i){return{s:s,d:depth(s),i:i};}).sort(function(a,b){return(b.d?1:0)-(a.d?1:0)||b.d-a.d||a.i-b.i;}).map(function(x){return x.s;});
     var secs=list.map(function(s){
-      if(s.dataset.grow)return{el:s,top:topIn(s,page),h:+s.dataset.gh,grow:1};
+      if(s.dataset.grow)return{el:s,top:topIn(s,page),h:+s.dataset.gh,grow:1,nested:depth(s)>0};
       return{el:s,top:topIn(s,page),h:+s.dataset.vhH,ct:+s.dataset.vhCt,cb:+s.dataset.vhCb,al:s.dataset.vh,
         inn:s.querySelector('.nt-vhin'),
         fills:[].slice.call(s.querySelectorAll('.nt-vhfill')).map(function(f){return{el:f,top:f.offsetTop,h:f.offsetHeight};})};
@@ -7485,7 +7488,7 @@ function siteJs(){
     var vh=v.__vh;if(!vh)return h;
     var H=screenH()/k,add=0,m=24;
     vh.secs.forEach(function(s){
-      if(s.grow){s.d=growApply(s);add+=s.d;return;}
+      if(s.grow){s.d=growApply(s);if(!s.nested)add+=s.d;return;}
       /* 中身が切れない高さより低くはしない。上下の余白は 24px、ただしデザインでそれより端に置いた物はその余白のまま
          (端に置いた物に 24px を強制すると、区画がデザインより伸びてしまう) */
       var mt=Math.min(m,Math.max(0,s.ct)),mb=Math.min(m,Math.max(0,s.h-s.cb));
@@ -7501,7 +7504,7 @@ function siteJs(){
     });
     vh.items.forEach(function(it){
       var sh=0;
-      vh.secs.forEach(function(s){if(it.top>=s.top+s.h-1)sh+=s.d;});
+      vh.secs.forEach(function(s){if(!s.nested&&it.top>=s.top+s.h-1)sh+=s.d;});
       it.el.style.marginTop=sh?sh+'px':'';
     });
     h+=add;
@@ -12577,7 +12580,7 @@ function pasteShapes(at){
 let styleClipboard=null;
 const STYLE_SKIP=new Set(['id','type','x','y','w','h','rot','text','cattr','pts','holes','src','iw','ih','imgBox','imgFill','name','gid','locked','hidden',
   'nw','news','media','form','tag','href','alt','anim','txfx','hover','hoverC','hoverT','loop','pin','vh','grow','lay','mg','role','device','gmap',
-  'x1','y1','x2','y2','wrapW','htmlId','htmlCls','scene','fr','btn','ui','ico','iconId','dummy','smemo']);
+  'x1','y1','x2','y2','wrapW','wrapAuto','htmlId','htmlCls','scene','fr','btn','ui','ico','iconId','dummy','smemo']);
 /* ボタン・UIパーツの中の「中身」(文字・画像)は写さない */
 const uiContentKeys=k=>(UI_FIELDS[k]||[]).filter(f=>['text','textarea','img'].includes(f[2])).map(f=>f[0]);
 const styleKind=s=>s.type==='ui'?'ui:'+(s.ui&&s.ui.kind):s.type;
@@ -13844,6 +13847,7 @@ wireView.addEventListener('pointerdown',e=>{
       const g=startGroupResize(selShapes(),sx,sy);
       if(!g)return;
       pushUndo();
+      g.pm0=layPm();g.rs0=selShapes();
       wDrag=g;
       return;
     }
@@ -13858,6 +13862,7 @@ wireView.addEventListener('pointerdown',e=>{
     }
     pushUndo();
     wDrag=startResize(s,sx,sy);
+    if(wDrag){wDrag.pm0=layPm();wDrag.rs0=[s];}
     return;
   }
   const gid=e.target.closest('g[data-id]');
@@ -14350,6 +14355,7 @@ function wireUp(e){
   if(dg.mode==='move'||dg.mode==='resize'||dg.mode==='rotate'||dg.mode==='gresize'){
     /* 自動で並べるフレームの上に落としたら、その位置の順番に入れる */
     if(dg.mode==='move'&&dg.items)layDrop(dg.items);
+    if((dg.mode==='resize'||dg.mode==='gresize')&&dg.pm0)layKeep(dg.rs0,dg.pm0);
     save();
     if(curDoc().shapes.some(x=>x.lay)){renderWire();renderLayerPanel();}
   }
@@ -15326,11 +15332,13 @@ function updateWebSec(ss){
       b.classList.toggle('active',on);b.setAttribute('aria-checked',on?'true':'false');
     });
   }
-  $('#webGrowRow').style.display=$('#webVhRow').style.display;
+  /* 伸ばす: ページの中のセクション・コンテナ */
+  const growSecs=ss.filter(x=>isFrame(x)&&parentFrameAt(curShapes(),curShapes().indexOf(x)));
+  $('#webGrowRow').style.display=growSecs.length&&growSecs.length===ss.length?'block':'none';
   layPanelUpdate(ss);
-  if(topSecs.length){
-    const g0=!!topSecs[0].grow;
-    const same=topSecs.every(x=>!!x.grow===g0);
+  if(growSecs.length){
+    const g0=!!growSecs[0].grow;
+    const same=growSecs.every(x=>!!x.grow===g0);
     document.querySelectorAll('#webGrow .seg').forEach(b=>{
       const on=same&&!!b.dataset.fit===g0;
       b.classList.toggle('active',on);b.setAttribute('aria-checked',on?'true':'false');
@@ -15434,7 +15442,14 @@ $('#webVh').addEventListener('click',e=>{
 $('#webGrow').addEventListener('click',e=>{
   const b=e.target.closest('.seg');if(!b)return;
   const v=!!b.dataset.fit,sh=curShapes();
-  const list=webTargets().filter(x=>{if(!isFrame(x))return false;const p=parentFrameAt(sh,sh.indexOf(x));return p&&!parentFrameAt(sh,sh.indexOf(p));});
+  const parOf=x=>parentFrameAt(sh,sh.indexOf(x));
+  let list=webTargets().filter(x=>isFrame(x)&&parOf(x));
+  /* コンテナを伸ばす時は、それを囲むセクション(・コンテナ)も伸ばす(囲む側が伸びないと、はみ出して切れるため) */
+  if(v){
+    const add=[];
+    list.forEach(x=>{let p=parOf(x);while(p&&parOf(p)){if(!list.includes(p)&&!add.includes(p))add.push(p);p=parOf(p);}});
+    list=list.concat(add);
+  }
   if(v&&list.some(x=>x.vh||x.scene||x.pin==='top'||x.pin==='bottom')){toast('画面いっぱい・スクロールの演出・ページ全体に固定の区画は、伸ばす設定と一緒に使えません');return;}
   setWebProp(list,x=>{if(v)x.grow=true;else delete x.grow;},
     v?'書き出したページで、文章が長くなった時(文字を書き足した・端末で文字が広い)に、この区画を下へ広げ、下の物をずらします(編集画面ではデザインどおりの高さです)':'伸ばすのをやめました');
@@ -15676,6 +15691,7 @@ $('#txWrap').addEventListener('pointerdown',e=>e.stopPropagation());
 $('#txWrap').addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter')e.target.blur();});
 $('#txWrap').addEventListener('change',()=>{
   const v=+$('#txWrap').value;
+  selShapes().forEach(x=>{if(x.type==='text')delete x.wrapAuto;});
   setBlockAttr('wrapW',(isNaN(v)||v<=0)?undefined:v);
 });
 $('#txLh').addEventListener('pointerdown',e=>{e.stopPropagation();pushUndo();});
@@ -17883,6 +17899,16 @@ function layFrame(sh,f,par){
       if(Math.abs(s.h-H)>.01){s.y=layR(s.y-s.h/2+H/2);s.h=H;}
     }
   });
+  /* 縦に並べる入れ物(幅が中身で決まらない物)の中の文字は、入れ物の幅を超えたら自動で折り返す。
+     一度折り返した文字(wrapAuto)は、入れ物の幅が変わったら折り返し幅も合わせる */
+  if(v&&!hug.w)items.forEach(it=>{
+    if(it.m.length!==1)return;
+    const s=it.m[0];if(s.type!=='text'||s.vert)return;
+    const m=q4(s.mg),W=Math.max(20,layR(f.w-pad[1]-pad[3]-m[1]-m[3]));
+    if(!(s.wrapAuto||(s.wrapW?s.wrapW>W+0.5:s.w>W+0.5)))return;
+    if(s.wrapW&&Math.abs(s.wrapW-W)<=.01&&s.wrapAuto)return;
+    const l=s.x-s.w/2;s.wrapW=W;s.wrapAuto=true;measureWText(s);s.x=layR(l+s.w/2);
+  });
   const bs=items.map(layBox),mgs=items.map(it=>q4(it.m[0].mg));
   const main=bs.map((b,i)=>v?b.h+mgs[i][0]+mgs[i][2]:b.w+mgs[i][3]+mgs[i][1]);
   const cross=bs.map((b,i)=>v?b.w+mgs[i][3]+mgs[i][1]:b.h+mgs[i][0]+mgs[i][2]);
@@ -17995,6 +18021,28 @@ function layDrop(dgItems){
   });
   return changed;
 }
+/* 大きさを変えた時: 変える前の入れ子(pm)のまま、外側の自動で並べる入れ物を内側から順に並べ直す。
+   (大きく伸ばすと中心が入れ物の外へ出て、入れ物から外れたと判定されてしまうため)
+   自由に置くページのセクションは、はみ出した分だけページを伸ばす */
+function layKeep(rs,pm){
+  const sh=curShapes();if(!sh||!pm)return false;
+  const parArr=()=>sh.map(x=>pm.has(x)?pm.get(x):null);
+  let changed=false;
+  rs.forEach(s=>{
+    let a=pm.get(s),c=s;
+    while(a){
+      if(a.lay){layFrame(sh,a,parArr());changed=true;}
+      else if(isFrame(c)&&c.role==='section'){
+        const b={x:c.x-c.w/2,y:c.y-c.h/2,w:c.w,h:c.h},top=a.y-a.h/2,bot=a.y+a.h/2;
+        const nt=Math.min(top,b.y),nb=Math.max(bot,b.y+b.h);
+        if(nt<top||nb>bot){a.y=(nt+nb)/2;a.h=nb-nt;changed=true;}
+      }
+      c=a;a=pm.get(a);
+    }
+  });
+  return changed;
+}
+const layPm=()=>{const sh=curShapes(),pr=layParents(sh);return new Map(sh.map((x,i)=>[x,pr[i]]));};
 /* レイヤーの印(ページ・セクション・コンテナ・ボタンは専用の形) */
 const LAY_ICONS={
   page:'<svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8.5 8h7M8.5 12h7M8.5 16h4"/></svg>',
