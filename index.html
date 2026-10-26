@@ -2968,7 +2968,7 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-28.3';
+const APP_VERSION='2026-10-28.4';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -17907,6 +17907,18 @@ function layDrop(dgItems){
     const secOnly=isFrame(s)&&(s.role==='section'||(!s.role&&pm.get(s)&&!pm.get(pm.get(s))));
     let T=null;
     sh.forEach(f=>{if(isFrame(f)&&!f.hidden&&!bset.has(f)&&inFrame(f,c)&&(!secOnly||!pm.get(f)))T=f;});
+    /* セクションは、ページの外で離しても元のページに残す(ページの中にしか置かない物なので) */
+    const p0=pm.get(s);
+    if(!T&&secOnly&&p0&&!bset.has(p0)){
+      T=p0;
+      if(!T.lay){
+        /* 自由に置くページ: はみ出した分だけページを伸ばす(上へ出た時は上へ) */
+        const b=unionWorldBox([s]),top=T.y-T.h/2,bot=T.y+T.h/2;
+        const nt=Math.min(top,b.y),nb=Math.max(bot,b.y+b.h);
+        if(nt<top||nb>bot){T.y=(nt+nb)/2;T.h=nb-nt;changed=true;}
+        return;
+      }
+    }
     if(!T)return;
     const first=sh.indexOf(block[0]);
     if(T.lay){
