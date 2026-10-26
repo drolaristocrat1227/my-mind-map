@@ -2968,7 +2968,7 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-28.4';
+const APP_VERSION='2026-10-28.5';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -12544,14 +12544,14 @@ function copySel(cut){
     toast('切り取りました');
   }else toast('コピーしました');
 }
-function pasteShapes(){
+function pasteShapes(at){
   const d=curDoc();
   if(!d||!d.shapes||!shapeClipboard||!shapeClipboard.length)return;
   pushUndo();
   /* カーソル(最後にキャンバス上にあった位置)に、コピーした図形全体の中心が来るように配置 */
   const box=cornersBox(shapeClipboard,0);
   const cx=(box.x1+box.x2)/2,cy=(box.y1+box.y2)/2;
-  const target=lastWireMouse||{x:cx,y:cy};
+  const target=at||lastWireMouse||{x:cx,y:cy};
   const dx=target.x-cx,dy=target.y-cy;
   const gidMap=new Map();
   const copies=shapeClipboard.map(s=>{
@@ -12569,6 +12569,49 @@ function pasteShapes(){
   wireSel=copies.map(c=>c.id);selAnchor=null;
   save();renderWire();updateStyleMenu();
   toast('貼り付けました');
+}
+/* ---------- スタイルをコピー / ペースト ----------
+   色・枠線・角の丸み・影・ぼかし・文字の書式などの「見た目」だけを写す。
+   位置・大きさ・文字の中身・画像・リンク・動き・並べ方(配置)は写さない。
+   貼り付けられるのは同じ種類の要素(四角→四角、テキスト→テキスト、ボタン→ボタン、同じUIパーツ)だけ */
+let styleClipboard=null;
+const STYLE_SKIP=new Set(['id','type','x','y','w','h','rot','text','cattr','pts','holes','src','iw','ih','imgBox','imgFill','name','gid','locked','hidden',
+  'nw','news','media','form','tag','href','alt','anim','txfx','hover','hoverC','hoverT','loop','pin','vh','grow','lay','mg','role','device','gmap',
+  'x1','y1','x2','y2','wrapW','htmlId','htmlCls','scene','fr','btn','ui','ico','iconId','dummy','smemo']);
+/* ボタン・UIパーツの中の「中身」(文字・画像)は写さない */
+const uiContentKeys=k=>(UI_FIELDS[k]||[]).filter(f=>['text','textarea','img'].includes(f[2])).map(f=>f[0]);
+const styleKind=s=>s.type==='ui'?'ui:'+(s.ui&&s.ui.kind):s.type;
+const styleKindName=s=>s.type==='ui'?((UI_KINDS[s.ui&&s.ui.kind]||{}).n||'UIパーツ'):(SHAPE_TYPE_LABEL[s.type]||s.type);
+function copyStyle(){
+  const s=selShapes()[0];if(!s){toast('スタイルをコピーする要素を選んでください');return;}
+  const p={};
+  Object.keys(s).forEach(k=>{if(!STYLE_SKIP.has(k))p[k]=JSON.parse(JSON.stringify(s[k]));});
+  if(s.type==='btn'&&s.btn){p.btn=JSON.parse(JSON.stringify(s.btn));delete p.btn.t;}
+  if(s.type==='ui'&&s.ui){p.ui=JSON.parse(JSON.stringify(s.ui));delete p.ui.kind;uiContentKeys(s.ui.kind).forEach(k=>delete p.ui[k]);}
+  styleClipboard={kind:styleKind(s),name:styleKindName(s),p};
+  toast(`スタイルをコピーしました(${styleClipboard.name})。同じ種類の要素を選んで「スタイルをペースト」`);
+}
+const styleTargets=()=>styleClipboard?selShapes().filter(x=>!x.locked&&styleKind(x)===styleClipboard.kind):[];
+function pasteStyle(){
+  if(!styleClipboard){toast('先に「スタイルをコピー」をしてください');return;}
+  const ts=styleTargets();
+  if(!ts.length){toast(`同じ種類の要素(${styleClipboard.name})を選んでください`);return;}
+  pushUndo();
+  const p=styleClipboard.p;
+  ts.forEach(t=>{
+    /* 今の見た目を消してから写す(コピー元で既定のままの項目は、既定に戻す) */
+    Object.keys(t).forEach(k=>{if(!STYLE_SKIP.has(k))delete t[k];});
+    Object.keys(p).forEach(k=>{if(k!=='btn'&&k!=='ui')t[k]=JSON.parse(JSON.stringify(p[k]));});
+    if(t.type==='btn'&&p.btn)t.btn={...JSON.parse(JSON.stringify(p.btn)),t:t.btn?t.btn.t:''};
+    if(t.type==='ui'&&p.ui){const keep={kind:t.ui.kind};uiContentKeys(t.ui.kind).forEach(k=>{if(t.ui[k]!==undefined)keep[k]=t.ui[k];});t.ui={...JSON.parse(JSON.stringify(p.ui)),...keep};}
+    /* 文字ごとの書式(大きさ・太さ・フォント・文字間隔・斜体)も外して、全体の書式にそろえる */
+    if(t.type==='text'){
+      if(t.cattr)t.cattr=t.cattr.map(a=>{if(!a)return a;const b={...a};['fs','fw','ff','ls','it','c','fill'].forEach(k=>delete b[k]);return Object.keys(b).length?b:null;});
+      measureWText(t);
+    }
+  });
+  save();renderWire();updateStyleMenu();
+  toast(`スタイルを貼り付けました(${ts.length}つ)`);
 }
 /* 穴を埋める(切り取りに使った図形の跡を消す) */
 function removeHole(s,ci){
@@ -14443,6 +14486,8 @@ function wireKeydown(e){
   if(ctrl&&e.key.toLowerCase()==='z'&&!e.shiftKey){e.preventDefault();undo();return;}
   if(ctrl&&(e.key.toLowerCase()==='y'||(e.key.toLowerCase()==='z'&&e.shiftKey))){e.preventDefault();redo();return;}
   if(ctrl&&e.key.toLowerCase()==='d'){e.preventDefault();dupSel();return;}
+  if(ctrl&&e.altKey&&e.code==='KeyC'){e.preventDefault();copyStyle();return;}
+  if(ctrl&&e.altKey&&e.code==='KeyV'){e.preventDefault();pasteStyle();return;}
   if(ctrl&&e.key.toLowerCase()==='c'){e.preventDefault();copySel(false);return;}
   if(ctrl&&e.key.toLowerCase()==='x'){e.preventDefault();copySel(true);return;}
   if(ctrl&&e.key.toLowerCase()==='v'){if(shapeClipboard&&shapeClipboard.length){e.preventDefault();pasteShapes();}return;}
@@ -15845,6 +15890,10 @@ const CTX_ITEMS=[
   {act:'align', label:'整列', btn:'wireAlignBtn', need:s=>s.any},
   {act:'group', label:'グループ化 / 解除', btn:'wireGroupBtn', need:s=>s.n>=2},
   {act:'dup', label:'複製', btn:'wireDupBtn', need:s=>s.any, kbd:'Ctrl+D'},
+  {act:'copy', label:'コピー', need:s=>s.any, kbd:'Ctrl+C', icon:'<svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>'},
+  {act:'paste', label:'ペースト(ここに)', need:s=>s.clip, kbd:'Ctrl+V', icon:'<svg viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M9 10h6M9 14h6M9 18h3"/></svg>'},
+  {act:'copystyle', label:'スタイルをコピー', need:s=>s.n===1, kbd:'Ctrl+Alt+C', icon:'<svg viewBox="0 0 24 24"><path d="M5 4h11v5H5zM16 6.5h3v5.5h-8v3"/><rect x="9.5" y="15" width="3" height="6" rx="1"/></svg>'},
+  {act:'pastestyle', label:'スタイルをペースト', need:s=>s.style, kbd:'Ctrl+Alt+V', icon:'<svg viewBox="0 0 24 24"><path d="M12 3l2.5 5.5L20 11l-5.5 2.5L12 19l-2.5-5.5L4 11l5.5-2.5z"/></svg>'},
   {act:'delete', label:'削除', btn:'wireDelBtn', need:s=>s.any, kbd:'Delete'},
   {sep:1},
   {act:'more', label:'その他の道具…', btn:'wireMoreBtn'},
@@ -15925,6 +15974,7 @@ function updateMoreMenu(){
 function ctxState(){
   const ss=selShapes();const h=histOf();
   return{any:ss.length>0,n:ss.length,undo:h.undo.length>0,redo:h.redo.length>0,
+    clip:!!(shapeClipboard&&shapeClipboard.length),style:styleTargets().length>0,
     path:ss.length===1&&ss[0].type==='path'};
 }
 function updateWireCtx(){
@@ -15984,6 +16034,10 @@ function wireAction(act,x,y){
     case'lock':lockToggle();break;
     case'cut':cutByFront();break;
     case'dup':dupSel();break;
+    case'copy':copySel(false);break;
+    case'paste':pasteShapes(x!==undefined?s2w(x,y):null);break;
+    case'copystyle':copyStyle();break;
+    case'pastestyle':pasteStyle();break;
     case'delete':delSel();break;
     case'multi':$('#wireMultiBtn').onclick();break;
     case'eraser':
