@@ -2975,7 +2975,7 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-28.8';
+const APP_VERSION='2026-10-28.9';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -17900,10 +17900,20 @@ function layItems(sh,f,par){
   });
   return out;
 }
+/* 並べる時の大きさ。線は見えている範囲(両端＋線の太さ)で測る
+   (図形の外接箱は、線だけグラデーション用に「長さ×長さ」の正方形なので、縦線の左右に大きな空きができていた) */
+function layShapeBox(s){
+  if(s.type!=='line')return shapeWorldBox(s);
+  const a=rotV({x:-s.w/2,y:0},s.rot||0),b=rotV({x:s.w/2,y:0},s.rot||0),h=Math.max(.5,strokeW(s)/2);
+  const x1=s.x+Math.min(a.x,b.x)-h,x2=s.x+Math.max(a.x,b.x)+h,y1=s.y+Math.min(a.y,b.y)-h,y2=s.y+Math.max(a.y,b.y)+h;
+  return{x:x1,y:y1,w:x2-x1,h:y2-y1};
+}
 function layBox(it){
   const s=it.m[0];
   if(it.m.length===1&&isFrame(s))return{x:s.x-s.w/2,y:s.y-s.h/2,w:s.w,h:s.h};
-  return unionWorldBox(it.m);
+  let x1=1e9,y1=1e9,x2=-1e9,y2=-1e9;
+  it.m.forEach(m=>{const b=layShapeBox(m);x1=Math.min(x1,b.x);y1=Math.min(y1,b.y);x2=Math.max(x2,b.x+b.w);y2=Math.max(y2,b.y+b.h);});
+  return{x:x1,y:y1,w:Math.max(1,x2-x1),h:Math.max(1,y2-y1)};
 }
 function layMove(sh,it,dx,dy){
   dx=layR(dx);dy=layR(dy);
