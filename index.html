@@ -1847,7 +1847,7 @@ kbd{
   <div id="btnPart">
     <hr>
     <div class="menu-label">ボタン</div>
-    <div class="segRow" id="btnTabs"><button class="seg" data-st="n">ふだん</button><button class="seg" data-st="h">ホバー(タップ)時</button></div>
+    <div class="segRow" id="btnTabs"><button class="seg" data-st="b">ボタン</button><button class="seg" data-st="t">文字</button><button class="seg" data-st="a">矢印</button><button class="seg" data-st="h" title="マウスを乗せた時(スマホはタップした時)">ホバー</button></div>
     <div id="btnFields"></div>
     <div class="segRow"><button class="seg" id="btnPrev">編集画面でホバーの見た目を見る</button></div>
   </div>
@@ -2975,7 +2975,7 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-28.9';
+const APP_VERSION='2026-10-29.1';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -12198,6 +12198,15 @@ function tspPunct(ch){
   if(TSP_MID.includes(ch))return{cut:.5,shift:.25};
   return null;
 }
+function tspHtml(tsp,t,a){
+  if(tsp!=='punct')return escXml(t);
+  return[...t].map(ch=>{
+    const p=tspPunct(ch);
+    if(!p||!(charMetrics(ch,a).w>a.fs*0.9))return escXml(ch);
+    const ml=p.shift?`margin-left:-${p.shift}em;`:'',mr=p.cut-p.shift?`margin-right:-${p.cut-p.shift}em`:'';
+    return`<span style="${ml}${mr}">${escXml(ch)}</span>`;
+  }).join('');
+}
 const paltCache=new Map();
 function paltWidth(ch,a){
   const k=a.ff+'|'+a.fw+'|'+ch;
@@ -15650,9 +15659,10 @@ function syncFontBtn(k){
   b.style.fontFamily=f.f;
   if(f.web)wfLink(f);
 }
-let fpIO=null;
-function openFontPop(){
-  const cur=$('#txFont').value;
+let fpIO=null,fontPopCb=null;
+function openFontPop(cur0,cb){
+  fontPopCb=typeof cb==='function'?cb:null;
+  const cur=(typeof cur0==='string'&&cur0)||$('#txFont').value;
   const list=WFONTS.filter(f=>f.web);
   const groups=[...new Set(list.map(f=>f.g))];
   $('#fontPopTabs').innerHTML=groups.map((g,i)=>`<button type="button" data-g="${i}">${escXml(g)}</button>`).join('');
@@ -15679,7 +15689,7 @@ function openFontPop(){
 }
 function closeFontPop(){$('#fontPop').classList.remove('on');if(fpIO){fpIO.disconnect();fpIO=null;}}
 $('#txFontBtn').addEventListener('pointerdown',e=>e.stopPropagation());
-$('#txFontBtn').onclick=openFontPop;
+$('#txFontBtn').onclick=()=>openFontPop();
 $('#fontPopBack').onclick=closeFontPop;
 $('#fontPopX').onclick=closeFontPop;
 $('#fontPop').addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Escape')closeFontPop();});
@@ -15687,6 +15697,7 @@ $('#fontPop').addEventListener('pointerdown',e=>e.stopPropagation());
 $('#fontPopTabs').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const g=$('#fpg'+b.dataset.g);if(g)g.scrollIntoView({block:'start',behavior:'smooth'});});
 $('#fontPopList').addEventListener('click',e=>{
   const b=e.target.closest('.fp-i');if(!b)return;
+  if(fontPopCb){const cb=fontPopCb;fontPopCb=null;closeFontPop();cb(b.dataset.k);return;}
   $('#txFont').value=b.dataset.k;
   setFont(b.dataset.k);syncFontBtn(b.dataset.k);
   closeFontPop();
@@ -18300,7 +18311,7 @@ function btnLook(s,hover){
   const pick=(k,hk)=>h[hk||k]!==undefined?h[hk||k]:b[k];
   const dir=BTN_DIR[ar.dir]||BTN_DIR.right;
   return{
-    t:(hover&&h.t)?h.t:b.t,fs:b.fs,fw:b.fw,ff:b.ff||docFont(),tc:pick('tc'),bg:pick('bg'),bc:pick('bc'),bw:pick('bw')||0,
+    t:(hover&&h.t)?h.t:b.t,fs:b.fs,fw:b.fw,ff:b.ff||docFont(),ls:+b.ls||0,tsp:b.tsp||'',lh:b.lh||1.3,tc:pick('tc'),bg:pick('bg'),bc:pick('bc'),bw:pick('bw')||0,
     shape:pick('shape'),r:pick('r'),ic:b.ic||'none',gap:b.gap!==undefined?b.gap:12,
     tx:+b.tx||0,ty:+b.ty||0,ax:+b.ax||0,ay:+b.ay||0,dir,
     ar:{st:ar.st||'line',len:hover&&h.alen!==undefined?h.alen:(ar.len||22),th:ar.th||1.5,hd:ar.hd||6,ang:dir.a,
@@ -18309,8 +18320,9 @@ function btnLook(s,hover){
 }
 const btnRadius=(L,h)=>L.shape==='pill'?h/2:L.shape==='round'?(L.r||0):0;
 /* 文字の幅(テキストと同じ測り方。Webフォントは読み込んでから測り直す) */
+const btnTextShape=L=>({type:'text',text:L.t||' ',fs:L.fs,fw:L.fw,ff:L.ff,ls:L.ls||0,tsp:L.tsp||undefined,lh:L.lh||1.3,align:'center'});
 function btnTextW(L){
-  const p={type:'text',text:L.t||' ',fs:L.fs,fw:L.fw,ff:L.ff,ls:0};
+  const p=btnTextShape(L);
   try{wfNeed(p);return textLayout(p).w;}catch(e){return(L.t||'').length*L.fs;}
 }
 /* 矢印の形(右向き・原点は矢印の左端の中央)。shaft=軸、head=先 */
@@ -18344,7 +18356,7 @@ function btnSvg(s){
   const bw=L.bw||0;
   let h=`<g data-id="${s.id}" ${tr}>`;
   h+=`<rect x="${-s.w/2+bw/2}" y="${-s.h/2+bw/2}" width="${Math.max(0,s.w-bw)}" height="${Math.max(0,s.h-bw)}" rx="${Math.max(0,rr-bw/2)}" fill="${L.bg&&L.bg!=='none'?L.bg:'transparent'}" stroke="${bw?L.bc:'none'}" stroke-width="${bw}"/>`;
-  h+=`<text x="${X.textX}" y="${X.textY}" text-anchor="middle" dominant-baseline="central" font-size="${L.fs}" font-weight="${L.fw}" font-family="${escXml(cssFont(L.ff))}" fill="${L.tc}" style="white-space:pre">${escXml(L.t||'')}</text>`;
+  {const p=btnTextShape(L),TL=textLayout(p);h+=`<g transform="translate(${X.textX} ${X.textY})">${textCharsSvg(p,TL,()=>` fill="${L.tc}"`)}</g>`;}
   if(X.g)h+=`<g transform="translate(${X.ax+L.ar.dx} ${X.ay+L.ar.dy}) rotate(${L.ar.ang}) translate(${-X.aw/2} 0)">${btnArrowSvgInner(L.ar,L.ar.col)}</g>`;
   return h+'</g>';
 }
@@ -18355,7 +18367,8 @@ function btnCanvas(ctx,s){
   if(L.bg&&L.bg!=='none'){ctx.fillStyle=L.bg;ctx.fill(p);}
   if(bw){ctx.strokeStyle=L.bc;ctx.lineWidth=bw;ctx.stroke(p);}
   ctx.fillStyle=L.tc;ctx.textBaseline='middle';ctx.textAlign='center';
-  ctx.font=`${L.fw} ${L.fs}px ${cssFont(L.ff)}`;ctx.fillText(L.t||'',X.textX,X.textY);
+  {const p=btnTextShape(L),TL=textLayout(p);ctx.textAlign='left';ctx.textBaseline='alphabetic';
+   TL.chars.forEach(c=>{ctx.font=fontCss(c.a);ctx.fillText(c.ch,X.textX+c.cx+(c.gx||0),X.textY+c.by);});}
   if(X.g){
     const g=X.g;
     ctx.save();ctx.translate(X.ax,X.ay);ctx.rotate(L.ar.ang*Math.PI/180);ctx.translate(-X.aw/2,0);
@@ -18371,6 +18384,7 @@ function siteBtn(s,o){
   const b=s.btn,h=b.hv||{},L=btnLook(s,false),X=btnLayout(L);
   const rad=(shape,r)=>shape==='pill'?'999px':shape==='round'?cssNum(r||0)+'px':'0px';
   const v=[siteBox(s,o,s.w,s.h),`font-family:${cssFont(L.ff)}`,`font-size:${cssNum(L.fs)}px`,`font-weight:${L.fw}`,
+    `line-height:${cssNum(L.fs*L.lh)}px`,...(L.ls?[`letter-spacing:${cssNum(L.ls)}px`]:[]),...(L.tsp==='palt'?["font-feature-settings:'palt'"]:[]),
     `--tc:${cssCol(L.tc)}`,`--bg:${L.bg&&L.bg!=='none'?cssCol(L.bg):'transparent'}`,`--bc:${cssCol(L.bc||'#000000')}`,`--bw:${cssNum(L.bw)}px`,
     `--r:${rad(L.shape,L.r)}`,`--d:${cssNum(h.dur||0.3)}s`];
   if(h.tc)v.push(`--tch:${cssCol(h.tc)}`);
@@ -18391,8 +18405,11 @@ function siteBtn(s,o){
       +`<g class="nt-hd">`+(g.fillHead?`<path d="${g.head}" fill="currentColor"/>`:`<path d="${g.head}" fill="none" stroke="currentColor" stroke-width="${a.th}" stroke-linecap="round" stroke-linejoin="round"/>`)+'</g></svg>';
   }
   const two=!!(h.t&&h.t!==b.t);
-  const tst=(L.tx||L.ty)?` style="translate:${cssNum(L.tx)}px ${cssNum(L.ty)}px"`:'';
-  const txt=two?`<span class="nt-bt"${tst}><span class="nt-bt1">${escXml(b.t||'')}</span><span class="nt-bt2" aria-hidden="true">${escXml(h.t)}</span></span>`:`<span class="nt-bt"${tst}><span class="nt-bt1">${escXml(b.t||'')}</span></span>`;
+  /* 文字間隔は最後の文字の後ろにも付くので、その分だけ戻して真ん中をそろえる。改行はそのまま */
+  const tsx=[(L.tx||L.ty)?`translate:${cssNum(L.tx)}px ${cssNum(L.ty)}px`:'',L.ls?`margin-right:${cssNum(-L.ls)}px`:'',/\n/.test((b.t||'')+(h.t||''))?'white-space:pre;text-align:center':''].filter(Boolean).join(';');
+  const tst=tsx?` style="${tsx}"`:'';
+  const tx=t=>tspHtml(L.tsp,t||'',L);
+  const txt=two?`<span class="nt-bt"${tst}><span class="nt-bt1">${tx(b.t)}</span><span class="nt-bt2" aria-hidden="true">${tx(h.t)}</span></span>`:`<span class="nt-bt"${tst}><span class="nt-bt1">${tx(b.t)}</span></span>`;
   return`<span class="nt-e nt-button nt-h${two?' nt-btx':''}" style="${v.join(';')}">${txt}${arrow}</span>`;
 }
 /* ---- 足す ---- */
@@ -18416,14 +18433,26 @@ function btnAdd(){
   toast('ボタンを足しました。「色とスタイル」の「ボタン」で、ふだんとホバーの見た目を決めます');
 }
 /* ---- パネル ---- */
-let btnTab='n';
+let btnTab='b';
 /* [項目, 見出し, 種類, ...] 種類: text / range(最小,最大,刻み) / color / seg([[値,見出し]]) 。opt=「変えない」「なし」の切り替え */
 const BTN_FIELDS={
-  n:[
-    ['t','文字','text'],['fs','文字の大きさ','range',8,72,1],['fw','太さ','seg',[[400,'ふつう'],[500,'中'],[700,'太字'],[900,'極太']]],
-    ['tc','文字の色','color'],['bg','塗り','color',{none:'塗りなし'}],
+  /* ボタンそのもの */
+  b:[
+    ['bg','塗り','color',{none:'塗りなし'}],
     ['shape','形','seg',[['square','四角'],['round','角丸'],['pill','丸い']]],['r','角の丸み','range',0,40,1,{if:b=>b.shape==='round'}],
-    ['bc','枠の色','color'],['bw','枠の太さ','range',0,8,0.5],
+    ['bc','枠の色','color'],['bw','枠の太さ','range',0,8,0.5]
+  ],
+  /* 文字(改行もできる) */
+  t:[
+    ['t','文字(Enterで改行)','textarea'],['ff','フォント','font'],['fs','文字の大きさ','range',8,72,1],
+    ['fw','太さ','seg',[[100,'Thin'],[200,'ExLight'],[300,'Light'],[400,'Regular'],[500,'Medium'],[600,'SemiBold'],[700,'Bold'],[800,'ExBold'],[900,'Heavy']]],
+    ['tc','文字の色','color'],
+    ['tsp','文字詰め','seg',[['','詰めない'],['punct','約物だけ'],['palt','全体を詰める']]],
+    ['ls','文字間隔','range',-5,30,0.5],['lh','行間','range',0.8,3,0.05,{base0:1.3}],
+    ['tx','文字の位置(横)','range',-150,150,1],['ty','文字の位置(縦)','range',-60,60,1]
+  ],
+  /* 矢印 */
+  a:[
     ['ic','矢印の場所','seg',[['none','なし'],['right','文字の右'],['left','文字の左']]],
     ['ar.st','矢印の形','seg',[['line','線の矢印'],['half','線の矢印(下なし)'],['chev','くの字'],['tri','三角']],{if:b=>b.ic!=='none'}],
     ['ar.len','矢印の長さ','range',4,80,1,{if:b=>b.ic!=='none'&&(b.ar||{}).st!=='chev'}],
@@ -18432,7 +18461,6 @@ const BTN_FIELDS={
     ['ar.col','矢印の色','color',{if:b=>b.ic!=='none',same:'文字と同じ'}],
     ['ar.dir','矢印の向き','seg',[['right','→ 右'],['left','← 左'],['up','↑ 上'],['down','↓ 下']],{if:b=>b.ic!=='none'}],
     ['gap','文字との間','range',0,40,1,{if:b=>b.ic!=='none'}],
-    ['tx','文字の位置(横)','range',-150,150,1],['ty','文字の位置(縦)','range',-60,60,1],
     ['ax','矢印の位置(横)','range',-150,150,1,{if:b=>b.ic!=='none'}],['ay','矢印の位置(縦)','range',-60,60,1,{if:b=>b.ic!=='none'}]
   ],
   h:[
@@ -18451,6 +18479,8 @@ function btnFieldHtml(f,b){
   const [k,label,type]=f,opt=(type==='range'?f[6]:type==='seg'?f[4]:f[3])||{};
   if(opt.if&&!opt.if(b))return'';
   const v=btnGet(b,k);
+  if(type==='textarea')return`<div class="menu-label">${label}</div><div class="numRow"><textarea data-bk="${k}" rows="2" spellcheck="false" style="flex:1;min-width:0;resize:vertical;font:inherit;font-size:14px;padding:6px 8px;border-radius:7px;border:1px solid var(--panel-border);background:var(--node-bg);color:var(--ink)">${escXml(v||'')}</textarea></div>`;
+  if(type==='font'){const f=WFONTS.find(x=>x.k===(v||docFont()))||WFONTS[0];return`<div class="numRow"><span class="radLbl">${label}</span><button type="button" class="fontBtn" data-bfont="${k}" style="font-family:${escXml(f.f)}">${escXml(f.n)}</button></div>`;}
   if(type==='text')return`<div class="numRow"><span class="radLbl">${label}</span><input type="text" data-bk="${k}" value="${escXml(v||'')}" placeholder="${escXml(opt.ph||'')}" spellcheck="false" autocomplete="off"></div>`;
   if(type==='seg')return`<div class="menu-label">${label}</div><div class="segRow mWrap">${f[3].map(([val,l])=>`<button class="seg${String(v===undefined?'':v)===String(val)?' active':''}" data-bseg="${k}" data-v="${val}">${l}</button>`).join('')}</div>`;
   const on=v!==undefined&&v!==null;
@@ -18486,9 +18516,11 @@ $('#btnTabs').addEventListener('click',e=>{const x=e.target.closest('.seg');if(!
 $('#btnPrev').addEventListener('click',()=>{const s=btnSel();if(!s)return;btnHoverPrev=btnHoverPrev===s.id?null:s.id;renderWire();renderBtnPart();});
 $('#btnFields').addEventListener('pointerdown',e=>{e.stopPropagation();if(e.target.matches('input,select'))pushUndo();});
 $('#btnFields').addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter'&&e.target.matches('input[type=text]'))e.target.blur();});
-$('#btnFields').addEventListener('focusin',e=>{if(e.target.matches('input[type=text]'))pushUndo();});
+$('#btnFields').addEventListener('focusin',e=>{if(e.target.matches('input[type=text],textarea'))pushUndo();});
 $('#btnFields').addEventListener('click',e=>{
   const s=btnSel();if(!s)return;
+  const fb=e.target.closest('[data-bfont]');
+  if(fb){openFontPop(s.btn.ff||docFont(),k=>{pushUndo();s.btn.ff=k;save();renderWire();renderBtnPart();});return;}
   const sg=e.target.closest('[data-bseg]');
   if(sg){pushUndo();const k=sg.dataset.bseg,v=sg.dataset.v;btnSet(s.btn,k,/^-?\d+(\.\d+)?$/.test(v)?+v:v);save();renderWire();renderBtnPart();}
 });
