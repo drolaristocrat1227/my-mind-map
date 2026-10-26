@@ -1525,7 +1525,7 @@ kbd{
   <button class="iconbtn menu-btn" id="wireTextBtn" title="テキスト・見出しを追加">
     <svg viewBox="0 0 24 24"><path d="M6 6.5h12M12 6.5V19"/></svg>
   </button>
-  <button class="iconbtn" id="wireImgBtn" title="画像を追加(Ctrl+Vで貼り付けも可)">
+  <button class="iconbtn menu-btn" id="wireImgBtn" title="画像を追加 / ダミー画像">
     <svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="M4.5 17l4.5-4.5 3 3 3.5-3.5 4 4"/></svg>
   </button>
   <button class="iconbtn menu-btn" id="wireIconBtn" title="アイコンを追加">
@@ -1870,6 +1870,7 @@ kbd{
       <button class="seg" data-align="center">中央揃え</button>
       <button class="seg" data-align="right">右揃え</button>
     </div>
+    <div class="radRow" id="txLsRow"><span class="radLbl" title="文字と文字の間隔(カーニング)">文字間隔</span><input type="range" id="txLs" min="-20" max="60" step="0.5" value="0"><input type="number" class="radNum" id="txLsV" min="-20" max="60" step="0.5" value="0"></div>
     <div class="radRow" id="txLhRow"><span class="radLbl">行間</span><input type="range" id="txLh" min="0.8" max="3" step="0.05" value="1.35"><span class="radNum" id="txLhV">×1.35</span></div>
     <!-- たまにしか触らない文字組みはまとめて折りたたむ -->
     <div id="txDetailSec">
@@ -1885,7 +1886,6 @@ kbd{
         <button class="seg" data-va="middle">中央</button>
         <button class="seg" data-va="bottom">下</button>
       </div>
-      <div class="radRow"><span class="radLbl" style="width:72px" title="文字と文字の間隔(カーニング)">カーニング</span><input type="range" id="txLs" min="-20" max="60" step="0.5" value="0"><input type="number" class="radNum" id="txLsV" min="-20" max="60" step="0.5" value="0"></div>
       <div class="segRow" id="txItalicRow">
         <button class="seg" data-it="0">立体</button>
         <button class="seg" data-it="12">斜体</button>
@@ -2119,6 +2119,11 @@ kbd{
   <button class="mi" data-add="blog"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="8" height="7" rx="1.5"/><rect x="13" y="4" width="8" height="7" rx="1.5"/><path d="M3 15h8M3 19h6M13 15h8M13 19h6"/></svg>ブログを足す(アイキャッチ画像つき)</button>
   <button class="mi" data-add="gmap"><svg viewBox="0 0 24 24"><path d="M12 21s-6-5.6-6-11a6 6 0 0 1 12 0c0 5.4-6 11-6 11z"/><circle cx="12" cy="10" r="2.2"/></svg>Googleマップを足す</button>
   <button class="mi" data-add="btn"><svg viewBox="0 0 24 24"><rect x="2.5" y="7" width="19" height="10" rx="5"/><path d="M13 12h5M16 10l2 2-2 2"/></svg>ボタンを足す(形・色・矢印・ホバー)</button>
+</div>
+<div id="imgMenu" class="menu glass">
+  <div class="menu-label">画像</div>
+  <button class="mi" data-img="file"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="M4.5 17l4.5-4.5 3 3 3.5-3.5 4 4"/></svg>画像を追加(Ctrl+Vで貼り付けも可)</button>
+  <button class="mi" data-img="dummy"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="2" stroke-dasharray="3 2"/><circle cx="9.5" cy="10" r="1.5"/><path d="M6.5 16.5l3.5-3.5 2.5 2.5 2-2 3 3"/></svg>ダミー画像を追加(あとで画像に差し替え)</button>
 </div>
 <div id="partsMenu" class="menu glass">
   <div class="menu-label">UIパーツを追加</div>
@@ -2939,7 +2944,7 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-27.9';
+const APP_VERSION='2026-10-28.1';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -5523,6 +5528,7 @@ function siteCssBox(s,o){
   const st=[siteBox(s,o,s.w,s.h)];
   if(s.grad){const g=cssGrad(s,s.grad,fa);if(!g)return null;st.push('background:'+g);}
   else if(s.fill)st.push('background-color:'+cssCol(s.fill,fa));
+  if(s.dummy)st.push(dummyCss(s));
   if(s.type==='ellipse')st.push('border-radius:50%');
   else{
     const rs=rectRadii(s);
@@ -11383,7 +11389,7 @@ function shapeSvg(s){
   const devBack=(isFrame(s)&&s.device)?devPartsSvg(deviceGeom(s).back):'';
   if(isRectish(s)){
     const d=roundRectPath(s.w,s.h,rectRadii(s));
-    if(!im)return`<g data-id="${s.id}" ${tr}>${devBack}<path d="${d}" fill="${fill}" fill-opacity="${fa}" stroke="${stroke}" stroke-opacity="${sa}" stroke-width="${sw}"/></g>`;
+    if(!im)return`<g data-id="${s.id}" ${tr}>${devBack}<path d="${d}" fill="${fill}" fill-opacity="${fa}" stroke="${stroke}" stroke-opacity="${sa}" stroke-width="${sw}"/>${dummySvg(s)}</g>`;
     return`<g data-id="${s.id}" ${tr}>${devBack}<path d="${d}" fill="${fill}" fill-opacity="${fa}"/>${im}<path d="${d}" fill="none" stroke="${stroke}" stroke-opacity="${sa}" stroke-width="${sw}"/></g>`;
   }
   if(s.type==='ellipse'){
@@ -15759,6 +15765,7 @@ const CTX_ITEMS=[
   {act:'line', label:'線を追加', btn:'wireLineBtn'},
   {act:'text', label:'テキストを追加', btn:'wireTextBtn'},
   {act:'image', label:'画像を追加', btn:'wireImgBtn'},
+  {act:'dummy', label:'ダミー画像を追加', icon:'<svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="2" stroke-dasharray="3 2"/><circle cx="9.5" cy="10" r="1.5"/><path d="M6.5 16.5l3.5-3.5 2.5 2.5 2-2 3 3"/></svg>'},
   {act:'icon', label:'アイコンを追加', btn:'wireIconBtn'},
   {act:'parts', label:'UIパーツを追加', btn:'wirePartsBtn'},
   {act:'pen', label:'ペン / 手書き', btn:'wirePenBtn'},
@@ -15890,6 +15897,7 @@ function wireAction(act,x,y){
     case'ellipse':addShape('ellipse');break;
     case'text':addShape('text');break;
     case'image':$('#wireImgInput').click();break;
+    case'dummy':dummyAdd();break;
     case'pen':
       document.querySelectorAll('#penMenu .mi').forEach(b=>b.classList.toggle('active',b.dataset.pen===penKind));
       openMenuAt($('#penMenu'),x,y);break;
@@ -15959,7 +15967,36 @@ $('#wireMultiBtn').onclick=()=>{
   toast(wMulti?'複数選択モード: タップで選択を追加/解除':'複数選択モードを終了');
 };
 /* 画像の追加(ファイル選択 / Ctrl+V貼り付け) */
-$('#wireImgBtn').onclick=()=>$('#wireImgInput').click();
+$('#wireImgBtn').onclick=e=>openBarMenu($('#imgMenu'),e.currentTarget);
+$('#imgMenu').addEventListener('click',e=>{
+  const b=e.target.closest('[data-img]');if(!b)return;
+  hideMenus();
+  if(b.dataset.img==='file')$('#wireImgInput').click();else dummyAdd();
+});
+/* ---------- ダミー画像(写真が届くまでの仮置き) ----------
+   灰色の四角に画像のマーク。四角なので、選んで Ctrl+V(または「図形の中の画像」)で本物の画像に差し替えられる。
+   書き出したページでも、差し替えるまでは灰色の四角とマークで出る */
+const DUMMY_ICON='<circle cx="8.5" cy="8.5" r="2"/><path d="M2.5 19.5l6-7 4 4.5 3-3.5 6 6z"/>';
+function dummySvg(s){
+  if(!s.dummy||s.imgFill)return'';
+  const k=Math.max(.2,Math.min(s.w,s.h)*0.3/24);
+  return`<g transform="scale(${k}) translate(-12 -12)" fill="#9AA1AB" pointer-events="none">${DUMMY_ICON}</g>`;
+}
+function dummyCss(s){
+  const svg=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#9AA1AB">${DUMMY_ICON}</svg>`;
+  const sz=Math.max(8,Math.min(s.w,s.h)*0.3);
+  return`background-image:url('data:image/svg+xml,${encodeURIComponent(svg)}');background-repeat:no-repeat;background-position:center;background-size:${cssNum(sz)}px`;
+}
+function dummyAdd(){
+  const d=curDoc();if(!d||!d.shapes)return;
+  pushUndo();
+  const c=s2w(viewW()/2,viewH()/2);
+  const s={id:uid(),type:'rect',x:c.x,y:c.y,w:400,h:260,rot:0,fill:'#E3E6EA',noStroke:true,r:0,dummy:true,name:'ダミー画像'};
+  d.shapes.push(s);
+  wireSel=[s.id];selAnchor=null;
+  save();renderWire();renderLayerPanel();
+  toast('ダミー画像を置きました。選んで Ctrl+V(または「図形の中の画像」)で本物の画像に差し替えられます');
+}
 $('#wireImgInput').addEventListener('change',e=>{
   const f=e.target.files[0];
   if(f)addImageFromBlob(f);
