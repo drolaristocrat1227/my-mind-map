@@ -2939,7 +2939,7 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-27.8';
+const APP_VERSION='2026-10-27.9';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -7446,11 +7446,13 @@ function siteJs(){
     var H=screenH()/k,add=0,m=24;
     vh.secs.forEach(function(s){
       if(s.grow){s.d=growApply(s);add+=s.d;return;}
-      /* 中身が切れない高さより低くはしない */
-      var T=Math.max(H,s.cb-s.ct+m*2);
-      if(s.al==='top')T=Math.max(T,s.cb+m);
-      else if(s.al==='bottom')T=Math.max(T,s.h-s.ct+m);
-      else T=Math.max(T,s.h-2*s.ct+2*m,2*s.cb-s.h+2*m);
+      /* 中身が切れない高さより低くはしない。上下の余白は 24px、ただしデザインでそれより端に置いた物はその余白のまま
+         (端に置いた物に 24px を強制すると、区画がデザインより伸びてしまう) */
+      var mt=Math.min(m,Math.max(0,s.ct)),mb=Math.min(m,Math.max(0,s.h-s.cb));
+      var T=Math.max(H,s.cb-s.ct+mt+mb);
+      if(s.al==='top')T=Math.max(T,s.cb+mb);
+      else if(s.al==='bottom')T=Math.max(T,s.h-s.ct+mt);
+      else T=Math.max(T,s.h-2*s.ct+2*mt,2*s.cb-s.h+2*mb);
       s.d=T-s.h;
       s.el.style.height=T+'px';
       if(s.inn)s.inn.style.top=(s.al==='top'?0:s.al==='bottom'?s.d:s.d/2)+'px';
@@ -18418,8 +18420,10 @@ function vhEditorAll(d){
     /* 中身が切れない高さより低くはしない(書き出したページと同じ余白 24px) */
     const m=24;let T=vhTargetH(d,page);
     if(rest.length){
-      T=Math.max(T,cb-ct+m*2);
-      if(sec.vh==='top')T=Math.max(T,cb+m);else if(sec.vh==='bottom')T=Math.max(T,sec.h-ct+m);else T=Math.max(T,sec.h-2*ct+2*m,2*cb-sec.h+2*m);
+      /* 端に置いた物(余白 24px 未満)は、その余白のまま(書き出したページと同じ。置き直すたびに伸びないように) */
+      const mt=Math.min(m,Math.max(0,ct)),mb=Math.min(m,Math.max(0,sec.h-cb));
+      T=Math.max(T,cb-ct+mt+mb);
+      if(sec.vh==='top')T=Math.max(T,cb+mb);else if(sec.vh==='bottom')T=Math.max(T,sec.h-ct+mt);else T=Math.max(T,sec.h-2*ct+2*mt,2*cb-sec.h+2*mb);
     }
     const dH=Math.round(T-sec.h);
     if(Math.abs(dH)<1)return;
