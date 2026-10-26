@@ -1870,6 +1870,12 @@ kbd{
       <button class="seg" data-align="center">中央揃え</button>
       <button class="seg" data-align="right">右揃え</button>
     </div>
+    <div class="menu-label" id="txTspLabel">文字詰め(、。「」などの空き)</div>
+    <div class="segRow" id="txTspRow" role="radiogroup">
+      <button class="seg" data-tsp="none" role="radio">詰めない</button>
+      <button class="seg" data-tsp="punct" role="radio" title="、。「」()などの記号の空きだけ半分に詰めます">約物だけ</button>
+      <button class="seg" data-tsp="palt" role="radio" title="フォントの設計に合わせて、すべての文字を詰めます(プロポーショナル詰め)">全体を詰める</button>
+    </div>
     <div class="radRow" id="txLsRow"><span class="radLbl" title="文字と文字の間隔(カーニング)">文字間隔</span><input type="range" id="txLs" min="-20" max="60" step="0.5" value="0"><input type="number" class="radNum" id="txLsV" min="-20" max="60" step="0.5" value="0"></div>
     <div class="radRow" id="txLhRow"><span class="radLbl">行間</span><input type="range" id="txLh" min="0.8" max="3" step="0.05" value="1.35"><span class="radNum" id="txLhV">×1.35</span></div>
     <!-- たまにしか触らない文字組みはまとめて折りたたむ -->
@@ -2944,7 +2950,7 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-28.1';
+const APP_VERSION='2026-10-28.2';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -5578,6 +5584,15 @@ function siteText(s,o,tag,attrs,cls){
     `color:${cssCol(s.fill||'var(--ink)',fa)}`,
     `font-family:${cssFont(base.ff)}`,`font-size:${cssNum(base.fs)}px`,`font-weight:${base.fw}`];
   if(base.ls)st.push(`letter-spacing:${cssNum(base.ls)}px`);
+  const tsp=tspOf(s);
+  if(tsp==='palt')st.push("font-feature-settings:'palt'");
+  /* 約物だけ詰める: 編集画面で詰めた約物を、余白を負にした span で包む(どのブラウザでも同じに詰まる) */
+  const tspT=(t,a)=>tsp!=='punct'?escXml(t):[...t].map(ch=>{
+    const p=tspPunct(ch);
+    if(!p||!(charMetrics(ch,a).w>a.fs*0.9))return escXml(ch);
+    const ml=p.shift?`margin-left:-${p.shift}em;`:'',mr=p.cut-p.shift?`margin-right:-${p.cut-p.shift}em`:'';
+    return`<span style="${ml}${mr}">${escXml(ch)}</span>`;
+  }).join('');
   if(hasSh(s))st.push('text-shadow:'+cssShadows(s,true));
   if(s.blur)st.push(`filter:blur(${cssNum(s.blur/2)}px)`);
   const align=s.align||'center';
@@ -5610,7 +5625,7 @@ function siteText(s,o,tag,attrs,cls){
       let t;
       if(perChar)t=[...r.t].map(ch=>{const i=ci++;const x=fx.t==='scatter'?`;--sx:${Math.round((rnd(i,1)-.5)*260)}px;--sy:${Math.round((rnd(i,2)-.5)*180)}px;--sr:${Math.round((rnd(i,3)-.5)*200)}deg`:'';return`<span class="nt-ch" style="--i:${i}${x}">${escXml(ch)}</span>`;}).join('');
       else if(fx&&fx.t==='drum')t=[...r.t].map(ch=>/[0-9]/.test(ch)?`<span class="nt-dg" style="--n:${+ch+10};--i:${ci++}">${ch}</span>`:escXml(ch)).join('');
-      else t=escXml(r.t);
+      else t=tspT(r.t,r.a);
       return d.length?`<span style="${d.join(';')}">${t}</span>`:t;
     }).join('');
     inners.push(inner);
@@ -11457,8 +11472,8 @@ function textCharsSvg(s,L,extraFn){
   return L.chars.map(c=>{
     const sk=c.a.it?` skewX(${-c.a.it})`:'';
     const rot=c.a.rot?` rotate(${c.a.rot})`:'';
-    const g=s.vert?`translate(${c.cx} ${c.cy})${rot}${sk}`:`translate(${c.cx} ${c.by})${rot}${sk}`;
-    return`<text transform="${g}" x="0" y="0" font-size="${c.a.fs}" font-weight="${c.a.fw}" font-family='${fontStack(c.a.ff)}'${extraFn?extraFn(c):''} text-anchor="${s.vert?'middle':'start'}"${s.vert?' dominant-baseline="central"':''} style="user-select:none;white-space:pre">${escXml(c.ch)}</text>`;
+    const g=s.vert?`translate(${c.cx} ${c.cy})${rot}${sk}`:`translate(${c.cx+(c.gx||0)} ${c.by})${rot}${sk}`;
+    return`<text transform="${g}" x="0" y="0" font-size="${c.a.fs}" font-weight="${c.a.fw}" font-family='${fontStack(c.a.ff)}'${extraFn?extraFn(c):''} text-anchor="${s.vert?'middle':'start'}"${s.vert?' dominant-baseline="central"':''} style="user-select:none;white-space:pre${tspOf(s)==='palt'?";font-feature-settings:'palt'":''}">${escXml(c.ch)}</text>`;
   }).join('');
 }
 /* フレームの名前とピクセル数(上に表示)。図形で覆われても
@@ -12141,6 +12156,40 @@ function charMetrics(ch,a){
     desc:m.fontBoundingBoxDescent||a.fs*0.12
   };
 }
+/* ---- 文字詰め ----
+   約物だけ: 全角の約物の空き(半文字)を詰める。閉じ(、。」)は右を、開き(「()は左を、中点(・：)は左右を詰める。
+   全体を詰める: フォントの palt(プロポーショナル詰め)。送り幅は実際に palt を付けて測る(書き出しと同じ幅になる) */
+const TSP_CLOSE='、。，．」』）】〕〉》｝］',TSP_OPEN='「『（【〔〈《｛［',TSP_MID='・：；';
+const tspOf=s=>s&&!s.vert&&(s.tsp==='punct'||s.tsp==='palt')?s.tsp:'';
+/* 約物の詰め方: 戻り値 {cut:詰める量(em), shift:文字を左へずらす量(em)} */
+function tspPunct(ch){
+  if(TSP_CLOSE.includes(ch))return{cut:.5,shift:0};
+  if(TSP_OPEN.includes(ch))return{cut:.5,shift:.5};
+  if(TSP_MID.includes(ch))return{cut:.5,shift:.25};
+  return null;
+}
+const paltCache=new Map();
+function paltWidth(ch,a){
+  const k=a.ff+'|'+a.fw+'|'+ch;
+  let w=paltCache.get(k);
+  if(w===undefined){
+    const el=paltWidth.el||(paltWidth.el=Object.assign(document.createElement('span'),{style:'position:absolute;left:-9999px;top:0;visibility:hidden;white-space:pre;font-size:100px;font-feature-settings:"palt"'}));
+    if(!el.isConnected)document.body.appendChild(el);
+    el.style.fontFamily=fontStack(a.ff);el.style.fontWeight=a.fw;el.textContent=ch;
+    w=el.getBoundingClientRect().width/100;
+    paltCache.set(k,w);
+  }
+  return w*a.fs;
+}
+/* Webフォントを読み終えたら測り直す */
+if(document.fonts)document.fonts.addEventListener('loadingdone',()=>paltCache.clear());
+/* 文字の送り幅(詰めを含む)と、文字を左へずらす量 */
+function charAdv(s,ch,a,m){
+  const t=tspOf(s);
+  if(t==='palt'&&ch!==' ')return{w:paltWidth(ch,a),gx:0};
+  if(t==='punct'){const p=tspPunct(ch);if(p&&m.w>a.fs*0.9)return{w:m.w-a.fs*p.cut,gx:-a.fs*p.shift};}
+  return{w:m.w,gx:0};
+}
 /* 文字ごとのローカル座標を出す唯一の計算元。
    横書き: 行を縦に積む / 縦書き: 列を右から左へ積む。
    s.lh=行送り(一番大きい文字に対する倍率)、s.va=文字の縦の揃え(既定 bottom=ベースライン) */
@@ -12163,9 +12212,9 @@ function textLayout(s){
       if(!ln.length){wrapped.push(ln);return;}
       let row=[],pos=0;
       ln.forEach(c=>{
-        const m=charMetrics(c.ch,c.a);
-        if(row.length&&pos+m.w>s.wrapW){wrapped.push(row);row=[];pos=0;}
-        row.push(c);pos+=m.w+c.a.ls;
+        const m=charMetrics(c.ch,c.a),aw=charAdv(s,c.ch,c.a,m).w;
+        if(row.length&&pos+aw>s.wrapW){wrapped.push(row);row=[];pos=0;}
+        row.push(c);pos+=aw+c.a.ls;
       });
       wrapped.push(row);
     });
@@ -12176,7 +12225,8 @@ function textLayout(s){
     let pos=0,maxFs=0,A=0,D=0;
     ln.forEach(c=>{
       const m=charMetrics(c.ch,c.a);
-      c.adv=s.vert?c.a.fs*1.05:m.w;
+      const ad=s.vert?{w:c.a.fs*1.05,gx:0}:charAdv(s,c.ch,c.a,m);
+      c.adv=ad.w;c.gx=ad.gx;
       c.asc=m.asc;c.desc=m.desc;
       c.pos=pos;
       pos+=c.adv+c.a.ls;
@@ -12266,7 +12316,7 @@ function addShape(type){
   if(type==='line')s={id:uid(),type,x:c.x,y:c.y,w:160,h:0,rot:0,fill:null};
   else if(type==='rect')s={id:uid(),type,x:c.x,y:c.y,w:120,h:120,rot:0,fill:'#D7DBE2',noStroke:true,r:0}; /* 正方形で出現 */
   else if(type==='ellipse')s={id:uid(),type,x:c.x,y:c.y,w:120,h:120,rot:0,fill:'#D7DBE2',noStroke:true};
-  else{s={id:uid(),type:'text',x:c.x,y:c.y,w:0,h:0,rot:0,fill:null,text:'テキスト',fs:18,fw:400};measureWText(s);}
+  else{s={id:uid(),type:'text',x:c.x,y:c.y,w:0,h:0,rot:0,fill:null,text:'テキスト',fs:18,fw:400,tsp:'punct'};measureWText(s);}
   d.shapes.push(s);
   wireSel=[s.id];
   save();renderWire();
@@ -12280,7 +12330,7 @@ function addHeading(n){
   exitPen();exitEraser();exitBrush();
   pushUndo();
   const c=s2w(viewW()/2,viewH()/2);
-  const s={id:uid(),type:'text',x:c.x,y:c.y,w:0,h:0,rot:0,fill:null,text:n===1?'大見出し':n===3?'小見出し':'見出し',fs:HEAD_FS[n],fw:n<=2?800:700,tag:'h'+n};
+  const s={id:uid(),type:'text',x:c.x,y:c.y,w:0,h:0,rot:0,fill:null,text:n===1?'大見出し':n===3?'小見出し':'見出し',fs:HEAD_FS[n],fw:n<=2?800:700,tag:'h'+n,tsp:'punct'};
   measureWText(s);
   d.shapes.push(s);
   wireSel=[s.id];
@@ -19355,6 +19405,21 @@ function ctxArrange(){
   more.style.display=vis?'block':'none';
   more.querySelector('.mCnt').textContent=vis?'('+vis+')':'';
 }
+/* ---- 文字詰め(詰めない/約物だけ/全体を詰める) ---- */
+$('#txTspRow').addEventListener('click',e=>{
+  const b=e.target.closest('[data-tsp]');if(!b)return;
+  const ss=selShapes().filter(x=>!x.locked&&x.type==='text');if(!ss.length)return;
+  pushUndo();
+  ss.forEach(x=>{if(b.dataset.tsp==='none')delete x.tsp;else x.tsp=b.dataset.tsp;measureWText(x);});
+  save();renderWire();updateStyleMenu();
+});
+function tspSync(){
+  const ts=selShapes().filter(x=>x.type==='text');
+  const vert=ts.length&&ts.every(x=>x.vert);
+  $('#txTspRow').style.display=$('#txTspLabel').style.display=ts.length&&!vert?'':'none';
+  const v=ts.length?(ts[0].tsp||'none'):'';
+  $('#txTspRow').querySelectorAll('.seg').forEach(x=>x.classList.toggle('active',x.dataset.tsp===v));
+}
 /* ---- 操作の見直し(第3段階): 使っていない設定は「＋」で足す ----
    元の「あり/なし」ボタンをそのまま押して切り替える(元に戻す・保存はこれまでと同じ)。
    あり/なしを切り替えられない物(線など)の時は、これまで通りの表示にする */
@@ -19471,7 +19536,7 @@ let rngDrag=false;
 {
   const _usm=updateStyleMenu;
   let usmQ=0;
-  const run=()=>{const r=_usm();try{ctxArrange();scrubSync($('#fillMenu'));addSync();}catch(e){console.error(e);}return r;};
+  const run=()=>{const r=_usm();try{ctxArrange();scrubSync($('#fillMenu'));addSync();tspSync();}catch(e){console.error(e);}return r;};
   updateStyleMenu=function(){
     if(rngDrag){if(!usmQ)usmQ=requestAnimationFrame(()=>{usmQ=0;run();});return;}
     return run();
