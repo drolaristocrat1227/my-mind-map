@@ -1896,6 +1896,12 @@ kbd{
     </div>
     <div class="radRow" id="txLsRow"><span class="radLbl" title="文字と文字の間隔(カーニング)">文字間隔</span><input type="range" id="txLs" min="-20" max="60" step="0.5" value="0"><input type="number" class="radNum" id="txLsV" min="-20" max="60" step="0.5" value="0"></div>
     <div class="radRow" id="txLhRow"><span class="radLbl">行間</span><input type="range" id="txLh" min="0.8" max="3" step="0.05" value="1.35"><span class="radNum" id="txLhV">×1.35</span></div>
+    <div class="menu-label" id="txWrapLabel">折り返し</div>
+    <div class="segRow" id="txWrapOnRow" role="radiogroup">
+      <button class="seg" data-wrapon="0" role="radio">しない</button>
+      <button class="seg" data-wrapon="1" role="radio" title="決めた幅で折り返します。キャンバスでテキストの左右の辺をドラッグしても幅を変えられます">幅で折り返す</button>
+    </div>
+    <div class="numRow" id="txWrapRow"><span class="radLbl">幅</span><input type="number" id="txWrap" min="20" max="20000" step="1"><span class="unit">px</span></div>
     <!-- たまにしか触らない文字組みはまとめて折りたたむ -->
     <div id="txDetailSec">
       <div class="menu-label">文字組みの詳細</div>
@@ -1903,7 +1909,6 @@ kbd{
         <button class="seg" data-dir="h">横書き</button>
         <button class="seg" data-dir="v">縦書き</button>
       </div>
-      <div class="numRow" id="txWrapRow"><span class="radLbl">折り返し幅</span><input type="number" id="txWrap" min="0" max="20000" step="1" placeholder="指定なし"><span class="unit">px</span></div>
       <div class="menu-label" id="txVaLabel">文字の縦の揃え</div>
       <div class="segRow" id="txVaRow">
         <button class="seg" data-va="top">上</button>
@@ -2968,7 +2973,7 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-28.6';
+const APP_VERSION='2026-10-28.7';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -11545,7 +11550,8 @@ function frameClipDefs(f){
 function handlesFor(s){
   if(s.type==='line')return[[-1,0],[1,0]];
   if(isFrame(s)&&s.sizeLock)return[];   /* ピクセル固定中はドラッグで変えられない */
-  if(s.type==='text')return[[-1,-1],[1,-1],[-1,1],[1,1]];
+  /* テキスト: 四隅は文字の大きさ、左右の辺は幅(折り返し)。縦書きは四隅だけ */
+  if(s.type==='text')return s.vert?[[-1,-1],[1,-1],[-1,1],[1,1]]:[[-1,-1],[1,-1],[-1,0],[1,0],[-1,1],[1,1]];
   return[[-1,-1],[0,-1],[1,-1],[-1,0],[1,0],[-1,1],[0,1],[1,1]];
 }
 function selSvg(s){
@@ -13649,7 +13655,7 @@ function lockToggle(){
 /* ---------- ポインタ操作 ---------- */
 function startResize(s,sx,sy){
   const al=rotV({x:-sx*s.w/2,y:-sy*s.h/2},s.rot||0);
-  const d={mode:'resize',s,sx,sy,ax:s.x+al.x,ay:s.y+al.y,w0:s.w,h0:s.h,fs0:s.fs};
+  const d={mode:'resize',s,sx,sy,ax:s.x+al.x,ay:s.y+al.y,w0:s.w,h0:s.h,fs0:s.fs,wrapW0:s.wrapW};
   /* テキストを引き伸ばすときは文字ごとのサイズも同じ比率で動かす */
   if(s.type==='text'&&s.cattr)d.cattr0=s.cattr.map(c=>c?{...c}:c);
   const cp=a=>a.map(p=>({x:p.x,y:p.y,h1:p.h1&&{...p.h1},h2:p.h2&&{...p.h2}}));
@@ -14157,10 +14163,17 @@ wireView.addEventListener('pointermove',e=>{
   if(wDrag.mode==='resize'){
     const{s,sx,sy,ax,ay}=wDrag;
     const dl=rotV({x:p.x-ax,y:p.y-ay},-(s.rot||0));
-    if(s.type==='text'){
+    if(s.type==='text'&&!s.vert&&sx&&!sy){
+      /* 左右の辺: テキストの幅を変えて、その幅で折り返す */
+      const pad=(olW1(s)+olW2(s))*2;
+      s.wrapW=Math.max(20,dl.x*sx-pad);delete s.wrapAuto;
+      measureWText(s);
+    }else if(s.type==='text'){
       /* 等倍スケール(フォントサイズを変更) */
       const k=Math.max(0.2,(sx?dl.x*sx:dl.y*sy)/(wDrag.w0||1));
       s.fs=clamp(wDrag.fs0*k,8,200);
+      /* 折り返している文章は、折り返し幅も同じ比率で(行の区切りが変わらないように) */
+      if(wDrag.wrapW0)s.wrapW=Math.max(20,wDrag.wrapW0*s.fs/(wDrag.fs0||1));
       if(wDrag.cattr0){
         const r=s.fs/(wDrag.fs0||1);
         s.cattr=wDrag.cattr0.map(c=>
@@ -15691,8 +15704,24 @@ $('#txWrap').addEventListener('pointerdown',e=>e.stopPropagation());
 $('#txWrap').addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter')e.target.blur();});
 $('#txWrap').addEventListener('change',()=>{
   const v=+$('#txWrap').value;
-  selShapes().forEach(x=>{if(x.type==='text')delete x.wrapAuto;});
-  setBlockAttr('wrapW',(isNaN(v)||v<=0)?undefined:v);
+  const ts=selShapes().filter(x=>x.type==='text'),lefts=ts.map(x=>x.x-x.w/2);
+  ts.forEach(x=>delete x.wrapAuto);
+  setBlockAttr('wrapW',(isNaN(v)||v<=0)?undefined:Math.max(20,v));
+  /* 左揃えの文章を読みやすいよう、幅を変えても左端はそのまま */
+  ts.forEach((x,i)=>{x.x=lefts[i]+x.w/2;});
+  renderWire();updateStyleMenu();
+});
+/* 折り返し しない / 幅で折り返す。折り返す時は、今の幅をそのまま折り返し幅にする(見た目が変わらないように) */
+$('#txWrapOnRow').addEventListener('click',e=>{
+  const b=e.target.closest('[data-wrapon]');if(!b)return;
+  const ss=selShapes().filter(x=>!x.locked&&x.type==='text'&&!x.vert);if(!ss.length)return;
+  pushUndo();
+  ss.forEach(x=>{
+    delete x.wrapAuto;
+    if(b.dataset.wrapon==='1'){if(!x.wrapW){const l=x.x-x.w/2;x.wrapW=Math.max(20,Math.ceil(textLayout(x).along));measureWText(x);x.x=l+x.w/2;}}
+    else if(x.wrapW){const l=x.x-x.w/2;delete x.wrapW;measureWText(x);x.x=l+x.w/2;}
+  });
+  save();renderWire();updateStyleMenu();
 });
 $('#txLh').addEventListener('pointerdown',e=>{e.stopPropagation();pushUndo();});
 $('#txLh').addEventListener('input',()=>{
@@ -16566,7 +16595,9 @@ function updateStyleMenu(){
     $('#txAlignRow').style.display=showVa?'flex':'none';
     document.querySelectorAll('#txAlignRow .seg').forEach(b=>
       b.classList.toggle('active',b.dataset.align===(t0.align||'center')));
-    $('#txWrapRow').style.display=showVa?'flex':'none';
+    $('#txWrapLabel').style.display=$('#txWrapOnRow').style.display=showVa?'':'none';
+    $('#txWrapRow').style.display=showVa&&t0.wrapW?'flex':'none';
+    document.querySelectorAll('#txWrapOnRow .seg').forEach(x=>x.classList.toggle('active',(x.dataset.wrapon==='1')===!!t0.wrapW));
     if(document.activeElement!==$('#txWrap'))$('#txWrap').value=t0.wrapW?Math.round(t0.wrapW):'';
     $('#txTargetLabel').innerHTML=rng
       ?`▼ ここから下は<b>選んだ ${rng.b-rng.a+1} 文字</b>に効きます`
