@@ -3030,7 +3030,7 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-30.8';
+const APP_VERSION='2026-10-30.9';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -7612,19 +7612,23 @@ function siteJs(){
   function vhApply(v,k,h){
     if(v.__vh===undefined)v.__vh=vhPrep(v);
     var vh=v.__vh;if(!vh)return h;
-    var H=screenH()/k,add=0,m=24;
+    var H=screenH()/k,add=0,m=24,first=true;
     vh.secs.forEach(function(s){
       if(s.grow){s.d=growApply(s);if(!s.nested)add+=s.d;return;}
+      /* ページで最初の区画で、上にヘッダーなどがある時は、その分を引いた高さにする(ヘッダーと合わせて画面いっぱい) */
+      var Hs=H;
+      if(first&&s.top>0&&s.top<H*0.5)Hs=H-s.top;
+      first=false;
       /* 中身が切れない高さより低くはしない。上下の余白は 24px、ただしデザインでそれより端に置いた物はその余白のまま
          (端に置いた物に 24px を強制すると、区画がデザインより伸びてしまう) */
       var mt=Math.min(m,Math.max(0,s.ct)),mb=Math.min(m,Math.max(0,s.h-s.cb));
-      var T=Math.max(H,s.cb-s.ct+mt+mb);
-      if(s.al==='top')T=Math.max(T,s.cb+mb);
-      else if(s.al==='bottom')T=Math.max(T,s.h-s.ct+mt);
-      else T=Math.max(T,s.h-2*s.ct+2*mt,2*s.cb-s.h+2*mb);
+      var T=Math.max(Hs,s.cb-s.ct+mt+mb);
       s.d=T-s.h;
       s.el.style.height=T+'px';
-      if(s.inn)s.inn.style.top=(s.al==='top'?0:s.al==='bottom'?s.d:s.d/2)+'px';
+      /* そろえ方どおりにずらす。画面が低くてそのままでは切れる時は、中身が収まる所までずらす */
+      var sh0=s.al==='top'?0:s.al==='bottom'?s.d:s.d/2;
+      sh0=Math.max(mt-s.ct,Math.min(T-mb-s.cb,sh0));
+      if(s.inn)s.inn.style.top=sh0+'px';
       s.fills.forEach(function(f){f.el.style.top=(f.top/s.h*T)+'px';f.el.style.height=(f.h/s.h*T)+'px';});
       add+=s.d;
     });
@@ -19060,15 +19064,20 @@ function vhEditorAll(d){
     if(cy){ct=cy.y1-top;cb=cy.y2-top;}
     /* 中身が切れない高さより低くはしない(書き出したページと同じ余白 24px) */
     const m=24;let T=vhTargetH(d,page);
+    /* ページで最初の区画で、上にヘッダーなどがある時は、その分を引いた高さ(書き出したページと同じ) */
+    {const off=top-(page.y-page.h/2),firstVh=!sh.some((x,j)=>j!==i&&x.vh&&isFrame(x)&&par[j]===page&&x.y-x.h/2<top);
+     if(firstVh&&off>0&&off<T*0.5)T=Math.round(T-off);}
+    let mt=0,mb=0;
     if(cy){
       /* 端に置いた物(余白 24px 未満)は、その余白のまま(書き出したページと同じ。置き直すたびに伸びないように) */
-      const mt=Math.min(m,Math.max(0,ct)),mb=Math.min(m,Math.max(0,sec.h-cb));
+      mt=Math.min(m,Math.max(0,ct));mb=Math.min(m,Math.max(0,sec.h-cb));
       T=Math.max(T,cb-ct+mt+mb);
-      if(sec.vh==='top')T=Math.max(T,cb+mb);else if(sec.vh==='bottom')T=Math.max(T,sec.h-ct+mt);else T=Math.max(T,sec.h-2*ct+2*mt,2*cb-sec.h+2*mb);
     }
     const dH=Math.round(T-sec.h);
     if(Math.abs(dH)<1)return;
-    const shift=sec.vh==='top'?0:sec.vh==='bottom'?dH:dH/2;
+    let shift=sec.vh==='top'?0:sec.vh==='bottom'?dH:dH/2;
+    /* そのままでは切れる時は、中身が収まる所までずらす */
+    if(cy)shift=Math.max(mt-ct,Math.min(sec.h+dH-mb-cb,shift));
     const oldBottom=top+sec.h;
     /* 区画の下にある物(ページの中)を、伸びた分だけずらす(下のセクションが伸びた区画の後ろに潜らないように) */
     {
