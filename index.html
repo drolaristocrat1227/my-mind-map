@@ -2166,6 +2166,7 @@ kbd{
   <button class="mi" data-img="file"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="M4.5 17l4.5-4.5 3 3 3.5-3.5 4 4"/></svg>画像を追加(Ctrl+Vで貼り付けも可)</button>
   <button class="mi" data-img="dummy"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="2" stroke-dasharray="3 2"/><circle cx="9.5" cy="10" r="1.5"/><path d="M6.5 16.5l3.5-3.5 2.5 2.5 2-2 3 3"/></svg>ダミー画像を追加(あとで画像に差し替え)</button>
 </div>
+<div id="layerCtxMenu" class="menu glass"></div>
 <div id="partsMenu" class="menu glass">
   <div class="menu-label">UIパーツを追加</div>
   <div id="partsList"></div>
@@ -2985,7 +2986,7 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-29.6';
+const APP_VERSION='2026-10-29.7';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -12721,11 +12722,14 @@ function delSel(){
     return;
   }
   const ss=selShapes();if(!ss.length)return;
-  const del=ss.filter(s=>!s.locked);
-  if(!del.length){toast('固定された図形は削除できません');return;}
+  const del0=ss.filter(s=>!s.locked);
+  if(!del0.length){toast('固定された図形は削除できません');return;}
+  /* ページ・セクション・コンテナを消す時は、中に入っている物(入れ子も)も一緒に消す */
+  const del=withFrameChildren(del0);
   pushUndo();
   const d=curDoc();
   d.shapes=d.shapes.filter(s=>!del.includes(s));
+  renderLayerPanel();
   wireSel=[];
   save();renderWire();
   if(del.length<ss.length)toast('固定された図形は残しました');
@@ -15929,6 +15933,25 @@ $('#layerList').addEventListener('click',e=>{
   if(e.target.closest('.lr-grip'))return;
   if(s.hidden)return;   /* 非表示中は目のボタンから戻すまで選べない */
   if(!wireSel.includes(id)){wireSel=[id];selAnchor=null;renderWire();updateStyleMenu();}
+});
+/* 右クリック: コピー・複製・削除(押した行を選んでから) */
+$('#layerCtxMenu').innerHTML=buildMenuItems([
+  {act:'copy',label:'コピー',kbd:'Ctrl+C',icon:'<svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>'},
+  {act:'dup',label:'複製(同じ入れ物の中に)',btn:'wireDupBtn',kbd:'Ctrl+D'},
+  {act:'delete',label:'削除(中身も一緒に)',btn:'wireDelBtn',kbd:'Delete'}
+]);
+$('#layerList').addEventListener('contextmenu',e=>{
+  const row=e.target.closest('.layerRow');if(!row)return;
+  e.preventDefault();
+  const id=row.dataset.id,s=shapeById(id);if(!s)return;
+  if(!wireSel.includes(id)){wireSel=groupIds?groupIds(s):[id];selAnchor=null;renderWire();updateStyleMenu();}
+  openMenuAt($('#layerCtxMenu'),e.clientX,e.clientY);
+});
+$('#layerCtxMenu').addEventListener('click',e=>{
+  const mi=e.target.closest('.mi');if(!mi)return;
+  hideMenus();
+  wireAction(mi.dataset.act);
+  renderLayerPanel();
 });
 $('#layerList').addEventListener('input',e=>{
   const inp=e.target.closest('.lr-name');if(!inp)return;
