@@ -2986,7 +2986,7 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-29.8';
+const APP_VERSION='2026-10-29.9';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -13749,6 +13749,15 @@ function startGroupResize(ss,sx,sy){
   });
   return{mode:'gresize',sx,sy,ax,ay,bw0:bw,bh0:bh,items};
 }
+/* キャンバスの上では、ブラウザ自身のドラッグ(画像・リンク・選択した文字を持ち上げる動き)を起こさない。
+   起きると駐車禁止のカーソルになり、図形を動かす操作が止まってしまう */
+wireView.addEventListener('dragstart',e=>e.preventDefault(),true);
+wireView.addEventListener('pointerdown',e=>{
+  if(e.button===0&&!e.target.closest('input,textarea,[contenteditable],foreignObject')){
+    const sel=window.getSelection&&window.getSelection();
+    if(sel&&sel.rangeCount&&!sel.isCollapsed)sel.removeAllRanges();
+  }
+},true);
 wireView.addEventListener('pointerdown',e=>{
   if(e.button===2)return;   /* 右クリックは contextmenu で処理する */
   hidePopups();   /* スタイルパネルは開いたままにする */
