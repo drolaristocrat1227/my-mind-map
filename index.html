@@ -2986,7 +2986,7 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-29.7';
+const APP_VERSION='2026-10-29.8';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -17029,7 +17029,7 @@ function initColl(){
   /* [id, 見出し, 既定で開く?]
      並びは「よく触る順」。開いておくのは、選んだ直後にそのまま調整したい所だけ。
      位置・角度は数値入力より直接ドラッグで動かす方が多いので既定は閉じる */
-  [['posSec','位置・角度',false],
+  [['posSec','位置・角度',true],
    ['gradSec','塗りのスタイル・グラデーション',false],
    ['strokeSec','枠線・線',true],
    ['radiusSec','角の丸み',true],
@@ -19644,14 +19644,14 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&stEl().classList.contains('o
 const CTX_ALL=['frameSec','sizeSec','posSec','webSec','uiPart','mapPart','btnPart','icoPart','textSec','fillSec','gradSec','strokeSec','radiusSec','shadowSec','blurSec','imgFillSec','aspectSec','imgFxSec','toPathSec','refineSec'];
 /* 種類ごとに上へ出す物(よく使う順) */
 const CTX_ORDER={
-  btn:['btnPart','sizeSec','webSec'],
-  ui:['uiPart','sizeSec','webSec'],
-  gmap:['mapPart','sizeSec','webSec'],
-  text:['textSec','fillSec','webSec'],
+  btn:['btnPart','sizeSec','posSec','webSec'],
+  ui:['uiPart','sizeSec','posSec','webSec'],
+  gmap:['mapPart','sizeSec','posSec','webSec'],
+  text:['textSec','fillSec','posSec','webSec'],
   frame:['frameSec','webSec','fillSec'],
-  image:['sizeSec','imgFillSec','aspectSec','imgFxSec','webSec'],
-  icon:['icoPart','fillSec','sizeSec','webSec'],
-  shape:['fillSec','sizeSec','radiusSec','strokeSec','webSec'],
+  image:['sizeSec','posSec','imgFillSec','aspectSec','imgFxSec','webSec'],
+  icon:['icoPart','fillSec','sizeSec','posSec','webSec'],
+  shape:['fillSec','sizeSec','posSec','radiusSec','strokeSec','webSec'],
   multi:['fillSec','sizeSec','webSec']
 };
 /* その種類では効かない物は出さない(ボタン・地図は、塗りや枠線を自分の設定で決める) */
