@@ -2986,7 +2986,7 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-29.9';
+const APP_VERSION='2026-10-30.1';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -6452,6 +6452,51 @@ function spAnchorX(pb,b,ox,W,w){
   if(Math.abs(lg-rg)<pb.w*0.12)return ox+(W-w)/2;
   return lg<rg?ox+SPM:ox+W-SPM-w;
 }
+/* 自動で並べる入れ物(ページ・セクション・コンテナ)の並べ方を、スマホの幅に合わせて直す。
+   PCの設定のままだと、書き込んだ位置を自動整列が並べ直して、横並びの中身が幅の外へはみ出すため。
+   ・左右の内側の余白・すき間を詰める
+   ・横並びが幅に収まらない時は縦並びにして、中身を幅いっぱいに(縦の区切り線は横線に)
+   nf=複製した入れ物 / at=ctx.out の中の nf の位置(その後ろが中身)。返り値は入れ物の高さ */
+function spFixLay(ctx,nf,at,W){
+  if(!nf.lay)return nf.h;
+  const L=nf.lay=JSON.parse(JSON.stringify(nf.lay));
+  const p=q4(L.pad);L.pad=[Math.min(p[0],40),Math.min(p[1],SPM),Math.min(p[2],40),Math.min(p[3],SPM)];
+  L.gap=Math.min(+L.gap||0,24);
+  const sub=ctx.out.slice(at);
+  let par=layParents(sub);
+  const items=layItems(sub,nf,par);
+  items.forEach(it=>{if(it.m[0].mg){const m=q4(it.m[0].mg);it.m[0].mg=[m[0],Math.min(m[1],SPM),m[2],Math.min(m[3],SPM)];}});
+  if(L.d==='h'){
+    const bs=items.map(layBox);
+    const need=bs.reduce((a,b)=>a+b.w,0)+L.gap*Math.max(0,items.length-1)+L.pad[1]+L.pad[3];
+    if(need>W+0.5){
+      L.d='v';L.ai='stretch';
+      if(L.hug)L.hug={...L.hug,w:false};
+      const iw=W-L.pad[1]-L.pad[3];
+      items.forEach(it=>{
+        const c=it.m[0];
+        if(it.m.length!==1||c.type!=='line')return;
+        const a=((c.rot||0)%180+180)%180;
+        if(Math.abs(a-90)<20){c.rot=0;c.w=iw;}
+      });
+    }
+  }
+  if(L.hug&&L.hug.w&&L.d!=='h')L.hug={...L.hug,w:false};
+  nf.w=W;
+  /* 内側から順に並べ直す(中の入れ物は先に直してある) */
+  for(let pass=0;pass<2;pass++){
+    par=layParents(sub);
+    const depth=sub.map((x,i)=>{let k=0,q=par[i];while(q&&k<50){k++;q=par[sub.indexOf(q)];}return k;});
+    sub.map((x,i)=>i).filter(i=>isFrame(sub[i])&&sub[i].lay).sort((a,b)=>depth[b]-depth[a]).forEach(i=>layFrame(sub,sub[i],par));
+  }
+  /* 中身に合わせない入れ物でも、中身が下へはみ出す時は伸ばす */
+  const ds=frameDescendants(sub,nf).filter(x=>!x.hidden);
+  if(ds.length){
+    const top=nf.y-nf.h/2,bot=Math.max(...ds.map(x=>{const b=layShapeBox(x);return b.y+b.h;}))+L.pad[2];
+    if(bot>top+nf.h){nf.h=bot-top;nf.y=top+nf.h/2;}
+  }
+  return nf.h;
+}
 /* 1つのまとまりを置き、使った高さを返す */
 function spLayoutUnit(ctx,u,pb,ox,y,W){
   const inner=W-SPM*2;
@@ -6460,6 +6505,7 @@ function spLayoutUnit(ctx,u,pb,ox,y,W){
     /* 区画: 幅いっぱいの新しいフレームにして中身を並べ直す */
     const f=u.m[0];
     const nf=spClone(f);nf.rot=0;delete nf.device;
+    const nfAt=ctx.out.length;
     ctx.out.push(nf);
     if(f.scene==='hscroll'){
       /* 横スクロール: 縦に並べ直すと意味が無いので、横並びのまま縮める(画像がスマホ幅の半分強になる程度) */
@@ -6483,7 +6529,7 @@ function spLayoutUnit(ctx,u,pb,ox,y,W){
     const kidsOf=ctx.sh.filter((s,i)=>!s.hidden&&parentFrameAt(ctx.sh,i)===f);
     const H=spLayout(ctx,kidsOf,bx(f),ox,y,W,{header:ctx.isTop(f)});
     nf.w=W;nf.h=H;nf.x=ox+W/2;nf.y=y+H/2;
-    return H;
+    return spFixLay(ctx,nf,nfAt,W);
   }
   if(u.kind==='form'){
     const bg=u.m.find(s=>s.form)||u.m[0];
