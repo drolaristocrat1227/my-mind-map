@@ -3030,7 +3030,7 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-30.7';
+const APP_VERSION='2026-10-30.8';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -7076,7 +7076,7 @@ function sitePageHtml(f,ranges,top){
       const isFill=k=>vhIsFill(sh,s,k);
       /* 中身の範囲(ページ直下へ出す固定の区画は除く) */
       const rest=kids.filter(k=>!isFill(k)&&!(isFrame(k)&&pageWide(k)));
-      const cb=rest.length?cornersBox(rest,0):{y1:io.y+s.h/2,y2:io.y+s.h/2};
+      const cb=vhContentYs(sh,rest)||{y1:io.y+s.h/2,y2:io.y+s.h/2};
       const fillCls=h=>h.replace(/<div class="nt-e"/g,'<div class="nt-e nt-vhfill"');
       const vh=` data-vh="${s.vh}" data-vh-h="${cssNum(s.h)}" data-vh-ct="${cssNum(Math.max(0,cb.y1-io.y))}" data-vh-cb="${cssNum(Math.min(s.h,cb.y2-io.y))}"`;
       return siteWrapUnit(mm,siteAttrs(`<${tg} class="nt-e"${sec}${vh} style="${st}">`,s)
@@ -19017,6 +19017,21 @@ function vhIsFill(sh,sec,k){
   const ds=frameDescendants(sh,k).filter(x=>!x.hidden);
   return ds.length>0&&ds.every(plain);
 }
+/* 高さ画面いっぱいの区画の中身の上下の範囲(ワールド座標)。
+   色・画像・枠線・影の無い透明なコンテナは、箱ではなく中に入れた物で測る
+   (区画と同じ大きさの透明なコンテナに文字を入れると、区画が画面の高さまで縮まず100vhより高くなるため) */
+function vhContentYs(sh,list){
+  const see=f=>isFrame(f)&&!f.imgFill&&!f.grad&&!(f.fill&&f.fill!=='none'&&alphaOf(f,'fill')>0)&&(f.noStroke||!(strokeW(f)>0))&&!hasSh(f);
+  let y1=Infinity,y2=-Infinity;
+  const add=x=>{
+    if(x.hidden)return;
+    if(see(x)){const xi=sh.indexOf(x);sh.forEach((k,i)=>{if(i>xi&&parentFrameAt(sh,i)===x)add(k);});return;}
+    const b=cornersBox(layBlock(sh,x).filter(k=>!k.hidden),0);
+    y1=Math.min(y1,b.y1);y2=Math.max(y2,b.y2);
+  };
+  list.forEach(add);
+  return y1<y2?{y1,y2}:null;
+}
 function vhEditorAll(d){
   const sh=d.shapes;
   if(!sh.some(x=>x.vh&&isFrame(x)))return false;
@@ -19041,10 +19056,11 @@ function vhEditorAll(d){
     const fills=kids.filter(isFill),rest=kids.filter(x=>!isFill(x)&&!(isFrame(x)&&(x.pin==='top'||x.pin==='bottom')));
     const top=sec.y-sec.h/2;
     let ct=0,cb=0;
-    if(rest.length){const b=unionWorldBox(rest.flatMap(x=>layBlock(sh,x)));ct=b.y-top;cb=b.y+b.h-top;}
+    const cy=vhContentYs(sh,rest);
+    if(cy){ct=cy.y1-top;cb=cy.y2-top;}
     /* 中身が切れない高さより低くはしない(書き出したページと同じ余白 24px) */
     const m=24;let T=vhTargetH(d,page);
-    if(rest.length){
+    if(cy){
       /* 端に置いた物(余白 24px 未満)は、その余白のまま(書き出したページと同じ。置き直すたびに伸びないように) */
       const mt=Math.min(m,Math.max(0,ct)),mb=Math.min(m,Math.max(0,sec.h-cb));
       T=Math.max(T,cb-ct+mt+mb);
