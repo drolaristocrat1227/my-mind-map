@@ -3030,7 +3030,7 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-30.3';
+const APP_VERSION='2026-10-30.4';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -5833,12 +5833,9 @@ function addContactForm(){
   exitPen();exitEraser();exitBrush();
   pushUndo();
   const cfg=defaultFormCfg();
-  const W=560;
-  const c=s2w(viewW()/2,viewH()/2);
-  const tmp=buildFormShapes(cfg,0,0,W);
-  const H=tmp[0].h;
-  const shapes=buildFormShapes(cfg,c.x-W/2,c.y-H/2,W);
-  d.shapes.push(...shapes);
+  const W=560,sel0=selShapes();
+  const shapes=buildFormShapes(cfg,0,0,W);
+  d.shapes.push(...shapes);placeNew(shapes,sel0);
   wireSel=shapes.map(s=>s.id);selAnchor=null;
   save();renderWire();
   toast('お問い合わせフォームを追加しました');
@@ -6088,21 +6085,14 @@ function addNewsBox(kind){
   pushUndo();
   const cfg=defaultNewsBox(),blog=kind==='blog';
   if(blog){cfg.layout='card';cfg.count=3;}
-  const sh=d.shapes,sel=selShapes(),p=sel.length===1&&isFrame(sel[0])?sel[0]:null;
+  const sh=d.shapes,sel=selShapes(),t=addTarget(sel),p=t&&t.into;
   /* ブログは記事ごとのページを作る(押すと記事が開く)。ほかのお知らせ欄にも「一覧を見る」が付くので、先に並べ直す */
   const n=siteNews(d);
   if(blog&&!n.blog){n.blog=true;sh.filter(x=>x.nw&&x.nw.role==='box'&&x.news).forEach(x=>rebuildNewsBox(x.news));}
-  let W=blog?1000:720,x0,y0,at=-1;
-  if(p){
-    W=Math.min(W,p.w-48);
-    const its=layItems(sh,p,layParents(sh));
-    const bottom=its.length?Math.max(...its.map(it=>{const b=layBox(it);return b.y+b.h;})):p.y-p.h/2+24;
-    x0=p.x-W/2;y0=bottom+16;at=layAfterLast(sh,p);
-  }else{const c=s2w(viewW()/2,viewH()/2);x0=c.x-W/2;y0=c.y-200;}
-  const H=newsBoxH(cfg,W,n);
-  if(p){const need=y0+H+24-(p.y-p.h/2);if(need>p.h){p.y=p.y-p.h/2+need/2;p.h=need;}}
-  const shapes=buildNewsShapes(d,cfg,x0,y0,W);
-  if(at>=0)sh.splice(at,0,...shapes);else sh.push(...shapes);
+  let W=blog?1000:720;
+  if(p)W=Math.max(200,Math.min(W,p.w-48));
+  const shapes=buildNewsShapes(d,cfg,0,0,W);
+  sh.push(...shapes);placeNew(shapes,sel);
   wireSel=shapes.map(s=>s.id);selAnchor=null;
   save();renderWire();renderLayerPanel();
   toast(blog?'ブログ欄を追加しました(記事ごとのページを作ります。押すと記事が開きます)':'お知らせ欄を追加しました');
@@ -12450,18 +12440,98 @@ function measureWText(s){
   s.w=L.w+pad;s.h=L.h+pad;
   return L;
 }
+/* ---------- 足した要素の置き場所 ----------
+   ・ページ・セクション・コンテナ(フレーム)を選んでいる → その中の一番下
+   ・フレームの中の要素を選んでいる → その要素のすぐ下(同じ入れ物の中。自由に置く入れ物では下の物を押し下げる)
+   ・何も選んでいない・どこにも入っていない要素を選んでいる → マウスの位置(キャンバスの外なら最後に押した所、無ければ画面の真ん中)
+   入れ物が足りなければ伸ばし、外側の入れ物も順に伸ばす */
+let wirePt=null,wirePtIn=false,wireDownPt=null;
+function addCursorWorld(){
+  const p=wirePtIn?wirePt:wireDownPt;
+  if(p&&p.x>=0&&p.y>=0&&p.x<=viewW()&&p.y<=viewH())return s2w(p.x,p.y);
+  return s2w(viewW()/2,viewH()/2);
+}
+function addTarget(sel){
+  const sh=curShapes();if(!sh)return null;
+  const ss=(sel||[]).filter(x=>!x.hidden&&sh.includes(x));
+  if(!ss.length)return null;
+  const g=ss[0].gid;
+  if(ss.length>1&&!(g&&!isFrame(ss[0])&&ss.every(x=>x.gid===g&&!isFrame(x))))return null;
+  const S=ss[0];
+  if(isFrame(S))return{into:S};
+  const P=layParents(sh)[sh.indexOf(S)];
+  return P?{into:P,after:ss}:null;
+}
+const layUnion=ss=>{let x1=1e9,y1=1e9,x2=-1e9,y2=-1e9;ss.forEach(m=>{const b=layShapeBox(m);x1=Math.min(x1,b.x);y1=Math.min(y1,b.y);x2=Math.max(x2,b.x+b.w);y2=Math.max(y2,b.y+b.h);});return{x:x1,y:y1,w:x2-x1,h:y2-y1};};
+/* 入れ物 F を下へ dh 伸ばし、外側へ順に伝える(自由に置く外側では、F より下にある物を同じだけ押し下げる。外側の中身がはみ出せば外側も伸ばす) */
+function growFrame(F,dh){
+  const sh=curShapes(),p0=layParents(sh),pm=new Map(sh.map((x,i)=>[x,p0[i]]));
+  const parArr=()=>sh.map(x=>pm.get(x)||null);   /* 入れ子は伸ばす前のまま数える(押し下げた物が途中で外れないように) */
+  for(let k=0;F&&dh>0.5&&k<30;k++){
+    const oldBot=F.y+F.h/2,A=pm.get(F);
+    const its=A?layItems(sh,A,parArr()):[];
+    const below=its.filter(it=>!it.m.includes(F)&&layBox(it).y>=oldBot-0.5);
+    F.h=layR(F.h+dh);F.y=layR(F.y+dh/2);
+    if(!A)break;
+    /* 下にある物を押し下げる(縦に並べる外側も、並べ直す前に入れ子が変わらないよう先に下げる) */
+    if(!A.lay||A.lay.d!=='h')below.forEach(it=>layMove(sh,it,0,dh));
+    const bot=Math.max(...its.map(it=>{const b=layBox(it);return b.y+b.h;}));
+    dh=layR(bot+frPadB(A)-(A.y+A.h/2));
+    F=A;
+  }
+}
+const frPadB=F=>F.lay?q4(F.lay.pad)[2]:24;
+function itemsBottom(sh,F,par){const its=layItems(sh,F,par);return its.length?Math.max(...its.map(it=>{const b=layBox(it);return b.y+b.h;})):F.y-F.h/2;}
+/* news=足した図形(もう配列に入っている) / sel=足す前に選んでいた物。返り値は入れた入れ物(無ければ null)。
+   入れ物は先に伸ばしてから入れる(中心が入れ物の外に出ると、その入れ物の中身と見なされないため) */
+function placeNew(news,sel){
+  const d=curDoc(),sh=d&&d.shapes;if(!sh||!news.length)return null;
+  news.forEach(x=>{const i=sh.indexOf(x);if(i>=0)sh.splice(i,1);});
+  const t=addTarget(sel);
+  const nb=layUnion(news);
+  let tx,ty,at=sh.length;
+  if(!t){const c=addCursorWorld();tx=c.x-nb.w/2;ty=c.y-nb.h/2;}
+  else{
+    const P=t.into;let par=layParents(sh);
+    const PB=()=>P.y+P.h/2;
+    if(t.after){
+      const dh=nb.h+16;
+      let ab=layUnion(t.after);
+      const lower=P.lay?[]:layItems(sh,P,par).filter(it=>!it.m.some(x=>t.after.includes(x))&&layBox(it).y>=ab.y+ab.h-0.5);
+      const lowBot=lower.length?Math.max(...lower.map(it=>{const b=layBox(it);return b.y+b.h;}))+dh:-1e9;
+      const need=Math.max(ab.y+ab.h+dh,lowBot,itemsBottom(sh,P,par))+frPadB(P)-PB();
+      if(need>0.5)growFrame(P,layR(need));
+      lower.forEach(it=>layMove(sh,it,0,dh));
+      ab=layUnion(t.after);
+      tx=Math.abs(ab.x+ab.w/2-P.x)<4?P.x-nb.w/2:ab.x;
+      ty=ab.y+ab.h+16;
+      at=Math.max(...t.after.flatMap(x=>layBlock(sh,x)).map(x=>sh.indexOf(x)))+1;
+    }else{
+      const has=()=>layItems(sh,P,layParents(sh)).length>0;
+      const top=()=>has()?itemsBottom(sh,P,layParents(sh))+16:P.y-P.h/2+24;
+      const need=top()+nb.h+frPadB(P)-PB();
+      if(need>0.5)growFrame(P,layR(need));
+      tx=P.x-nb.w/2;ty=top();at=layAfterLast(sh,P);
+    }
+  }
+  const dx=tx-nb.x,dy=ty-nb.y;
+  news.forEach(x=>{x.x=layR(x.x+dx);x.y=layR(x.y+dy);if(x.grad&&x.grad.box){x.grad.box.x+=dx;x.grad.box.y+=dy;}});
+  sh.splice(at,0,...news);
+  if(t)layAll(d);
+  return t?t.into:null;
+}
 function addShape(type){
   const d=curDoc();if(!d.shapes)return;
   exitPen();exitEraser();exitBrush();
   pushUndo();
-  const c=s2w(viewW()/2,viewH()/2);
+  const sel0=selShapes(),c={x:0,y:0};
   let s;
   /* 四角・丸は「枠なし・角は直角」が既定(塗りが無いと見えないため薄いグレーを既定に) */
   if(type==='line')s={id:uid(),type,x:c.x,y:c.y,w:160,h:0,rot:0,fill:null};
   else if(type==='rect')s={id:uid(),type,x:c.x,y:c.y,w:120,h:120,rot:0,fill:'#D7DBE2',noStroke:true,r:0}; /* 正方形で出現 */
   else if(type==='ellipse')s={id:uid(),type,x:c.x,y:c.y,w:120,h:120,rot:0,fill:'#D7DBE2',noStroke:true};
   else{s={id:uid(),type:'text',x:c.x,y:c.y,w:0,h:0,rot:0,fill:null,text:'テキスト',fs:18,fw:400,tsp:'punct'};measureWText(s);}
-  d.shapes.push(s);
+  d.shapes.push(s);placeNew([s],sel0);
   wireSel=[s.id];
   save();renderWire();
   if(type==='text')beginWireText(s);
@@ -12473,10 +12543,10 @@ function addHeading(n){
   n=clamp(n|0,1,6);
   exitPen();exitEraser();exitBrush();
   pushUndo();
-  const c=s2w(viewW()/2,viewH()/2);
+  const sel0=selShapes(),c={x:0,y:0};
   const s={id:uid(),type:'text',x:c.x,y:c.y,w:0,h:0,rot:0,fill:null,text:n===1?'大見出し':n===3?'小見出し':'見出し',fs:HEAD_FS[n],fw:n<=2?800:700,tag:'h'+n,tsp:'punct'};
   measureWText(s);
-  d.shapes.push(s);
+  d.shapes.push(s);placeNew([s],sel0);
   wireSel=[s.id];
   save();renderWire();
   beginWireText(s);
@@ -12488,9 +12558,9 @@ function addIcon(iconId){
   const ic=iconById(iconId);if(!ic)return;
   exitPen();exitEraser();exitBrush();
   pushUndo();
-  const c=s2w(viewW()/2,viewH()/2);
-  const s={id:uid(),type:'icon',x:c.x,y:c.y,w:32,h:32,rot:0,fill:'#23262D',noStroke:true,iconId};
-  d.shapes.push(s);
+  const sel0=selShapes();
+  const s={id:uid(),type:'icon',x:0,y:0,w:32,h:32,rot:0,fill:'#23262D',noStroke:true,iconId};
+  d.shapes.push(s);placeNew([s],sel0);
   wireSel=[s.id];
   save();renderWire();
   toast(`${ic.n}を追加しました`);
@@ -12518,14 +12588,15 @@ function addPart(partId){
   const d=curDoc();if(!d.shapes)return;
   exitPen();exitEraser();exitBrush();
   pushUndo();
-  const c=s2w(viewW()/2,viewH()/2);
+  const sel0=selShapes(),c={x:0,y:0};
   const gid=uid();
-  const ids=[];
+  const ids=[],made=[];
   part.build().forEach(def=>{
     const s={id:uid(),rot:0,...def,x:c.x+def.x,y:c.y+def.y,gid};
     if(s.type==='text'){s.w=0;s.h=0;measureWText(s);}
-    d.shapes.push(s);ids.push(s.id);
+    d.shapes.push(s);ids.push(s.id);made.push(s);
   });
+  placeNew(made,sel0);
   wireSel=ids;selAnchor=null;
   save();renderWire();
   toast(`${part.n}を追加しました`);
@@ -13843,6 +13914,13 @@ function startGroupResize(ss,sx,sy){
 /* キャンバスの上では、ブラウザ自身のドラッグ(画像・リンク・選択した文字を持ち上げる動き)を起こさない。
    起きると駐車禁止のカーソルになり、図形を動かす操作が止まってしまう */
 wireView.addEventListener('dragstart',e=>e.preventDefault(),true);
+/* 足した要素をマウスの位置に置くため、キャンバス上のマウスの位置を覚えておく */
+{
+  const rel=e=>{const b=wireView.getBoundingClientRect();return{x:e.clientX-b.left,y:e.clientY-b.top};};
+  wireView.addEventListener('pointermove',e=>{if(e.pointerType==='mouse'){wirePt=rel(e);wirePtIn=true;}},true);
+  wireView.addEventListener('pointerleave',()=>{wirePtIn=false;});
+  wireView.addEventListener('pointerdown',e=>{wireDownPt=rel(e);},true);
+}
 wireView.addEventListener('pointerdown',e=>{
   if(e.button===0&&!e.target.closest('input,textarea,[contenteditable],foreignObject')){
     const sel=window.getSelection&&window.getSelection();
@@ -14828,9 +14906,8 @@ async function placeLibIcon(k){
     sel.forEach(s=>{s.ico={...g,...(g.mode==='stroke'&&s.ico&&s.ico.lw?{lw:s.ico.lw}:{})};delete s.iconId;});
     toast('アイコンを替えました');
   }else{
-    const c=s2w(viewW()/2,viewH()/2);
-    const s={id:uid(),type:'icon',x:c.x,y:c.y,w:40,h:40,rot:0,fill:'#23262D',noStroke:true,ico:g};
-    d.shapes.push(s);wireSel=[s.id];
+    const s={id:uid(),type:'icon',x:0,y:0,w:40,h:40,rot:0,fill:'#23262D',noStroke:true,ico:g};
+    d.shapes.push(s);placeNew([s],selShapes());wireSel=[s.id];
     toast('アイコンを置きました。右の「アイコン」で太さを変えられます');
   }
   save();renderWire();updateStyleMenu&&updateStyleMenu();
@@ -15072,7 +15149,7 @@ async function addMedia(kind){
   const d=curDoc();if(!d.shapes)return;
   exitPen();exitEraser();exitBrush();
   pushUndo();
-  const c=s2w(viewW()/2,viewH()/2);
+  const sel0=selShapes(),c={x:0,y:0};
   const size={video:[640,360],carousel:[720,405],marquee:[1000,120],ctext:[260,260],swap:[1000,2400],wave:[1200,2400],tunnel:[1200,2600]}[kind];
   const media=kind==='video'?{kind,src:'youtube',url:'',auto:false,loop:false,ctrl:true,bg:false}
     :kind==='carousel'?{kind,imgs:[],fx:'slide',auto:true,int:4,arrows:true,dots:true}
@@ -15083,7 +15160,7 @@ async function addMedia(kind){
   const fill=kind==='marquee'?'#FFFFFF':kind==='ctext'?null:kind==='tunnel'?'#0E0F14':'#1E2230';
   const s={id:uid(),type:'rect',x:c.x,y:c.y,w:size[0],h:size[1],rot:0,fill,noStroke:true,r:kind==='marquee'||kind==='ctext'||kind==='wave'||kind==='tunnel'?0:12,media};
   await mediaThumb(s);
-  d.shapes.push(s);
+  d.shapes.push(s);placeNew([s],sel0);
   wireSel=[s.id];selAnchor=null;
   save();renderWire();
   /* そのまま設定できるように、ホームページ → メディアを開く */
@@ -16349,9 +16426,8 @@ function dummyCss(s){
 function dummyAdd(){
   const d=curDoc();if(!d||!d.shapes)return;
   pushUndo();
-  const c=s2w(viewW()/2,viewH()/2);
-  const s={id:uid(),type:'rect',x:c.x,y:c.y,w:400,h:260,rot:0,fill:'#E3E6EA',noStroke:true,r:0,dummy:true,name:'ダミー画像'};
-  d.shapes.push(s);
+  const s={id:uid(),type:'rect',x:0,y:0,w:400,h:260,rot:0,fill:'#E3E6EA',noStroke:true,r:0,dummy:true,name:'ダミー画像'};
+  d.shapes.push(s);placeNew([s],selShapes());
   wireSel=[s.id];selAnchor=null;
   save();renderWire();renderLayerPanel();
   toast('ダミー画像を置きました。ダブルクリック・画像のファイルをドラッグして落とす・Ctrl+V で本物の画像に差し替えられます');
@@ -16444,13 +16520,14 @@ function loadImageBlob(blob,cb){
   reader.readAsDataURL(blob);
 }
 function addImageFromBlob(blob,at){
+  const sel0=selShapes();
   loadImageBlob(blob,r=>{
     const d=curDoc();if(!d.shapes)return;
     pushUndo();
-    const c=at||s2w(viewW()/2,viewH()/2);
+    const c=at||{x:0,y:0};
     const dk=Math.min(1,280/Math.max(r.w,r.h));
     const s={id:uid(),type:'image',x:c.x,y:c.y,w:r.w*dk,h:r.h*dk,rot:0,fill:null,src:r.url,iw:r.w,ih:r.h};
-    d.shapes.push(s);
+    d.shapes.push(s);if(!at)placeNew([s],sel0);
     wireSel=[s.id];
     save();renderWire();
     toast('画像を追加しました');
@@ -18645,15 +18722,7 @@ function btnAdd(){
   const sh=d.shapes,sel=selShapes();
   pushUndo();
   const s={id:uid(),type:'btn',x:0,y:0,w:220,h:56,rot:0,btn:JSON.parse(JSON.stringify(BTN_DEF))};
-  const p=sel.length===1&&isFrame(sel[0])?sel[0]:null;
-  if(p){
-    const par=layParents(sh),its=layItems(sh,p,par);
-    const bottom=its.length?Math.max(...its.map(it=>{const b=layBox(it);return b.y+b.h;})):p.y-p.h/2+24;
-    s.x=p.x;s.y=bottom+16+28;
-    const need=bottom+16+56+24-(p.y-p.h/2);
-    if(need>p.h){p.y=p.y-p.h/2+need/2;p.h=need;}
-    sh.splice(layAfterLast(sh,p),0,s);
-  }else{const c=s2w(viewW()/2,viewH()/2);s.x=c.x;s.y=c.y;sh.push(s);}
+  sh.push(s);placeNew([s],sel);
   wireSel=[s.id];selAnchor=null;
   save();renderWire();openStyleMenu();updateStyleMenu();renderLayerPanel();
   toast('ボタンを足しました。「色とスタイル」の「ボタン」で、ふだんとホバーの見た目を決めます');
@@ -18849,16 +18918,8 @@ function gmapAdd(){
   const sh=d.shapes,sel=selShapes();
   pushUndo();
   const s={id:uid(),type:'gmap',x:0,y:0,w:640,h:400,rot:0,r:12,gmap:{q:q.trim(),z:15}};
-  const p=sel.length===1&&isFrame(sel[0])?sel[0]:null;
-  if(p){
-    s.w=Math.min(640,p.w-48);
-    const its=layItems(sh,p,layParents(sh));
-    const bottom=its.length?Math.max(...its.map(it=>{const b=layBox(it);return b.y+b.h;})):p.y-p.h/2+24;
-    s.x=p.x;s.y=bottom+16+s.h/2;
-    const need=bottom+16+s.h+24-(p.y-p.h/2);
-    if(need>p.h){p.y=p.y-p.h/2+need/2;p.h=need;}
-    sh.splice(layAfterLast(sh,p),0,s);
-  }else{const c=s2w(viewW()/2,viewH()/2);s.x=c.x;s.y=c.y;sh.push(s);}
+  const t=addTarget(sel);if(t)s.w=Math.max(160,Math.min(640,t.into.w-48));
+  sh.push(s);placeNew([s],sel);
   wireSel=[s.id];selAnchor=null;
   save();renderWire();openStyleMenu();updateStyleMenu();renderLayerPanel();
   toast(s.gmap.q?'地図を置きました(書き出したページで本物のGoogleマップになります)':'地図を置きました。「色とスタイル」の「Googleマップ」で場所を入れます');
@@ -19425,16 +19486,9 @@ function uiAdd(kind){
   const d=curDoc();if(!d||!d.shapes)return;
   exitPen();exitEraser();exitBrush();hideMenus();
   pushUndo();
-  const sh=d.shapes,sel=selShapes(),p=sel.length===1&&isFrame(sel[0])?sel[0]:null;
+  const sh=d.shapes,sel=selShapes();
   const s={id:uid(),type:'ui',x:0,y:0,w:K.w,h:K.h,rot:0,ui:{kind,...JSON.parse(JSON.stringify(K.def))}};
-  if(p){
-    const its=layItems(sh,p,layParents(sh));
-    const bottom=its.length?Math.max(...its.map(it=>{const b=layBox(it);return b.y+b.h;})):p.y-p.h/2+24;
-    s.x=p.x;s.y=bottom+16+s.h/2;
-    const need=bottom+16+s.h+24-(p.y-p.h/2);
-    if(need>p.h){p.y=p.y-p.h/2+need/2;p.h=need;}
-    sh.splice(layAfterLast(sh,p),0,s);
-  }else{const c=s2w(viewW()/2,viewH()/2);s.x=c.x;s.y=c.y;sh.push(s);}
+  sh.push(s);placeNew([s],sel);
   wireSel=[s.id];selAnchor=null;
   save();renderWire();openStyleMenu();updateStyleMenu();renderLayerPanel();
   toast(`${K.n}を置きました。「色とスタイル」の「${K.n}」で中身と見た目を変えられます`);
