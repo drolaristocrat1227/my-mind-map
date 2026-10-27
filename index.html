@@ -2985,7 +2985,7 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-29.5';
+const APP_VERSION='2026-10-29.6';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -10996,8 +10996,8 @@ function frameChildren(f){
 }
 /* 選択中の図形＋選択中のフレームの中身(まとめて動かす・複製するため) */
 function withFrameChildren(ss){
-  const out=[...ss];
-  ss.filter(isFrame).forEach(f=>frameChildren(f).forEach(c=>{if(!out.includes(c))out.push(c);}));
+  const out=[...ss],sh0=curShapes();
+  ss.filter(isFrame).forEach(f=>(sh0?frameDescendants(sh0,f):frameChildren(f)).forEach(c=>{if(!out.includes(c))out.push(c);}));
   const sh=curShapes();
   return sh?out.sort((a,b)=>sh.indexOf(a)-sh.indexOf(b)):out;
 }
@@ -12538,32 +12538,71 @@ function renewFormIds(copies){
     if(c.news){c.news=JSON.parse(JSON.stringify(c.news));c.news.id=id;}
   });
 }
+/* 複製: 中の物(入れ子のセクション・コンテナとその中身)も一緒に。
+   入れ物の中にある物は、同じ入れ物の中に作る(外に出したい時はコピー&ペースト)。
+   ・自動で並べる入れ物: 元のすぐ後ろに並ぶ
+   ・自由に置く入れ物: フレームは元の下、ほかは少しずらして置き、はみ出す時は入れ物を伸ばす
+   ・どこにも入っていない物: これまでどおり(フレームは横に並べる) */
 function dupSel(){
-  let ss=selShapes();if(!ss.length)return;
+  const ss=selShapes();if(!ss.length)return;
   pushUndo();
-  const d=curDoc();
-  /* フレームを複製するときは中身も一緒に。位置は横に並べる(重ねると
-     中身がどちらのフレームの物か分からなくなるため) */
-  const frames=ss.filter(isFrame);
-  ss=withFrameChildren(ss);
-  const dx=frames.length?Math.max(...frames.map(f=>f.w))+48:18;
-  const dy=frames.length?0:18;
-  const gidMap=new Map();
-  const copies=ss.map(s=>{
-    const c=cloneShape(s);   /* pts/穴/グラデ/画像を実体コピー(参照共有を防ぐ) */
-    c.id=uid();c.x=s.x+dx;c.y=s.y+dy;
-    if(isFrame(c))c.name=(s.name||'フレーム')+' のコピー';   /* 同名だと見分けがつかない */
-    delete c.locked;
-    if(s.gid){
-      if(!gidMap.has(s.gid))gidMap.set(s.gid,uid());
-      c.gid=gidMap.get(s.gid);
-    }
-    return c;
+  const d=curDoc(),sh=d.shapes,par=layParents(sh);
+  const pm=new Map(sh.map((x,i)=>[x,par[i]]));
+  const all=withFrameChildren(ss),set=new Set(all);
+  /* 選んだ物のうち、いちばん外側(親も選ばれていない物) */
+  const tops=all.filter(x=>{let p=pm.get(x);while(p){if(set.has(p))return false;p=pm.get(p);}return true;});
+  const gidMap=new Map(),newSel=[],copiesAll=[],reflow=[];
+  /* 後ろの物から入れる(前の物の位置がずれないように) */
+  tops.slice().sort((a,b)=>sh.indexOf(b)-sh.indexOf(a)).forEach(t=>{
+    const block=isFrame(t)?[t,...frameDescendants(sh,t)]:[t];
+    const p=pm.get(t);
+    let dx=18,dy=18;
+    if(p&&p.lay){
+      /* 並べる入れ物: 並べ直すので、位置は元の後ろ(縦なら下・横なら右)に仮置き */
+      const b=layBox({m:[t]}),gap=+p.lay.gap||0;
+      if(p.lay.d==='h'){dx=b.w+gap;dy=0;}else{dx=0;dy=b.h+gap;}
+    }else if(p){
+      if(isFrame(t)){dx=0;dy=t.h+16;}
+    }else if(isFrame(t)){dx=t.w+48;dy=0;}
+    const map=new Map();
+    const copies=block.map(x=>{
+      const c=cloneShape(x);
+      c.id=uid();c.x=x.x+dx;c.y=x.y+dy;
+      if(c.grad&&c.grad.box){c.grad.box.x+=dx;c.grad.box.y+=dy;}
+      if(x===t&&isFrame(c))c.name=(x.name||'フレーム')+' のコピー';   /* 同名だと見分けがつかない */
+      delete c.locked;
+      if(x.gid){if(!gidMap.has(x.gid))gidMap.set(x.gid,uid());c.gid=gidMap.get(x.gid);}
+      map.set(x,c);
+      return c;
+    });
+    /* 入れ子(親)を写す */
+    block.forEach(x=>{const c=map.get(x);pm.set(c,x===t?p:(map.get(pm.get(x))||pm.get(x)));});
+    /* 元のまとまりのすぐ後ろへ */
+    const last=Math.max(...block.map(x=>sh.indexOf(x)));
+    sh.splice(last+1,0,...copies);
+    copiesAll.push(...copies);
+    newSel.push(map.get(t).id);
+    if(p)reflow.push(map.get(t));
   });
-  renewFormIds(copies);
-  d.shapes.push(...copies);
-  wireSel=copies.map(c=>c.id);
-  save();renderWire();
+  renewFormIds(copiesAll);
+  /* 入れ物の中に収める: 並べる入れ物は並べ直し、自由な入れ物ははみ出した分だけ伸ばす(外側へ順に) */
+  const parArr=()=>sh.map(x=>pm.has(x)?pm.get(x):null);
+  reflow.forEach(c=>{
+    let a=pm.get(c),cur=c;
+    while(a){
+      if(a.lay)layFrame(sh,a,parArr());
+      else if(isFrame(cur)||cur===c){
+        const b=isFrame(cur)?{x:cur.x-cur.w/2,y:cur.y-cur.h/2,w:cur.w,h:cur.h}:unionWorldBox([cur]);
+        const top=a.y-a.h/2,bot=a.y+a.h/2,nb=Math.max(bot,b.y+b.h+(isFrame(cur)?0:16));
+        if(nb>bot){a.y=(top+nb)/2;a.h=nb-top;}
+      }
+      cur=a;a=pm.get(a);
+    }
+  });
+  /* 選択: 選んでいた物の複製(グループは丸ごと) */
+  wireSel=copiesAll.filter(c=>newSel.includes(c.id)||(c.gid&&copiesAll.some(o=>newSel.includes(o.id)&&o.gid===c.gid))).map(c=>c.id);
+  selAnchor=null;
+  save();renderWire();renderLayerPanel();
   toast('複製しました');
 }
 /* ---------- コピー&ペースト(このアプリ内だけの独自クリップボード。
