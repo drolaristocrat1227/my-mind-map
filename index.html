@@ -3030,7 +3030,7 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-30.5';
+const APP_VERSION='2026-10-30.6';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -5630,12 +5630,12 @@ function siteCssBox(s,o){
   if(s.glass)st.push(`-webkit-backdrop-filter:blur(${cssNum(s.glass)}px) saturate(1.4);backdrop-filter:blur(${cssNum(s.glass)}px) saturate(1.4)`);
   return`<div class="nt-e" style="${st.join(';')}"></div>`;
 }
-/* 中に画像を入れた四角・丸(ダミー画像に入れた画像など) → div の中の img。
+/* 中に画像を入れた四角・丸・フレーム(ダミー画像やセクションに入れた画像など) → div の中の img。
    SVGで出すと、広い画面で画面の端まで伸ばす対象(img)にならず、書き出しの画像の軽量化も効かないため。
    大きさを変えていない(画面いっぱいに覆う)時は object-fit:cover、拡大・縮小した時は位置と大きさをpxで */
 function siteImgFill(s,o){
   const f=s.imgFill;
-  if(!f||f.show||s.grad||s.sgrad||!(s.type==='rect'||s.type==='ellipse'))return null;
+  if(!f||f.show||s.grad||s.sgrad||!(isRectish(s)||s.type==='ellipse'))return null;
   const fa=alphaOf(s,'fill'),sa=alphaOf(s,'stroke');
   const st=[siteBox(s,o,s.w,s.h),'overflow:hidden'];
   if(s.fill)st.push('background-color:'+cssCol(s.fill,fa));   /* 画像で覆いきれない所は図形の色(画面と同じ) */
@@ -6794,7 +6794,7 @@ function linkKind(h){
 function siteFrameBg(f,o){
   const bgShape={...f,rot:0,device:undefined};
   delete bgShape.shadows;delete bgShape.sh;
-  return siteCssBox(bgShape,o)||siteSvg(bgShape,o);
+  return (bgShape.imgFill?siteImgFill(bgShape,o):siteCssBox(bgShape,o))||siteSvg(bgShape,o);
 }
 /* HTMLのID・クラス名(半角英数字・-・_ だけ。nt- で始まるクラスは書き出し用に予約) */
 function cleanHtmlId(v){const t=String(v||'').trim().replace(/[^A-Za-z0-9_-]/g,'');return /^[A-Za-z]/.test(t)?t:'';}
