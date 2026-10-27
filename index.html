@@ -2985,7 +2985,7 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-29.4';
+const APP_VERSION='2026-10-29.5';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -7147,7 +7147,7 @@ img{display:block;max-width:none}
 .nt-ui-cb:focus-visible~.nt-uc-box,.nt-ui-cb:focus-visible~.nt-ut-track{outline:2px solid currentColor;outline-offset:2px}
 .nt-ui-tabs button{cursor:pointer}
 /* ボタン(ふだん/ホバー。スマホはタップで .nt-hov が付く) */
-.nt-button{display:flex;align-items:center;justify-content:center;box-sizing:border-box;background:var(--bg);border:var(--bw) solid var(--bc);border-radius:var(--r);color:var(--tc);cursor:pointer;white-space:nowrap;overflow:hidden;line-height:1.2;transition:background-color var(--d),border-color var(--d),border-width var(--d),border-radius var(--d),color var(--d)}
+.nt-button{display:flex;align-items:center;justify-content:center;box-sizing:border-box;background:var(--bg);border:var(--bw) solid var(--bc);border-radius:var(--r);color:var(--tc);cursor:pointer;white-space:nowrap;overflow:visible;line-height:1.2;transition:background-color var(--d),border-color var(--d),border-width var(--d),border-radius var(--d),color var(--d)}
 .nt-button:hover,.nt-button.nt-hov{background:var(--bgh,var(--bg));border-color:var(--bch,var(--bc));border-width:var(--bwh,var(--bw));border-radius:var(--rh,var(--r));color:var(--tch,var(--tc))}
 .nt-bi{display:flex;align-items:center;gap:var(--gap)}
 .nt-bt{display:grid;overflow:hidden;transition:translate var(--d)}
@@ -7156,6 +7156,8 @@ img{display:block;max-width:none}
 .nt-btx:hover .nt-bt1,.nt-btx.nt-hov .nt-bt1{opacity:0;translate:0 -70%}
 .nt-btx:hover .nt-bt2,.nt-btx.nt-hov .nt-bt2{opacity:1;translate:0 0}
 /* 矢印の色は変数で(直接 color を書くと、ホバーの色より強くなって変わらない) */
+/* 矢印はボタンの枠の外に出ても見せる(編集画面と同じ)。波紋のホバーだけは枠の中に収める */
+.nt-button.nt-h-ripple{overflow:hidden}
 .nt-ba{color:var(--bac);position:absolute;overflow:visible;rotate:var(--aang,0deg);transition:color var(--d),translate var(--d),rotate var(--d)}
 .nt-ba .nt-sh{transform-box:fill-box;transform-origin:0 50%;transition:scale var(--d)}
 .nt-ba .nt-hd{transition:translate var(--d)}
