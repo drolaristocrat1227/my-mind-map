@@ -2985,7 +2985,7 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-29.3';
+const APP_VERSION='2026-10-29.4';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -18816,6 +18816,7 @@ async function openPreview(){
   $('#pvPage').value=String(i);
   pvSetWidth('pc');
   $('#pvWrap').classList.add('on','bar');
+  {const z=appZoom();if(z!==1)toast(`NT-D の画面が ${Math.round(z*100)}% に縮小・拡大されているので、プレビューは100%の大きさに直して出しています(画面右上の虫めがねで100%に戻せます)`);}
   setTimeout(()=>$('#pvWrap').classList.remove('bar'),2200);
   await pvShow(i);
 }
@@ -18857,10 +18858,25 @@ function pvScrollbar(){
   try{fr.contentWindow.dispatchEvent(new Event('resize'));}catch(e){}
 }
 $('#pvFrame').addEventListener('load',pvScrollbar);
+/* 画面の表示倍率(Chrome の拡大・縮小)。外枠の幅(拡大の影響を受けない)と中の幅の比から求め、Chrome の倍率の段階に合わせる */
+function appZoom(){
+  const r=(window.outerWidth||0)/(window.innerWidth||1);
+  if(!r||!isFinite(r))return 1;
+  const L=[.25,.33,.5,.67,.75,.8,.9,1,1.1,1.25,1.5,1.75,2,2.5,3,4,5];
+  let best=1,dd=1e9;L.forEach(v=>{const x=Math.abs(r-v)/v;if(x<dd){dd=x;best=v;}});
+  return dd<0.025?best:1;
+}
 function pvFit(){
   const w=$('#pvWrap').dataset.w,fr=$('#pvFrame'),box=$('#pvDev'),d=PV_DEV[w];
   pvScrollbar();
-  if(!d){fr.style.width=fr.style.height=fr.style.transform='';box.style.width=box.style.height='';return;}
+  if(!d){
+    /* NT-D の画面の表示倍率(Ctrl+−/＋)が100%でない時は、プレビューの中だけ100%に戻して出す(書き出したページを普通に開いた時と同じ大きさに) */
+    const z=appZoom();
+    if(z!==1){fr.style.position='absolute';fr.style.left=fr.style.top='0';fr.style.transformOrigin='0 0';fr.style.width=innerWidth*z+'px';fr.style.height=innerHeight*z+'px';fr.style.transform='scale('+(1/z)+')';}
+    else{fr.style.position=fr.style.left=fr.style.top=fr.style.transformOrigin='';fr.style.width=fr.style.height=fr.style.transform='';}
+    box.style.width=box.style.height='';return;
+  }
+  fr.style.position=fr.style.left=fr.style.top=fr.style.transformOrigin='';
   const k=Math.min(1,(innerHeight-70)/d.h,(innerWidth-40)/d.w);
   fr.style.width=d.w+'px';fr.style.height=d.h+'px';fr.style.transform=`scale(${k})`;
   box.style.width=d.w*k+'px';box.style.height=d.h*k+'px';
