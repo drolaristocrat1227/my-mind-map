@@ -3030,7 +3030,7 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-30.4';
+const APP_VERSION='2026-10-30.5';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -5630,6 +5630,31 @@ function siteCssBox(s,o){
   if(s.glass)st.push(`-webkit-backdrop-filter:blur(${cssNum(s.glass)}px) saturate(1.4);backdrop-filter:blur(${cssNum(s.glass)}px) saturate(1.4)`);
   return`<div class="nt-e" style="${st.join(';')}"></div>`;
 }
+/* 中に画像を入れた四角・丸(ダミー画像に入れた画像など) → div の中の img。
+   SVGで出すと、広い画面で画面の端まで伸ばす対象(img)にならず、書き出しの画像の軽量化も効かないため。
+   大きさを変えていない(画面いっぱいに覆う)時は object-fit:cover、拡大・縮小した時は位置と大きさをpxで */
+function siteImgFill(s,o){
+  const f=s.imgFill;
+  if(!f||f.show||s.grad||s.sgrad||!(s.type==='rect'||s.type==='ellipse'))return null;
+  const fa=alphaOf(s,'fill'),sa=alphaOf(s,'stroke');
+  const st=[siteBox(s,o,s.w,s.h),'overflow:hidden'];
+  if(s.fill)st.push('background-color:'+cssCol(s.fill,fa));   /* 画像で覆いきれない所は図形の色(画面と同じ) */
+  if(s.type==='ellipse')st.push('border-radius:50%');
+  else{const rs=rectRadii(s);if(rs.some(v=>v>0))st.push('border-radius:'+rs.map(v=>cssNum(v)+'px').join(' '));}
+  const fl=[];
+  if(hasImgFx(s))fl.push(fxCss(s));
+  if(s.blur)fl.push(`blur(${cssNum(s.blur/2)}px)`);
+  if(fl.length)st.push('filter:'+fl.join(' '));
+  const sw=strokeW(s);
+  if(!s.noStroke&&sw>0)st.push(`outline:${cssNum(sw)}px solid ${cssCol(s.sc,sa)};outline-offset:${cssNum(-sw/2)}px`);
+  if(hasSh(s))st.push('box-shadow:'+cssShadows(s));
+  const q=imgFillRect(s),cover=Math.abs(ifSx(f)-1)<1e-6&&Math.abs(ifSy(f)-1)<1e-6;
+  const pos=cover
+    ?`left:0;top:0;width:100%;height:100%;object-fit:cover;object-position:calc(50% + ${cssNum((f.ox||0)*s.w)}px) calc(50% + ${cssNum((f.oy||0)*s.h)}px)`
+    :`left:${cssNum(s.w/2+q.x)}px;top:${cssNum(s.h/2+q.y)}px;width:${cssNum(q.w)}px;height:${cssNum(q.h)}px`;
+  const lazy=(s.y-s.h/2-o.y)>1200?' loading="lazy"':'';
+  return`<div class="nt-e" style="${st.join(';')}"><img src="${imgHref(f.src)}" alt="${escXml(s.alt||'')}"${lazy}${cover?' data-fit="cover"':''} style="position:absolute;${pos}${fa<1?';opacity:'+cssNum(fa):''}"></div>`;
+}
 /* 画像 → img(トリミング・補正・枠線・影にも対応) */
 function siteImage(s,o){
   if(s.type!=='image'||s.grad)return null;
@@ -6870,7 +6895,7 @@ function siteShapeEl(s,o,tagOf){
   if(s.type==='ui')return siteAttrs(siteUi(s,o),s);
   if(s.type==='gmap')return siteAttrs(siteMap(s,o),s);
   if(s.type==='text'&&siteTextOk(s))return siteAttrs(siteText(s,o,tagOf(s)),s);
-  const el=siteAttrs((s.type==='image'?siteImage(s,o):siteCssBox(s,o))||siteSvg(s,o),s);
+  const el=siteAttrs((s.type==='image'?siteImage(s,o):s.imgFill?siteImgFill(s,o):siteCssBox(s,o))||siteSvg(s,o),s);
   /* 図として描いた文字は、検索エンジン・読み上げソフト向けに、見えない本物の文字(見出しなら見出し)を添える */
   if(s.type==='text'&&(s.text||'').trim()){
     const tg=tagOf(s);
@@ -7654,7 +7679,7 @@ function siteJs(){
     it.forEach(function(a){
       if(!a.full||!(a.box||a.img))return;
       a.el.style.height=(a.h0+D)+'px';
-      if(a.img)a.img.style.objectFit=D?'cover':'';
+      if(a.img)a.img.style.objectFit=D||a.img.dataset.fit?'cover':'';
     });
     return D;
   }
@@ -7699,7 +7724,7 @@ function siteJs(){
     var bl=v.__bl;
     bl.list.forEach(function(b){
       b.el.style.left=(b.l-G)+'px';b.el.style.width=(b.w+2*G)+'px';
-      if(b.img)b.img.style.objectFit=G?'cover':'';
+      if(b.img)b.img.style.objectFit=G||b.img.dataset.fit?'cover':'';
     });
     if(!bl.list.length)return;
     bl.clips.forEach(function(c){
@@ -9496,6 +9521,7 @@ function siteImageUses(d,pages){
   frames.forEach(f=>[f,...frameDescendants(d.shapes,f)].forEach(s=>{
     if(s.hidden)return;
     if(s.type==='image'&&s.src)need(s.src,s.imgBox?s.imgBox.w:s.w,s.imgBox?s.imgBox.h:s.h);
+    if(s.imgFill&&s.imgFill.src){const q=imgFillRect(s);need(s.imgFill.src,q.w,q.h);}
     if(s.type==='ui'&&s.ui&&s.ui.img)need(s.ui.img,s.w,s.h*0.6);
     if(s.media){
       (s.media.imgs||[]).forEach(r=>need(r,s.w,s.h));
