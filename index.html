@@ -3030,7 +3030,7 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-30.6';
+const APP_VERSION='2026-10-30.7';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -7073,7 +7073,7 @@ function sitePageHtml(f,ranges,top){
       /* 高さを画面いっぱいに: 区画いっぱいの背景(四角・画像)は伸ばし、ほかの中身は .nt-vhin に入れて、
          そろえ方(中央・上・下)に合わせて js/main.js がずらす */
       const kids=sh.filter((k,i)=>!k.hidden&&parentFrameAt(sh,i)===s);
-      const isFill=k=>!isFrame(k)&&k.type!=='text'&&!k.fr&&!k.nw&&!k.gid&&!k.href&&(()=>{const b=cornersBox([k],0);return b.x2-b.x1>=s.w*0.9&&b.y2-b.y1>=s.h*0.8;})();
+      const isFill=k=>vhIsFill(sh,s,k);
       /* 中身の範囲(ページ直下へ出す固定の区画は除く) */
       const rest=kids.filter(k=>!isFill(k)&&!(isFrame(k)&&pageWide(k)));
       const cb=rest.length?cornersBox(rest,0):{y1:io.y+s.h/2,y2:io.y+s.h/2};
@@ -19005,6 +19005,18 @@ function vhTargetH(d,page){
   if(k>1)k=page.w<SITE_BP?1:Math.max(1,Math.min(k,(siteMaxW(c)||page.w)/page.w));
   return Math.round(ref.h/k);
 }
+/* 高さ画面いっぱいの区画で、区画いっぱいの背景として伸ばす物(四角・画像)。
+   画像だけを入れたコンテナ(区画いっぱい)や、文字とグループにした画像も背景にする
+   (中身に数えると、画面が低い時に区画が縮まず100vhより高くなる)。リンク・ホバーを付けたグループは分けない */
+function vhIsFill(sh,sec,k){
+  const big=x=>{const b=cornersBox([x],0);return b.x2-b.x1>=sec.w*0.9&&b.y2-b.y1>=sec.h*0.8;};
+  const grpOk=x=>!x.gid||!sh.some(y=>y.gid===x.gid&&(y.href||y.hover));
+  const plain=x=>!isFrame(x)&&x.type!=='text'&&!x.fr&&!x.nw&&grpOk(x)&&!x.href&&big(x);
+  if(!isFrame(k))return plain(k);
+  if(k.role==='section'||k.role==='page'||k.vh||k.scene||k.pin||k.grow||k.href||k.fr||k.nw||!big(k))return false;
+  const ds=frameDescendants(sh,k).filter(x=>!x.hidden);
+  return ds.length>0&&ds.every(plain);
+}
 function vhEditorAll(d){
   const sh=d.shapes;
   if(!sh.some(x=>x.vh&&isFrame(x)))return false;
@@ -19024,7 +19036,7 @@ function vhEditorAll(d){
       changed=true;
       return;   /* 入れ子が変わったので、続きは数え直してから */
     }
-    const isFill=x=>!isFrame(x)&&x.type!=='text'&&!x.fr&&!x.nw&&!x.gid&&!x.href&&x.w>=sec.w*0.9&&x.h>=sec.h*0.8;
+    const isFill=x=>vhIsFill(sh,sec,x);
     /* ページ全体に固定する区画(ヘッダーなど)は、書き出したページと同じく動かさない */
     const fills=kids.filter(isFill),rest=kids.filter(x=>!isFill(x)&&!(isFrame(x)&&(x.pin==='top'||x.pin==='bottom')));
     const top=sec.y-sec.h/2;
@@ -19050,7 +19062,7 @@ function vhEditorAll(d){
       page.y+=dH/2;page.h+=dH;
     }
     sec.y=top+T/2;sec.h=T;
-    fills.forEach(x=>{const ft=x.y-x.h/2-top;x.h=Math.max(1,x.h+dH);x.y=top+ft+x.h/2;});
+    fills.flatMap(x=>layBlock(sh,x)).forEach(x=>{const ft=x.y-x.h/2-top;x.h=Math.max(1,x.h+dH);x.y=top+ft+x.h/2;});
     rest.forEach(x=>layBlock(sh,x).forEach(y=>{y.y+=shift;}));
     changed=true;
   });
