@@ -2985,7 +2985,7 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-29.2';
+const APP_VERSION='2026-10-29.3';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -7155,7 +7155,8 @@ img{display:block;max-width:none}
 .nt-bt2{opacity:0;translate:0 70%}
 .nt-btx:hover .nt-bt1,.nt-btx.nt-hov .nt-bt1{opacity:0;translate:0 -70%}
 .nt-btx:hover .nt-bt2,.nt-btx.nt-hov .nt-bt2{opacity:1;translate:0 0}
-.nt-ba{position:absolute;overflow:visible;rotate:var(--aang,0deg);transition:color var(--d),translate var(--d),rotate var(--d)}
+/* 矢印の色は変数で(直接 color を書くと、ホバーの色より強くなって変わらない) */
+.nt-ba{color:var(--bac);position:absolute;overflow:visible;rotate:var(--aang,0deg);transition:color var(--d),translate var(--d),rotate var(--d)}
 .nt-ba .nt-sh{transform-box:fill-box;transform-origin:0 50%;transition:scale var(--d)}
 .nt-ba .nt-hd{transition:translate var(--d)}
 .nt-button:hover .nt-ba,.nt-button.nt-hov .nt-ba{translate:var(--adx,0px) var(--ady,0px)}
@@ -18409,7 +18410,7 @@ function siteBtn(s,o){
     v.push(`--aang:${cssNum(a.ang)}deg`,`--adx:${cssNum((h.adx||0)*L.dir.x)}px`,`--ady:${cssNum((h.adx||0)*L.dir.y)}px`,`--ak:${cssNum(k)}`,`--adl:${cssNum(dl)}px`);
     /* ボタンの枠の内側が基準(枠線の分を引く) */
     const left=s.w/2+X.ax-g.w/2-L.bw,top=s.h/2+X.ay-ah/2-L.bw;
-    const st=[`left:${cssNum(left)}px`,`top:${cssNum(top)}px`,b.ar&&b.ar.col?`color:${cssCol(b.ar.col)}`:'',h.ac?`--ach:${cssCol(h.ac)}`:''].filter(Boolean).join(';');
+    const st=[`left:${cssNum(left)}px`,`top:${cssNum(top)}px`,b.ar&&b.ar.col?`--bac:${cssCol(b.ar.col)}`:'',h.ac?`--ach:${cssCol(h.ac)}`:''].filter(Boolean).join(';');
     arrow=`<svg class="nt-ba${h.ac?' nt-bach':''}" aria-hidden="true" width="${cssNum(g.w)}" height="${cssNum(ah)}" viewBox="0 ${cssNum(-ah/2)} ${cssNum(g.w)} ${cssNum(ah)}" style="${st}">`
       +(g.shaft?`<path class="nt-sh" d="${g.shaft}" fill="none" stroke="currentColor" stroke-width="${a.th}" stroke-linecap="round"/>`:'')
       +`<g class="nt-hd">`+(g.fillHead?`<path d="${g.head}" fill="currentColor"/>`:`<path d="${g.head}" fill="none" stroke="currentColor" stroke-width="${a.th}" stroke-linecap="round" stroke-linejoin="round"/>`)+'</g></svg>';
