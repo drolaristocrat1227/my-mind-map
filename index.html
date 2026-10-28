@@ -237,6 +237,27 @@ body.wire-mode .menu .map-only{display:none;}
 #colorChip:hover{border-color:var(--accent)}
 #colorChip[aria-expanded="true"]{box-shadow:0 0 0 2px var(--accent)}
 #palBox:not(.open){display:none}
+/* ナビメニューの項目の一覧 */
+.navIt{margin:6px 10px;padding:6px 4px;border:1px solid var(--panel-border);border-radius:9px}
+.navIt .numRow{padding:3px 6px}
+.navIt input[type=text]{flex:1;min-width:0}
+.navIt .navMini{flex:none;width:28px;height:28px;border:0;border-radius:6px;background:var(--btn-hover);color:var(--ink);font:inherit;font-size:12px;cursor:pointer}
+.navIt .navMini:hover{background:var(--btn-active)}
+.navIt .navMini:disabled{opacity:.35;cursor:default}
+.navIt .navCol{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:3px 6px 3px 10px;font-size:11.5px;color:var(--ink-soft)}
+.navIco{display:flex;flex-wrap:wrap;gap:6px;padding:4px 14px 6px}
+.navIco button{width:44px;height:44px;border:1px solid var(--panel-border);border-radius:9px;background:var(--node-bg);color:var(--ink);cursor:pointer;display:grid;place-items:center;padding:0}
+.navIco button:hover{border-color:var(--accent)}
+.navIco svg{width:28px;height:28px;overflow:visible}
+/* 色を選ぶ四角(彩度・明るさ)と色相のバー。ドラッグ中もそのまま図形の色が変わる */
+#hsvBox{padding:4px 14px 8px}
+#svPad{position:relative;height:150px;border-radius:8px;cursor:crosshair;touch-action:none;
+  background:linear-gradient(to top,#000,rgba(0,0,0,0)),linear-gradient(to right,#fff,hsl(var(--hue,220),100%,50%))}
+#huePad{position:relative;height:14px;margin-top:10px;border-radius:7px;cursor:pointer;touch-action:none;
+  background:linear-gradient(to right,#f00,#ff0 16.7%,#0f0 33.3%,#0ff 50%,#00f 66.7%,#f0f 83.3%,#f00)}
+#svKnob,#hueKnob{position:absolute;width:16px;height:16px;margin:-8px 0 0 -8px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.35),0 1px 3px rgba(0,0,0,.4);pointer-events:none;box-sizing:border-box}
+#hueKnob{top:50%}
+#olQuickRow{display:none}
 /* 操作の見直し(第3段階): 使っていない設定は見出しと「＋」だけ。使っている時は「−」で外す */
 .collHead .collAdd{margin-left:auto;margin-right:6px;width:28px;height:28px;flex:none;border:none;border-radius:6px;background:transparent;color:var(--ink-soft);font:inherit;font-size:19px;line-height:1;cursor:pointer;display:grid;place-items:center}
 .collHead .collAdd:hover{background:var(--btn-active);color:var(--accent)}
@@ -958,6 +979,15 @@ body:not(.wire-mode) #layerPanel{display:none;}
 #btnFields .btnHvHead{margin:12px 12px 2px;padding:8px 2px 0;border-top:1px dashed var(--panel-border);font-size:12px;font-weight:700;color:var(--accent)}
 #btnFields .btnHvHead::after{content:"「変える」に印を付けた項目だけ変わります";display:block;font-weight:500;font-size:11px;color:var(--ink-soft);margin-top:2px}
 #btnFields input[type=range]:disabled{opacity:.35}
+/* ナビメニューの設定(ボタンと同じ並び) */
+#navFields .numRow input[type=text]{flex:1;min-width:0}
+#navFields .radLbl{flex:none;width:8.5em;white-space:normal;line-height:1.3}
+#navFields .radRow input[type=range]{flex:1;min-width:60px;touch-action:none}
+#navFields .btnNum{width:58px;flex:none;padding:4px 6px;border-radius:8px;border:1px solid var(--panel-border);background:var(--node-bg);color:var(--ink);font:inherit;font-size:12px;text-align:right}
+#navFields .btnNum:disabled,#navFields input:disabled{opacity:.35}
+#navFields .btnRow{flex-wrap:wrap;row-gap:4px}
+#navFields .btnHvHead{margin:12px 12px 2px;padding:8px 2px 0;border-top:1px dashed var(--panel-border);font-size:12px;font-weight:700;color:var(--accent)}
+#navFields .navIt .radLbl{width:3.2em}
 /* パディング・マージン(上・右・下・左) */
 .layQuad{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin:4px 0 8px}
 .layQuad label{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10px;color:var(--ink-soft)}
@@ -1886,6 +1916,15 @@ kbd{
     <div id="btnFields"></div>
     <div class="segRow"><button class="seg" id="btnPrev">編集画面でホバーの見た目を見る</button></div>
   </div>
+  <div id="navPart">
+    <hr>
+    <div class="menu-label">ナビメニュー</div>
+    <div class="segRow mWrap" id="navTabs"><button class="seg" data-nt="i">項目</button><button class="seg" data-nt="t">文字・並び</button><button class="seg" data-nt="c">色・状態</button><button class="seg" data-nt="b">ハンバーガー</button><button class="seg" data-nt="p">開き方</button></div>
+    <div id="navFields"></div>
+    <div class="menu-label">編集画面で見る</div>
+    <div class="segRow mWrap" id="navPrevRow"><button class="seg" data-np="">ふだん</button><button class="seg" data-np="hover">ホバー</button><button class="seg" data-np="cur">このページ</button><button class="seg" data-np="open">開いた時</button></div>
+    <datalist id="navLinkList"></datalist>
+  </div>
   <div id="icoPart">
     <hr>
     <div class="menu-label">アイコン <span id="icoName" style="font-weight:400"></span></div>
@@ -1966,7 +2005,7 @@ kbd{
         <button class="seg" data-ol="off">なし</button>
       </div>
       <div id="olEdit">
-        <div class="radRow"><span class="radLbl">太さ</span><input type="range" id="olW" min="0.5" max="20" step="0.5" value="2"><input type="number" class="radNum" id="olWV" min="0.5" max="60" step="0.5" value="2"></div>
+        <div class="radRow"><span class="radLbl">太さ</span><input type="range" id="olW" min="0.5" max="40" step="0.5" value="2"><input type="number" class="radNum" id="olWV" min="0.5" max="80" step="0.5" value="2"></div>
       </div>
       <div class="menu-label" style="font-weight:600;opacity:.8">外側・二重(色は上の「ふち2」タブ)</div>
       <div class="segRow" id="ol2OnRow">
@@ -1974,7 +2013,7 @@ kbd{
         <button class="seg" data-ol="off">なし</button>
       </div>
       <div id="ol2Edit">
-        <div class="radRow"><span class="radLbl">太さ</span><input type="range" id="ol2W" min="0.5" max="20" step="0.5" value="2"><input type="number" class="radNum" id="ol2WV" min="0.5" max="60" step="0.5" value="2"></div>
+        <div class="radRow"><span class="radLbl">太さ</span><input type="range" id="ol2W" min="0.5" max="40" step="0.5" value="2"><input type="number" class="radNum" id="ol2WV" min="0.5" max="80" step="0.5" value="2"></div>
       </div>
     </div>
     <div id="txPosSec">
@@ -2002,14 +2041,7 @@ kbd{
     </div>
     <div class="radRow" id="alphaRow"><span class="radLbl">透明度</span><input type="range" id="alphaIn" min="0" max="100" step="1" value="100"><span class="radNum" id="alphaV">100%</span></div>
   </div>
-  <div id="ruleBox"></div>
-  <div id="palBox">
-  <div class="swatches" id="fillSwatches"></div>
-  <div class="brandHead"><span>ブランドカラー</span><span class="brandHint">＋で保存 / 右クリックで削除</span></div>
-  <div id="brandBox"></div>
-  </div>
-  <input type="color" id="brandPick" style="position:absolute;width:0;height:0;opacity:0;pointer-events:none">
-  </div>
+  <div class="radRow" id="olQuickRow"><span class="radLbl">ふちの太さ</span><input type="range" id="olQ" min="0" max="40" step="0.5" value="2"><input type="number" class="radNum" id="olQV" min="0" max="80" step="0.5" value="2"></div>
   <div id="gradSec">
     <hr>
     <div class="menu-label">塗りのスタイル</div>
@@ -2031,6 +2063,15 @@ kbd{
       <div class="radRow"><span class="radLbl" style="width:64px">この色だけ</span><input type="range" id="stopAlpha" min="0" max="100" step="1" value="100"><span class="radNum" id="stopAlphaV">100%</span></div>
       <div class="segRow"><button class="seg" id="gradDelStop">選んだ色を削除</button></div>
     </div>
+  </div>
+  <div id="ruleBox"></div>
+  <div id="palBox">
+  <div id="hsvBox"><div id="svPad"><div id="svKnob"></div></div><div id="huePad"><div id="hueKnob"></div></div></div>
+  <div class="swatches" id="fillSwatches"></div>
+  <div class="brandHead"><span>ブランドカラー</span><span class="brandHint">＋で保存 / 右クリックで削除</span></div>
+  <div id="brandBox"></div>
+  </div>
+  <input type="color" id="brandPick" style="position:absolute;width:0;height:0;opacity:0;pointer-events:none">
   </div>
   <div id="strokeSec">
     <hr>
@@ -2185,6 +2226,7 @@ kbd{
   <button class="mi" data-add="blog"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="8" height="7" rx="1.5"/><rect x="13" y="4" width="8" height="7" rx="1.5"/><path d="M3 15h8M3 19h6M13 15h8M13 19h6"/></svg>ブログを足す(アイキャッチ画像つき)</button>
   <button class="mi" data-add="gmap"><svg viewBox="0 0 24 24"><path d="M12 21s-6-5.6-6-11a6 6 0 0 1 12 0c0 5.4-6 11-6 11z"/><circle cx="12" cy="10" r="2.2"/></svg>Googleマップを足す</button>
   <button class="mi" data-add="btn"><svg viewBox="0 0 24 24"><rect x="2.5" y="7" width="19" height="10" rx="5"/><path d="M13 12h5M16 10l2 2-2 2"/></svg>ボタンを足す(形・色・矢印・ホバー)</button>
+  <button class="mi" data-add="nav"><svg viewBox="0 0 24 24"><path d="M3 6h4M10 6h4M17 6h4M4 13h16M4 18h16"/></svg>ナビメニューを足す(メニュー・ハンバーガー)</button>
 </div>
 <div id="imgMenu" class="menu glass">
   <div class="menu-label">画像</div>
@@ -3030,7 +3072,7 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-30.9';
+const APP_VERSION='2026-10-31.1';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -6892,6 +6934,7 @@ function siteMedia(s,o){
 function siteShapeEl(s,o,tagOf){
   if(s.media)return siteAttrs(siteMedia(s,o),s);
   if(s.type==='btn')return siteAttrs(siteBtn(s,o),s);
+  if(s.type==='nav')return siteAttrs(siteNav(s,o),s);
   if(s.type==='ui')return siteAttrs(siteUi(s,o),s);
   if(s.type==='gmap')return siteAttrs(siteMap(s,o),s);
   if(s.type==='text'&&siteTextOk(s))return siteAttrs(siteText(s,o,tagOf(s)),s);
@@ -7572,6 +7615,53 @@ button.nt-news-i:hover span,a.nt-news-i:hover span{text-decoration:underline}
 .nt-nm-date{display:block;font-size:14px;color:#8B93A6}
 .nt-nm-title{font-size:20px;line-height:1.5;margin:4px 0 16px}
 .nt-nm-body{font-size:16px;line-height:1.9;white-space:pre-line}
+/* ナビメニュー */
+.nt-nav{display:flex;align-items:center;justify-content:center;color:var(--tc)}
+.nt-nav ul,.nt-np ul{list-style:none;margin:0;padding:0}
+.nt-nl{display:flex;align-items:center;justify-content:var(--al);gap:var(--gap);width:100%;height:100%}
+.nt-nav-v .nt-nl{flex-direction:column;justify-content:center;align-items:var(--al)}
+.nt-ni{display:block;position:relative;padding:var(--ipy) var(--ipx);border-radius:var(--ir);color:var(--itc,var(--tc));background:var(--ibg,var(--ibg0));text-decoration:none;white-space:nowrap;line-height:1.3;transition:color var(--d),background-color var(--d)}
+.nt-ni:hover,.nt-ni.nt-hov{color:var(--ihc,var(--hc,var(--itc,var(--tc))));background:var(--hb,var(--ibg,var(--ibg0)))}
+.nt-ni.nt-now{color:var(--cc,var(--itc,var(--tc)));background:var(--cb,var(--ibg,var(--ibg0)))}
+.nt-nav-ul .nt-ni::after{content:"";position:absolute;left:var(--ipx);right:var(--ipx);bottom:max(0px,calc(var(--ipy) - 5px));height:1.5px;background:currentColor;transform:scaleX(0);transform-origin:left;transition:transform var(--d)}
+.nt-nav-ul .nt-ni:hover::after,.nt-nav-ul .nt-ni.nt-hov::after,.nt-nav-ul .nt-ni.nt-now::after{transform:none}
+.nt-nb,.nt-np-x{display:none;align-items:center;justify-content:center;gap:4px;margin:auto;padding:0;border:0;background:none;color:var(--ic);font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.nt-nav-burger .nt-nb{display:flex}
+@media (max-width:${SITE_BP-1}px){.nt-nav-sp .nt-nl{display:none}.nt-nav-sp .nt-nb{display:flex}}
+.nt-nbf{position:relative;display:grid;place-items:center;box-sizing:border-box;transition:background-color .3s,border-color .3s}
+.nt-nbf svg{grid-area:1/1;overflow:visible;transition:opacity .3s,transform .35s}
+.nt-nbo{opacity:0;transform:rotate(-90deg)}
+.nt-nb[aria-expanded="true"],.nt-np-x{color:var(--ico)}
+.nt-nb[aria-expanded="true"] .nt-nbc,.nt-np-x .nt-nbc{opacity:0;transform:rotate(90deg)}
+.nt-nb[aria-expanded="true"] .nt-nbo,.nt-np-x .nt-nbo{opacity:1;transform:none}
+.nt-nbls{display:grid;font-weight:600;letter-spacing:1px;line-height:1.25}
+.nt-nbl{grid-area:1/1;transition:opacity .3s}
+.nt-nbl2{opacity:0}
+.nt-nb[aria-expanded="true"] .nt-nbls .nt-nbl:not(.nt-nbl2):has(+.nt-nbl2),.nt-np-x .nt-nbls .nt-nbl:not(.nt-nbl2):has(+.nt-nbl2){opacity:0}
+.nt-nb[aria-expanded="true"] .nt-nbl2,.nt-np-x .nt-nbl2{opacity:1}
+.nt-np{position:fixed;inset:0;z-index:1002;visibility:hidden;transition:visibility 0s .4s;font-family:inherit}
+.nt-np.on{visibility:visible;transition:none}
+.nt-np-bg{position:absolute;inset:0;background:rgba(0,0,0,.4);opacity:0;transition:opacity .35s}
+.nt-np.nt-nodim .nt-np-bg{background:transparent}
+.nt-np.on .nt-np-bg{opacity:1}
+.nt-np-p{position:absolute;box-sizing:border-box;padding:84px 32px 40px;overflow-y:auto;background:var(--pbg);transition:transform .4s cubic-bezier(.2,.8,.2,1),opacity .4s}
+.nt-np-p .nt-np-x{display:flex;position:absolute;top:16px;right:16px;margin:0}
+.nt-from-right .nt-np-p{top:0;right:0;bottom:0;width:min(var(--pw),88vw)}
+.nt-from-left .nt-np-p{top:0;left:0;bottom:0;width:min(var(--pw),88vw)}
+.nt-from-top .nt-np-p{top:0;left:0;right:0;max-height:100%}
+.nt-from-bottom .nt-np-p{bottom:0;left:0;right:0;max-height:100%}
+.nt-np-full .nt-np-p{inset:0;width:auto;max-height:none;display:flex;flex-direction:column;justify-content:center}
+.nt-np-slide.nt-from-right .nt-np-p{transform:translateX(100%)}
+.nt-np-slide.nt-from-left .nt-np-p{transform:translateX(-100%)}
+.nt-np-slide.nt-from-top .nt-np-p{transform:translateY(-100%)}
+.nt-np-slide.nt-from-bottom .nt-np-p{transform:translateY(100%)}
+.nt-np-fade .nt-np-p{opacity:0}
+.nt-np-zoom .nt-np-p{opacity:0;transform:scale(.9)}
+.nt-np.on .nt-np-p{transform:none;opacity:1}
+.nt-np ul{display:flex;flex-direction:column;gap:var(--pgap);align-items:var(--pal)}
+.nt-np .nt-ni{font-size:var(--pfs);color:var(--itc,var(--ptc,var(--tc)))}
+.nt-np .nt-ni.nt-now{color:var(--cc,var(--itc,var(--ptc,var(--tc))))}
+.nt-np .nt-ni:hover,.nt-np .nt-ni.nt-hov{color:var(--ihc,var(--hc,var(--itc,var(--ptc,var(--tc)))))}
 .nt-nm-link{display:inline-block;margin-top:20px;padding:10px 22px;border-radius:999px;background:#1F2A44;color:#fff;font-size:15px;font-weight:700}
 `;
 }
@@ -8401,6 +8491,45 @@ function siteJs(){
   }
   /* 別のページから「ページ名.html#区画」で来た時 */
   if(location.hash)addEventListener('load',function(){goSec(decodeURIComponent(location.hash.slice(1)),false);});
+  /* ナビメニュー: ハンバーガーで開く(開いたメニューは、拡大縮小の影響を受けないようページの外へ出しておく) */
+  document.querySelectorAll('.nt-nav').forEach(function(nv){
+    var b=nv.querySelector('.nt-nb'),p=nv.querySelector('.nt-np');if(!b||!p)return;
+    p.style.fontFamily=getComputedStyle(nv).fontFamily;p.style.fontWeight=getComputedStyle(nv).fontWeight;
+    document.body.appendChild(p);
+    function set(on){
+      p.classList.toggle('on',on);p.setAttribute('aria-hidden',on?'false':'true');
+      b.setAttribute('aria-expanded',on?'true':'false');
+      document.documentElement.style.overflow=on?'hidden':'';
+    }
+    b.addEventListener('click',function(e){e.stopPropagation();set(!p.classList.contains('on'));});
+    p.querySelector('.nt-np-bg').addEventListener('click',function(){set(false);});
+    p.querySelector('.nt-np-x').addEventListener('click',function(){set(false);});
+    p.addEventListener('click',function(e){if(e.target.closest('a'))set(false);});
+    addEventListener('keydown',function(e){if(e.key==='Escape'&&p.classList.contains('on'))set(false);});
+  });
+  /* ナビメニュー: 今いるページ・見ている区画の項目に印を付ける */
+  (function(){
+    var as=[].slice.call(document.querySelectorAll('a.nt-ni'));if(!as.length)return;
+    var file=decodeURIComponent(location.pathname.split('/').pop()||'index.html');
+    if(/[.]html?$/i.test(file)||location.pathname.slice(-1)==='/')as.forEach(function(a){
+      var f=(a.getAttribute('href')||'').split('#')[0];if(!f||/^[a-z]+:/i.test(f))return;
+      var on=f===file;a.classList.toggle('nt-now',on);if(on)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');
+    });
+    var hs=as.filter(function(a){var h=a.getAttribute('href')||'';return h.length>1&&h[0]==='#';});
+    if(!hs.length)return;
+    function upd(){
+      var best=null,bt=-1e9;
+      hs.forEach(function(a){
+        var n=decodeURIComponent(a.getAttribute('href').slice(1));
+        [].forEach.call(document.querySelectorAll('[data-sec]'),function(el){
+          if(el.getAttribute('data-sec')!==n||!el.getClientRects().length)return;
+          var t=el.getBoundingClientRect().top;if(t<=innerHeight*0.35&&t>bt){bt=t;best=n;}
+        });
+      });
+      hs.forEach(function(a){a.classList.toggle('nt-now',best!==null&&decodeURIComponent(a.getAttribute('href').slice(1))===best);});
+    }
+    addEventListener('scroll',upd,{passive:true});addEventListener('resize',upd);upd();
+  })();
 })();
 `;
 }
@@ -8466,7 +8595,9 @@ function sitePageDoc(d,page,opt){
   try{
     const topV=siteTopView(views);
     siteNewsUsed=false;
+    siteCurFile=page.file||'';
     const body=views.map(v=>sitePageHtml(v.f,v.ranges,v===topV)).join('\n');
+    siteCurFile='';
     const newsData=siteNewsUsed?siteNewsData():'';
     if(siteNewsUsed&&opt.newsSeen)opt.newsSeen.v=true;
     const pf=topV.f;
@@ -10241,6 +10372,8 @@ async function makeWireCanvas(w,opt){
       uiCanvas(ctx,s);
     }else if(s.type==='gmap'){
       gmapCanvas(ctx,s);
+    }else if(s.type==='nav'){
+      navCanvas(ctx,s);
     }else if(s.type==='btn'){
       btnCanvas(ctx,s);
     }else if(s.type==='icon'){
@@ -11544,6 +11677,7 @@ function devPartsCanvas(ctx,parts){
 function shapeSvg(s){
   if(s.type==='ui')return uiSvg(s);
   if(s.type==='btn')return btnSvg(s);
+  if(s.type==='nav')return navSvg(s);
   if(s.type==='gmap')return gmapSvg(s);
   const tr=`transform="translate(${s.x} ${s.y}) rotate(${s.rot||0})"`;
   const paint=paintOf(s);
@@ -13317,6 +13451,7 @@ function chipSync(){
   const ch=$('#colorChip');if(!ch)return;
   ch.style.setProperty('--chip',ok?hex:'transparent');
   const a=+$('#alphaIn').value;ch.firstElementChild.style.opacity=isNaN(a)?1:a/100;
+  hsvSync();
 }
 (function(){
   const ch=$('#colorChip'),box=$('#palBox');
@@ -16063,7 +16198,7 @@ $('#wireBarToggleBtn').onclick=toggleWireBar;
 applyWireBar();
 
 /* ---------- レイヤーパネル ---------- */
-const SHAPE_TYPE_LABEL={ui:'UIパーツ',gmap:'地図',btn:'ボタン',rect:'四角',ellipse:'丸',line:'線',text:'テキスト',image:'画像',path:'パス',frame:'フレーム',icon:'アイコン'};
+const SHAPE_TYPE_LABEL={ui:'UIパーツ',gmap:'地図',btn:'ボタン',nav:'ナビメニュー',rect:'四角',ellipse:'丸',line:'線',text:'テキスト',image:'画像',path:'パス',frame:'フレーム',icon:'アイコン'};
 function shapeLabel(s){
   if(s.name)return s.name;
   if(s.role&&LAY_KIND[s.role])return LAY_KIND[s.role];
@@ -16617,15 +16752,62 @@ $('#wireFitBtn').onclick=fitWire;
     b.className='sw';b.dataset.fill=c;b.style.background=c;b.title=c;
     sw.appendChild(b);
   });
-  /* カラーピッカー(自由な色) */
-  const picker=document.createElement('input');
-  picker.type='color';picker.className='sw sw-picker';picker.title='自由な色を選ぶ';
-  picker.value='#4A7DE8';
-  picker.addEventListener('input',e=>{
-    if(refGrad())setStopColor(e.target.value);   /* グラデーション中は選んだ色を変更 */
-    else setFill(e.target.value);
-  });
-  sw.appendChild(picker);
+})();
+/* 色を選ぶ四角(彩度・明るさ)と色相のバー。
+   動かしている間は1コマに1回だけ図形に反映し、元に戻す記録は動かし始めの1回だけ(滑らかに、そのまま色が変わる) */
+const hsv={h:220,s:.7,v:.9,drag:false,raf:0,hex:null};
+function hsvToHex(h,s,v){
+  const f=n=>{const k=(n+h/60)%6;return v-v*s*Math.max(0,Math.min(k,4-k,1));};
+  const x=c=>Math.round(c*255).toString(16).padStart(2,'0');
+  return('#'+x(f(5))+x(f(3))+x(f(1))).toUpperCase();
+}
+function hexToHsv(hex){
+  const [r,g,b]=hexToRgb(hex).map(c=>c/255),mx=Math.max(r,g,b),mn=Math.min(r,g,b),d=mx-mn;
+  let h=0;
+  if(d){h=mx===r?((g-b)/d)%6:mx===g?(b-r)/d+2:(r-g)/d+4;h*=60;if(h<0)h+=360;}
+  return{h,s:mx?d/mx:0,v:mx};
+}
+function hsvPaint(){
+  const pad=$('#svPad');if(!pad)return;
+  pad.style.setProperty('--hue',Math.round(hsv.h));
+  const k=$('#svKnob');k.style.left=(hsv.s*100)+'%';k.style.top=((1-hsv.v)*100)+'%';
+  k.style.background=hsvToHex(hsv.h,hsv.s,hsv.v);
+  const hk=$('#hueKnob');hk.style.left=(hsv.h/360*100)+'%';hk.style.background=`hsl(${Math.round(hsv.h)},100%,50%)`;
+}
+/* いまの色に合わせる(動かしている最中は合わせない。灰色の時は色相を残す) */
+function hsvSync(){
+  if(hsv.drag)return;
+  const hex=normHex(currentColorHex());
+  if(hex&&hex!==hsv.hex){const o=hexToHsv(hex);if(o.s>0.001&&o.v>0.001)hsv.h=o.h;hsv.s=o.s;hsv.v=o.v;hsv.hex=hex;}
+  hsvPaint();
+}
+function hsvApply(){
+  hsv.raf=0;
+  const hex=hsvToHex(hsv.h,hsv.s,hsv.v);hsv.hex=hex;
+  if(refGrad())setStopColor(hex,true);else setFill(hex,true);
+  const hi=$('#hexInput');if(document.activeElement!==hi)hi.value=hex;
+  chipSync();
+}
+(function(){
+  const drag=(pad,fn)=>{
+    pad.addEventListener('pointerdown',e=>{
+      if(!selShapes().some(x=>!x.locked))return;
+      e.preventDefault();e.stopPropagation();
+      try{pad.setPointerCapture(e.pointerId);}catch(er){}
+      pushUndo();hsv.drag=true;
+      const at=ev=>{const r=pad.getBoundingClientRect();fn(clamp((ev.clientX-r.left)/r.width,0,1),clamp((ev.clientY-r.top)/r.height,0,1));
+        hsvPaint();if(!hsv.raf)hsv.raf=requestAnimationFrame(hsvApply);};
+      at(e);
+      const mv=ev=>at(ev);
+      const up=()=>{pad.removeEventListener('pointermove',mv);pad.removeEventListener('pointerup',up);pad.removeEventListener('pointercancel',up);
+        if(hsv.raf){cancelAnimationFrame(hsv.raf);hsvApply();}
+        hsv.drag=false;save();updateStyleMenu();};
+      pad.addEventListener('pointermove',mv);pad.addEventListener('pointerup',up);pad.addEventListener('pointercancel',up);
+    });
+  };
+  drag($('#svPad'),(x,y)=>{hsv.s=x;hsv.v=1-y;});
+  drag($('#huePad'),x=>{hsv.h=Math.min(359.9,x*360);if(hsv.s<0.02)hsv.s=1;if(hsv.v<0.02)hsv.v=1;});
+  hsvPaint();
 })();
 function setStroke(off){
   /* 四角・丸に加えて閉じたパス(切り取った図形など)も対象にする */
@@ -16911,6 +17093,7 @@ function updateStyleMenu(){
   }
   renderIcoPart();
   renderBtnPart();
+  renderNavPart();
   renderMapPart();
   renderUiPart();
   $('#textSec').style.display=texts.length?'block':'none';
@@ -17061,6 +17244,10 @@ function updateStyleMenu(){
       :(paintTarget==='ol2'&&hasText?'ふちどり2(外側)の色'
       :(editingStroke?'枠線の色'
       :(strokeOnly?(ss.every(s=>s.type==='image')?'枠線の色':'線の色'):'塗り / 文字色'))));
+  /* ふちの太さ(ふち1/ふち2のタブの時) */
+  {const olOn=hasText&&(paintTarget==='ol'||paintTarget==='ol2');
+   $('#olQuickRow').style.display=olOn?'flex':'none';
+   if(olOn&&document.activeElement!==$('#olQV')){const w=paintTarget==='ol'?olW1(texts[0]):olW2(texts[0]);$('#olQ').value=w;$('#olQV').value=w;}}
   /* 透明度 */
   if(ss.length){
     const a=Math.round(alphaOf(ss[0],effTarget(ss[0]))*100);
@@ -17146,6 +17333,16 @@ bindSlider('fxCt','fxCtV',v=>setImgFx('ct',v,true));
 bindSlider('fxSa','fxSaV',v=>setImgFx('sa',v,true));
 $('#fxReset').onclick=resetImgFx;
 bindSlider('olW','olWV',v=>setOlWidth('ol',v,true));
+/* 色の欄のふちの太さ。0 にするとふちどりを外す */
+bindSlider('olQ','olQV',v=>{
+  const which=paintTarget==='ol2'?'ol2':'ol',wk=which==='ol'?'olw':'ol2w';
+  if(v>0){setOlWidth(which,v,true);}
+  else{selShapes().filter(s=>!s.locked&&s.type==='text').forEach(s=>{delete s[wk];measureWText(s);});save();renderWire();}
+  const t=selShapes().find(s=>s.type==='text');
+  if(t){const w=which==='ol'?olW1(t):olW2(t);
+    document.querySelectorAll('#'+which+'OnRow .seg').forEach(b=>b.classList.toggle('active',(b.dataset.ol==='on')===(w>0)));
+    $('#'+which+'Edit').style.display=w>0?'block':'none';if(w>0){$('#'+which+'W').value=w;$('#'+which+'WV').value=w;}}
+});
 bindSlider('ol2W','ol2WV',v=>setOlWidth('ol2',v,true));
 /* あり/なし・色 */
 $('#shOnRow').addEventListener('click',e=>{
@@ -17309,7 +17506,7 @@ function initColl(){
 initColl();
 $('#fillMenu').addEventListener('pointerdown',e=>{
   /* 操作部品・折りたたみ見出しの上では動かさない */
-  if(e.target.closest('button,input,select,.sw,.gstop,#gradBar,.collHead,.gadd'))return;
+  if(e.target.closest('button,input,select,.sw,.gstop,#gradBar,.collHead,.gadd,#hsvBox'))return;
   const menu=$('#fillMenu');
   const r=menu.getBoundingClientRect();
   const ox=e.clientX-r.left,oy=e.clientY-r.top;
@@ -18436,9 +18633,10 @@ const LAY_ICONS={
   section:'<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M3 15h18"/></svg>',
   box:'<svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="2" stroke-dasharray="3 2.4"/><rect x="7.5" y="7.5" width="9" height="3.5" rx="1"/><rect x="7.5" y="13" width="9" height="3.5" rx="1"/></svg>',
   btn:'<svg viewBox="0 0 24 24"><rect x="2.5" y="7" width="19" height="10" rx="5"/><path d="M13 12h5M16 10l2 2-2 2"/></svg>',
-  gmap:'<svg viewBox="0 0 24 24"><path d="M12 21s-6-5.6-6-11a6 6 0 0 1 12 0c0 5.4-6 11-6 11z"/><circle cx="12" cy="10" r="2.2"/></svg>'
+  gmap:'<svg viewBox="0 0 24 24"><path d="M12 21s-6-5.6-6-11a6 6 0 0 1 12 0c0 5.4-6 11-6 11z"/><circle cx="12" cy="10" r="2.2"/></svg>',
+  nav:'<svg viewBox="0 0 24 24"><path d="M3 7h4M10 7h4M17 7h4M4 14h16M4 18.5h16"/></svg>'
 };
-function layIcon(s,k){return LAY_ICONS[s.type==='btn'||s.type==='gmap'?s.type:s.type==='ui'?'btn':k]||layerIconFor(s);}
+function layIcon(s,k){return LAY_ICONS[s.type==='btn'||s.type==='gmap'||s.type==='nav'?s.type:s.type==='ui'?'btn':k]||layerIconFor(s);}
 /* ---- ページ・セクション・コンテナを足す ---- */
 function layTopFrames(sh){const par=layParents(sh);return sh.filter((s,i)=>isFrame(s)&&!par[i]);}
 function layAddPage(){
@@ -18817,7 +19015,7 @@ function btnFieldHtml(f,b){
   if(type==='color'){
     /* opt.same=「変えない」(ホバー)/ 矢印の色は「文字と同じ」が基本で、印を付けると自分で選べる */
     const isNone=v==='none',optional=!!opt.same;
-    const fallback=k==='ar.col'?b.tc:(btnGet(b,k.replace('hv.',''))||'#000000');
+    const fallback=k==='ar.col'?b.tc:(btnGet(b,k.replace(/^(hv|cur)\./,''))||(/^bu\./.test(k)?btnGet(b,'bu.col'):'')||b.tc||'#000000');
     const cur=on&&!isNone?v:fallback;
     const onBox=optional?`<label class="btnChk"><input type="checkbox" data-bon="${k}"${on?' checked':''}>${k==='ar.col'?'自分で選ぶ':'変える'}</label>`:'';
     const noneBox=opt.none?`<label class="btnChk"><input type="checkbox" data-bnone="${k}"${isNone?' checked':''}>${opt.none}</label>`:'';
@@ -18890,6 +19088,430 @@ $('#btnFields').addEventListener('change',e=>{
     save();renderWire();renderBtnPart();
   }
 });
+/* ============================================================
+   ナビメニュー(type:'nav')。メニュー名を並べ、それぞれにリンクを付ける。横並び・縦並び。
+   ふだん・ホバー(スマホはタップ)・このページにいる時の色を決められる。項目ごとに色を変えることもできる。
+   表示のしかた: 並べる / ハンバーガーにたたむ / スマホだけたたむ。
+   ハンバーガーのアイコンは形を選ぶか、線の本数・長さ・太さで自分で作る。上か下に文字、枠で囲む、開いた時のアイコン。
+   開き方(スライド・ふわっと・拡大)と、出てくる方向(右・左・上・下)、全画面。
+   s.nav={items:[{t,h,c,hc,bg}],dir,al,gap,ff,fs,fw,ls,ipx,ipy,ir,tc,ibg,ul,hv:{tc,bg},cur:{tc,bg},dur,mode,
+     bu:{st,n,iw,th,ig,sh,sa,cap,col,ost,ocol,lbl,lblO,lp,lfs,fr,fsz,frr,fbc,fbw,fbg,an,from,full,pw,pbg,ptc,pfs,pgap,pal,dim}}
+   ============================================================ */
+const NAV_DEF={items:[{t:'ホーム',h:'#'},{t:'私たちについて',h:'#about'},{t:'サービス',h:'#service'},{t:'お問い合わせ',h:'#contact'}],
+  dir:'h',al:'center',gap:32,fs:16,fw:500,ls:1,ipx:4,ipy:6,ir:0,tc:'#1F1D1A',ibg:'none',ul:1,hv:{tc:'#B08D57'},cur:{tc:'#B08D57'},dur:0.25,mode:'show',
+  bu:{st:'lines',n:3,iw:26,th:2,ig:7,sh:100,sa:'right',cap:'round',col:'#1F1D1A',ost:'x',lbl:'',lblO:'',lp:'bottom',lfs:10,
+    fr:'none',fsz:48,frr:10,fbc:'#1F1D1A',fbw:1,fbg:'none',an:'slide',from:'right',pw:320,pbg:'#FFFFFF',pfs:20,pgap:20,pal:'flex-start',dim:1}};
+/* 値(無い時は既定) */
+const navV=(s,k)=>{const v=btnGet(s.nav,k);return v===undefined?btnGet(NAV_DEF,k):v;};
+let navPrev=null;   /* 編集画面で見ている状態 {id,m:'hover'|'cur'|'open'} */
+const navCol=c=>c&&c!=='none'?c:'transparent';
+const navTextShape=(s,t,fs)=>({type:'text',text:t||' ',fs:fs||navV(s,'fs'),fw:navV(s,'fw'),ff:navV(s,'ff')||docFont(),ls:+navV(s,'ls')||0,lh:1.3,align:'center'});
+function navTW(p){try{wfNeed(p);return textLayout(p).w;}catch(e){return(p.text||'').length*p.fs;}}
+/* 項目の大きさと位置(ナビの真ん中が 0,0) */
+function navItemsGeo(s){
+  const n=s.nav,its=n.items||[],ipx=+navV(s,'ipx')||0,ipy=+navV(s,'ipy')||0,gap=+navV(s,'gap')||0,fs=navV(s,'fs');
+  const g=its.map(it=>{const tw=navTW(navTextShape(s,it.t));return{it,tw,w:tw+ipx*2,h:fs*1.3+ipy*2};});
+  const al=navV(s,'al');
+  if(navV(s,'dir')==='v'){
+    const tot=g.reduce((a,x)=>a+x.h,0)+gap*Math.max(0,g.length-1);
+    let y=-tot/2;
+    g.forEach(x=>{x.cy=y+x.h/2;y+=x.h+gap;x.cx=al==='start'?-s.w/2+x.w/2:al==='end'?s.w/2-x.w/2:0;});
+    return{g,tw:Math.max(0,...g.map(x=>x.w)),th:tot};
+  }
+  const sum=g.reduce((a,x)=>a+x.w,0),tot=sum+gap*Math.max(0,g.length-1);
+  let x=al==='start'?-s.w/2:al==='end'?s.w/2-tot:al==='between'?-s.w/2:-tot/2;
+  const gg=al==='between'&&g.length>1?Math.max(gap,(s.w-sum)/(g.length-1)):gap;
+  g.forEach(o=>{o.cx=x+o.w/2;o.cy=0;x+=o.w+gg;});
+  return{g,tw:tot,th:Math.max(0,...g.map(o=>o.h))};
+}
+/* ハンバーガーのアイコン(真ん中が 0,0)。open=開いた時 */
+function navIconParts(bu,open){
+  const iw=+bu.iw||26,th=+bu.th||2,ig=+bu.ig||7,cap=bu.cap||'round';
+  const st=open?(bu.ost||'x'):'',ln=(x1,y1,x2,y2)=>({d:`M${x1} ${y1}L${x2} ${y2}`});
+  if(open&&st!=='same'){
+    if(st==='minus')return{paths:[ln(-iw/2,0,iw/2,0)],dots:[],th,cap};
+    if(st==='arrow'){const a=iw*0.32;return{paths:[ln(-iw/2,0,iw/2,0),{d:`M${-iw/2+a} ${-a}L${-iw/2} 0L${-iw/2+a} ${a}`}],dots:[],th,cap};}
+    const a=iw*0.36;return{paths:[ln(-a,-a,a,a),ln(-a,a,a,-a)],dots:[],th,cap};
+  }
+  const n=Math.max(1,+bu.n||3);
+  if(bu.st==='dots'){const rr=Math.max(1,th*1.15),sp=n>1?iw/(n-1):0;return{paths:[],dots:Array.from({length:n},(_,i)=>({x:-iw/2+sp*i,y:0,r:rr})),th,cap};}
+  if(bu.st==='grid'){const rr=Math.max(1,th*1.05),sp=iw/2;const d=[];for(let i=0;i<3;i++)for(let j=0;j<3;j++)d.push({x:-iw/2+sp*j,y:-iw/2+sp*i,r:rr});return{paths:[],dots:d,th,cap};}
+  const tot=(n-1)*ig,paths=[];
+  for(let i=0;i<n;i++){
+    const y=-tot/2+i*ig,last=i===n-1&&n>1,L=last?iw*clamp(+bu.sh||100,10,100)/100:iw;
+    const x1=!last||bu.sa==='left'?-iw/2:bu.sa==='center'?-L/2:iw/2-L;
+    paths.push(ln(x1,y,x1+L,y));
+  }
+  return{paths,dots:[],th,cap};
+}
+function navIconSvg(bu,open,col){
+  const P=navIconParts(bu,open);
+  return P.paths.map(p=>`<path d="${p.d}" fill="none" stroke="${col}" stroke-width="${P.th}" stroke-linecap="${P.cap}" stroke-linejoin="round"/>`).join('')
+    +P.dots.map(d=>`<circle cx="${cssNum(d.x)}" cy="${cssNum(d.y)}" r="${cssNum(d.r)}" fill="${col}"/>`).join('');
+}
+/* アイコンの占める大きさ(枠なしの時) */
+const navIconSize=bu=>{const iw=+bu.iw||26,n=+bu.n||3,th=+bu.th||2;return Math.max(iw,bu.st==='lines'||!bu.st?(n-1)*(+bu.ig||7):iw)+th*2;};
+/* ハンバーガーの並び(真ん中が 0,0): 枠(アイコン)と文字 */
+function navBurgerGeo(s,open){
+  const bu={...NAV_DEF.bu,...(s.nav.bu||{})};
+  const box=bu.fr==='none'?navIconSize(bu):(+bu.fsz||48);
+  const lbl=open&&bu.lblO?bu.lblO:bu.lbl,lh=lbl?bu.lfs*1.25:0,gp=lbl?4:0,H=box+lh+gp;
+  const top=bu.lp==='top';
+  return{bu,box,lbl,lh,H,iy:-H/2+(top?lh+gp:0)+box/2,ly:top?-H/2+lh/2:H/2-lh/2,W:Math.max(box,lbl?navTW({type:'text',text:lbl,fs:bu.lfs,fw:600,ff:navV(s,'ff')||docFont(),ls:1,lh:1.25,align:'center'}):0)};
+}
+function navBurgerSvg(s,open){
+  const G=navBurgerGeo(s,open),bu=G.bu,col=open&&bu.ocol?bu.ocol:bu.col;
+  let h='';
+  if(bu.fr!=='none'){
+    const F=G.box,fbw=+bu.fbw||0,rr=bu.fr==='circle'?F/2:bu.fr==='round'?Math.min(+bu.frr||0,F/2):0;
+    h+=`<rect x="${-F/2+fbw/2}" y="${G.iy-F/2+fbw/2}" width="${Math.max(0,F-fbw)}" height="${Math.max(0,F-fbw)}" rx="${Math.max(0,rr-fbw/2)}" fill="${navCol(bu.fbg)}" stroke="${fbw?bu.fbc:'none'}" stroke-width="${fbw}"/>`;
+  }
+  h+=`<g transform="translate(0 ${G.iy})">${navIconSvg(bu,open,col)}</g>`;
+  if(G.lbl){const p={type:'text',text:G.lbl,fs:bu.lfs,fw:600,ff:navV(s,'ff')||docFont(),ls:1,lh:1.25,align:'center'},TL=textLayout(p);h+=`<g transform="translate(0 ${G.ly})">${textCharsSvg(p,TL,()=>` fill="${col}"`)}</g>`;}
+  return h;
+}
+/* 今いるページの項目(編集画面で「このページ」を見る時): ナビが置かれたページの書き出し名と同じリンク。無ければ最初 */
+function navCurIndex(s){
+  const sh=curShapes();let p=parentFrameAt(sh,sh.indexOf(s)),top=p;
+  while(p){top=p;p=parentFrameAt(sh,sh.indexOf(p));}
+  const c=siteCfg(),pg=top&&(c.pages||[]).find(x=>x.pc===top.id||x.tab===top.id||x.sp===top.id);
+  const i=pg?(s.nav.items||[]).findIndex(it=>(it.h||'').split('#')[0]===pg.file):-1;
+  return i<0?0:i;
+}
+/* 項目の色(st: ''/'hover'/'cur') */
+function navItemLook(s,it,st){
+  const tc=it.c||navV(s,'tc'),bg=it.bg||navV(s,'ibg');
+  if(st==='hover')return{tc:it.hc||navV(s,'hv.tc')||tc,bg:navV(s,'hv.bg')||bg,ul:!!navV(s,'ul')};
+  if(st==='cur')return{tc:navV(s,'cur.tc')||tc,bg:navV(s,'cur.bg')||bg,ul:!!navV(s,'ul')};
+  return{tc,bg,ul:false};
+}
+function navItemsSvg(s,X,stOf){
+  const ir=+navV(s,'ir')||0,fs=navV(s,'fs');let h='';
+  X.g.forEach((o,i)=>{
+    const L=navItemLook(s,o.it,stOf(i));
+    if(L.bg&&L.bg!=='none')h+=`<rect x="${o.cx-o.w/2}" y="${o.cy-o.h/2}" width="${o.w}" height="${o.h}" rx="${Math.min(ir,o.h/2)}" fill="${L.bg}"/>`;
+    const p=navTextShape(s,o.it.t),TL=textLayout(p);
+    h+=`<g transform="translate(${o.cx} ${o.cy})">${textCharsSvg(p,TL,()=>` fill="${L.tc}"`)}</g>`;
+    if(L.ul)h+=`<rect x="${o.cx-o.tw/2}" y="${o.cy+fs*0.62}" width="${o.tw}" height="1.5" fill="${L.tc}"/>`;
+  });
+  return h;
+}
+function navSvg(s){
+  const pv=navPrev&&navPrev.id===s.id?navPrev.m:'',mode=navV(s,'mode');
+  const tr=`transform="translate(${s.x} ${s.y}) rotate(${s.rot||0})"`;
+  let h=`<g data-id="${s.id}" ${tr}><rect x="${-s.w/2}" y="${-s.h/2}" width="${s.w}" height="${s.h}" fill="transparent"/>`;
+  if(mode==='burger'||pv==='open')h+=navBurgerSvg(s,pv==='open');
+  else{const X=navItemsGeo(s),ci=pv==='cur'?navCurIndex(s):-1;h+=navItemsSvg(s,X,i=>pv==='hover'&&i===0?'hover':i===ci?'cur':'');}
+  h+='</g>';
+  if(pv==='open')h+=navPanelPrevSvg(s);
+  return h;
+}
+/* 「開いた時」を見る: ナビが置かれたページの上に、開いたメニューを重ねて描く(画面の大きさはページの幅と900px) */
+function navPanelPrevSvg(s){
+  const sh=curShapes();let p=parentFrameAt(sh,sh.indexOf(s)),P=p;
+  while(p){P=p;p=parentFrameAt(sh,sh.indexOf(p));}
+  const bu={...NAV_DEF.bu,...(s.nav.bu||{})};
+  const B=P?{x:P.x-P.w/2,y:P.y-P.h/2,w:P.w,h:Math.min(P.h,900)}:{x:s.x-200,y:s.y-s.h/2,w:400,h:600};
+  const pfs=+bu.pfs||20,gap=+bu.pgap||0,its=s.nav.items||[],ih=pfs*1.3+(+navV(s,'ipy')||0)*2;
+  const listH=its.length*ih+Math.max(0,its.length-1)*gap;
+  let x1=B.x,y1=B.y,w=B.w,hh=B.h;
+  if(!bu.full){
+    if(bu.from==='left'||bu.from==='right'){w=Math.min(+bu.pw||320,B.w*0.88);if(bu.from==='right')x1=B.x+B.w-w;}
+    else{hh=Math.min(B.h,listH+112);if(bu.from==='bottom')y1=B.y+B.h-hh;}
+  }
+  let h=`<g pointer-events="none">`;
+  if(bu.dim)h+=`<rect x="${B.x}" y="${B.y}" width="${B.w}" height="${B.h}" fill="#000" fill-opacity=".4"/>`;
+  h+=`<rect x="${x1}" y="${y1}" width="${w}" height="${hh}" fill="${navCol(bu.pbg)}"/>`;
+  const cen=bu.pal==='center',ptc=bu.ptc;
+  let y=bu.full?y1+(hh-listH)/2:y1+80;
+  its.forEach((it,i)=>{
+    const p=navTextShape(s,it.t,pfs),tw=navTW(p),TL=textLayout(p),L=navItemLook(s,it,i===navCurIndex(s)?'cur':'');
+    const cx=cen?x1+w/2:x1+32+tw/2,col=ptc&&!it.c&&i!==navCurIndex(s)?ptc:L.tc;
+    h+=`<g transform="translate(${cx} ${y+ih/2})">${textCharsSvg(p,TL,()=>` fill="${col}"`)}</g>`;
+    y+=ih+gap;
+  });
+  /* 閉じるアイコン(開いた時のアイコン) */
+  const G=navBurgerGeo(s,true),cx=bu.from==='left'&&!bu.full?x1+w-16-G.W/2:x1+w-16-G.W/2,cy=y1+16+G.H/2;
+  h+=`<g transform="translate(${cx} ${cy})">${navBurgerSvg(s,true)}</g>`;
+  return h+'</g>';
+}
+/* 画像(PNG・PDF)に書き出す時(ふだんの見た目) */
+function navCanvas(ctx,s){
+  const drawText=(p,x,y,col)=>{const TL=textLayout(p);ctx.fillStyle=col;ctx.textAlign='left';ctx.textBaseline='alphabetic';
+    TL.chars.forEach(c=>{ctx.font=fontCss(c.a);ctx.fillText(c.ch,x+c.cx+(c.gx||0),y+c.by);});};
+  if(navV(s,'mode')==='burger'){
+    const G=navBurgerGeo(s,false),bu=G.bu;
+    if(bu.fr!=='none'){
+      const F=G.box,fbw=+bu.fbw||0,rr=bu.fr==='circle'?F/2:bu.fr==='round'?Math.min(+bu.frr||0,F/2):0;
+      const p=new Path2D();p.roundRect(-F/2+fbw/2,G.iy-F/2+fbw/2,Math.max(0,F-fbw),Math.max(0,F-fbw),Math.max(0,rr-fbw/2));
+      if(bu.fbg&&bu.fbg!=='none'){ctx.fillStyle=bu.fbg;ctx.fill(p);}
+      if(fbw){ctx.strokeStyle=bu.fbc;ctx.lineWidth=fbw;ctx.stroke(p);}
+    }
+    const P=navIconParts(bu,false);
+    ctx.save();ctx.translate(0,G.iy);ctx.strokeStyle=bu.col;ctx.fillStyle=bu.col;ctx.lineWidth=P.th;ctx.lineCap=P.cap;ctx.lineJoin='round';
+    P.paths.forEach(p=>ctx.stroke(new Path2D(p.d)));
+    P.dots.forEach(d=>{ctx.beginPath();ctx.arc(d.x,d.y,d.r,0,Math.PI*2);ctx.fill();});
+    ctx.restore();
+    if(G.lbl)drawText({type:'text',text:G.lbl,fs:bu.lfs,fw:600,ff:navV(s,'ff')||docFont(),ls:1,lh:1.25,align:'center'},0,G.ly,bu.col);
+    return;
+  }
+  const X=navItemsGeo(s),ir=+navV(s,'ir')||0;
+  X.g.forEach(o=>{
+    const L=navItemLook(s,o.it,'');
+    if(L.bg&&L.bg!=='none'){const p=new Path2D();p.roundRect(o.cx-o.w/2,o.cy-o.h/2,o.w,o.h,Math.min(ir,o.h/2));ctx.fillStyle=L.bg;ctx.fill(p);}
+    drawText(navTextShape(s,o.it.t),o.cx,o.cy,L.tc);
+  });
+}
+/* 中身に合わせた大きさ */
+function navFitSize(s){
+  if(navV(s,'mode')==='burger'){const G=navBurgerGeo(s,false);return{w:Math.ceil(G.W+8),h:Math.ceil(G.H+8)};}
+  const X=navItemsGeo(s);return{w:Math.ceil(X.tw+8),h:Math.ceil(X.th+8)};
+}
+/* 項目が増えて収まらない時は広げる(縮めるのは「大きさを中身に合わせる」で) */
+function navGrow(s,shrink){
+  const f=navFitSize(s);
+  const w=shrink?f.w:Math.max(s.w,f.w),h=shrink?f.h:Math.max(s.h,f.h);
+  if(navV(s,'mode')!=='burger'&&navV(s,'al')==='start'){s.x+=(w-s.w)/2;}
+  else if(navV(s,'mode')!=='burger'&&navV(s,'al')==='end'){s.x-=(w-s.w)/2;}
+  s.w=w;s.h=h;
+}
+/* ---- ホームページに書き出す ---- */
+let siteCurFile='';   /* 書き出し中のページのファイル名(今いるページの項目に印を付ける) */
+function siteNavItems(s,inPanel){
+  return(s.nav.items||[]).map(it=>{
+    const href=safeHref(it.h)||'#',f=href.split('#')[0],cur=!!(f&&siteCurFile&&f===siteCurFile);
+    const v=[it.c?`--itc:${cssCol(it.c)}`:'',it.hc?`--ihc:${cssCol(it.hc)}`:'',it.bg?`--ibg:${navCol(it.bg)==='transparent'?'transparent':cssCol(it.bg)}`:''].filter(Boolean).join(';');
+    const ext=/^https?:/i.test(href)?' target="_blank" rel="noopener"':'';
+    return`<li><a class="nt-ni${cur?' nt-now':''}" href="${escXml(href)}"${ext}${cur?' aria-current="page"':''}${v?` style="${v}"`:''}>${escXml(it.t||'')}</a></li>`;
+  }).join('');
+}
+function siteNav(s,o){
+  const n=s.nav,mode=navV(s,'mode'),bu={...NAV_DEF.bu,...(n.bu||{})},col=c=>c&&c!=='none'?cssCol(c):'transparent';
+  const ff=navV(s,'ff')||docFont();
+  const vars=[`--tc:${cssCol(navV(s,'tc'))}`,`--ibg0:${col(navV(s,'ibg'))}`,navV(s,'hv.tc')?`--hc:${cssCol(navV(s,'hv.tc'))}`:'',navV(s,'hv.bg')?`--hb:${col(navV(s,'hv.bg'))}`:'',
+    navV(s,'cur.tc')?`--cc:${cssCol(navV(s,'cur.tc'))}`:'',navV(s,'cur.bg')?`--cb:${col(navV(s,'cur.bg'))}`:'',
+    `--ipx:${cssNum(+navV(s,'ipx')||0)}px`,`--ipy:${cssNum(+navV(s,'ipy')||0)}px`,`--ir:${cssNum(+navV(s,'ir')||0)}px`,`--d:${cssNum(+navV(s,'dur')||0.25)}s`,
+    `font-family:${cssFont(ff)}`,`font-weight:${navV(s,'fw')}`,(+navV(s,'ls'))?`letter-spacing:${cssNum(+navV(s,'ls'))}px`:''].filter(Boolean);
+  const al=navV(s,'al'),jc={start:'flex-start',center:'center',end:'flex-end',between:'space-between'}[al]||'center';
+  const cls=['nt-e','nt-nav','nt-nav-'+(mode==='burger'?'burger':mode==='sp'?'sp':'show'),navV(s,'dir')==='v'?'nt-nav-v':'',navV(s,'ul')?'nt-nav-ul':''].filter(Boolean).join(' ');
+  const st=[siteBox(s,o,s.w,s.h),...vars,`--al:${jc}`,`--gap:${cssNum(+navV(s,'gap')||0)}px`,`font-size:${cssNum(navV(s,'fs'))}px`].join(';');
+  let h=`<nav class="${cls}" style="${st}" aria-label="メニュー">`;
+  if(mode!=='burger')h+=`<ul class="nt-nl">${siteNavItems(s)}</ul>`;
+  if(mode!=='show'){
+    const ib=navIconSize(bu),box=bu.fr==='none'?ib:(+bu.fsz||48),vb=Math.max(ib,(+bu.iw||26)+(+bu.th||2)*2);
+    const icon=(open,c)=>`<svg class="${open?'nt-nbo':'nt-nbc'}" width="${cssNum(vb)}" height="${cssNum(vb)}" viewBox="${cssNum(-vb/2)} ${cssNum(-vb/2)} ${cssNum(vb)} ${cssNum(vb)}" aria-hidden="true">${navIconSvg(bu,open,c)}</svg>`;
+    const fr=bu.fr==='none'?'':`;border:${cssNum(+bu.fbw||0)}px solid ${cssCol(bu.fbc)};background:${col(bu.fbg)};border-radius:${bu.fr==='circle'?'50%':bu.fr==='round'?cssNum(+bu.frr||0)+'px':'0'}`;
+    const lbl=(t,o2)=>t?`<span class="nt-nbl${o2?' nt-nbl2':''}" style="font-size:${cssNum(bu.lfs)}px">${escXml(t)}</span>`:'';
+    const lbls=bu.lbl||bu.lblO?`<span class="nt-nbls">${lbl(bu.lbl||bu.lblO,false)}${bu.lblO?lbl(bu.lblO,true):''}</span>`:'';
+    const btn=(cls2,aria)=>`<button class="${cls2}" type="button" aria-label="${aria}"${cls2==='nt-nb'?' aria-expanded="false"':''} style="--ic:${cssCol(bu.col)};--ico:${cssCol(bu.ocol||bu.col)};flex-direction:${bu.lp==='top'?'column-reverse':'column'}">`
+      +`<span class="nt-nbf" style="width:${cssNum(box)}px;height:${cssNum(box)}px${fr}">${icon(false,'currentColor')}${icon(true,'currentColor')}</span>${lbls}</button>`;
+    h+=btn('nt-nb','メニューを開く');
+    const pv=[...vars,`--pbg:${col(bu.pbg)}`,bu.ptc?`--ptc:${cssCol(bu.ptc)}`:'',`--pw:${cssNum(+bu.pw||320)}px`,`--pfs:${cssNum(+bu.pfs||20)}px`,`--pgap:${cssNum(+bu.pgap||0)}px`,`--pal:${bu.pal||'flex-start'}`].filter(Boolean).join(';');
+    const pcls=['nt-np','nt-np-'+(bu.an||'slide'),'nt-from-'+(bu.from||'right'),bu.full?'nt-np-full':'',bu.dim?'':'nt-nodim',navV(s,'ul')?'nt-nav-ul':''].filter(Boolean).join(' ');
+    h+=`<div class="${pcls}" aria-hidden="true" style="${pv}"><div class="nt-np-bg"></div><div class="nt-np-p">${btn('nt-np-x nt-on','メニューを閉じる')}<ul>${siteNavItems(s,true)}</ul></div></div>`;
+  }
+  return h+'</nav>';
+}
+/* ---- 足す ---- */
+function navAdd(){
+  const d=curDoc();if(!d||!d.shapes)return;
+  hideMenus();
+  const sh=d.shapes,sel=selShapes();
+  pushUndo();
+  const s={id:uid(),type:'nav',x:0,y:0,w:100,h:40,rot:0,nav:JSON.parse(JSON.stringify(NAV_DEF))};
+  /* ページ・区画があれば、その名前でメニューを作る */
+  const c=siteCfg(),names=siteSectionNames(d);
+  if((c.pages||[]).length>1)s.nav.items=c.pages.slice(0,6).map(p=>({t:p.title||p.file.replace(/\.html$/,''),h:p.file}));
+  else if(names.length){
+    /* 置く区画(ヘッダーなど)そのものは項目にしない */
+    const own=sel.find(isFrame),nm=names.filter(n=>!own||n!==own.name);
+    s.nav.items=(nm.length?nm:names).slice(0,6).map(n=>({t:n,h:'#'+n}));
+  }
+  navGrow(s,true);
+  sh.push(s);placeNew([s],sel);
+  wireSel=[s.id];selAnchor=null;
+  save();renderWire();openStyleMenu();updateStyleMenu();renderLayerPanel();
+  toast('ナビメニューを足しました。「色とスタイル」の「ナビメニュー」で、項目とリンク・見た目を決めます');
+}
+/* ---- パネル ---- */
+let navTab='i';
+const NAV_FW=[[100,'Thin'],[200,'ExLight'],[300,'Light'],[400,'Regular'],[500,'Medium'],[600,'SemiBold'],[700,'Bold'],[800,'ExBold'],[900,'Heavy']];
+const isLines=b=>((b.bu||{}).st||'lines')==='lines',isBurger=b=>(b.mode||'show')!=='show',hasFr=b=>((b.bu||{}).fr||'none')!=='none';
+const NAV_FIELDS={
+  t:[
+    ['mode','表示のしかた','seg',[['show','項目を並べる'],['burger','ハンバーガーにたたむ'],['sp','スマホだけたたむ']]],
+    ['dir','並べ方','seg',[['h','横並び'],['v','縦並び']]],
+    ['al','そろえ方','seg',[['start','左'],['center','中央'],['end','右'],['between','均等']]],
+    ['gap','項目の間','range',0,120,1],
+    ['ff','フォント','font'],['fs','文字の大きさ','range',8,48,1],['fw','太さ','seg',NAV_FW],
+    ['ls','文字間隔','range',-2,20,0.5],
+    ['ipx','項目の余白(横)','range',0,40,1],['ipy','項目の余白(縦)','range',0,30,1],['ir','項目の角の丸み','range',0,40,1]
+  ],
+  c:[
+    ['tc','文字の色','color'],['ibg','項目の背景','color',{none:'塗りなし'}],
+    ['ul','下線','seg',[['','付けない'],['1','ホバー・このページで付ける']]],
+    ['-','ホバー時(マウスを乗せた時・スマホはタップした時)','head'],
+    ['hv.tc','文字の色','color',{same:'変えない'}],['hv.bg','背景','color',{same:'変えない',none:'塗りなし'}],
+    ['-','このページにいる時(今いるページ・見ている区画)','head'],
+    ['cur.tc','文字の色','color',{same:'変えない'}],['cur.bg','背景','color',{same:'変えない',none:'塗りなし'}],
+    ['dur','変化の速さ(秒)','range',0.05,1.2,0.05]
+  ],
+  b:[
+    ['bu.st','アイコンの形','seg',[['lines','線'],['dots','点'],['grid','点(9つ)']]],
+    ['bu.n','線・点の数','seg',[[2,'2'],[3,'3'],[4,'4']],{if:b=>(b.bu||{}).st!=='grid'}],
+    ['bu.iw','アイコンの幅','range',10,64,1],['bu.th','線の太さ','range',0.5,8,0.5],
+    ['bu.ig','線の間','range',2,24,0.5,{if:isLines}],
+    ['bu.sh','最後の線の長さ(%)','range',20,100,1,{if:isLines}],
+    ['bu.sa','短い線の位置','seg',[['left','左'],['center','中央'],['right','右']],{if:b=>isLines(b)&&((b.bu||{}).sh||100)<100}],
+    ['bu.cap','線の端','seg',[['round','丸'],['butt','四角']],{if:isLines}],
+    ['bu.col','アイコンの色','color'],
+    ['-','開いた時のアイコン','head'],
+    ['bu.ost','形','seg',[['x','× 閉じる'],['minus','− 線'],['arrow','← 矢印'],['same','変えない']]],
+    ['bu.ocol','色','color',{same:'変えない'}],
+    ['-','アイコンの文字','head'],
+    ['bu.lbl','文字','text',{ph:'例: MENU(空欄=なし)'}],['bu.lblO','開いた時の文字','text',{ph:'例: CLOSE(空欄=同じ)'}],
+    ['bu.lp','文字の場所','seg',[['bottom','アイコンの下'],['top','アイコンの上']]],['bu.lfs','文字の大きさ','range',6,24,1],
+    ['-','枠で囲む','head'],
+    ['bu.fr','枠','seg',[['none','なし'],['circle','丸'],['square','四角'],['round','角丸']]],
+    ['bu.fsz','枠の大きさ','range',24,120,1,{if:hasFr}],['bu.frr','角の丸み','range',0,40,1,{if:b=>(b.bu||{}).fr==='round'}],
+    ['bu.fbc','枠の色','color',{if:hasFr}],['bu.fbw','枠の太さ','range',0,6,0.5,{if:hasFr}],['bu.fbg','枠の中の色','color',{if:hasFr,none:'塗りなし'}]
+  ],
+  p:[
+    ['bu.an','出かた','seg',[['slide','スライド'],['fade','ふわっと'],['zoom','拡大']]],
+    ['bu.from','出てくる方向','seg',[['right','右から'],['left','左から'],['top','上から'],['bottom','下から']]],
+    ['bu.full','大きさ','seg',[['','画面の端に出す'],['1','全画面']]],
+    ['bu.pw','幅(px)','range',200,640,10,{if:b=>!(b.bu||{}).full&&['right','left',undefined].includes((b.bu||{}).from)}],
+    ['bu.pbg','メニューの背景','color'],['bu.ptc','文字の色','color',{same:'項目と同じ'}],
+    ['bu.pfs','文字の大きさ','range',12,48,1],['bu.pgap','項目の間','range',0,60,1],
+    ['bu.pal','そろえ方','seg',[['flex-start','左'],['center','中央']]],
+    ['bu.dim','後ろ','seg',[['1','暗くする'],['','そのまま']]]
+  ]
+};
+/* アイコンの形の見本(押すとその形になる) */
+const NAV_ICON_PRESETS=[
+  {st:'lines',n:3,sh:100},{st:'lines',n:2,sh:100},{st:'lines',n:3,sh:60,sa:'right'},{st:'lines',n:3,sh:55,sa:'left'},
+  {st:'lines',n:2,sh:60,sa:'right'},{st:'lines',n:3,sh:60,sa:'center'},{st:'dots',n:3},{st:'grid'}
+];
+function navItemsHtml(n){
+  const its=n.items||[];
+  return its.map((it,i)=>{
+    const own=!!(it.c||it.hc||it.bg);
+    const cin=(k,l,v)=>`<span>${l}</span><input type="color" data-nic="${k}" value="${escXml(normHex(String(v||'').slice(0,7))||'#000000')}">`;
+    return`<div class="navIt" data-i="${i}">
+      <div class="numRow"><input type="text" data-ni="t" value="${escXml(it.t||'')}" placeholder="メニュー名" spellcheck="false" autocomplete="off">
+        <button class="navMini" data-mv="-1" title="上へ"${i?'':' disabled'}>▲</button><button class="navMini" data-mv="1" title="下へ"${i<its.length-1?'':' disabled'}>▼</button><button class="navMini" data-del="1" title="この項目を消す">×</button></div>
+      <div class="numRow"><span class="radLbl">リンク</span><input type="text" data-ni="h" value="${escXml(it.h||'')}" list="navLinkList" placeholder="ページ / #区画 / https://…" spellcheck="false" autocomplete="off"></div>
+      <label class="btnChk navCol"><input type="checkbox" data-nown="1"${own?' checked':''}>この項目だけ色を変える</label>
+      ${own?`<div class="navCol">${cin('c','文字',it.c||navV({nav:n},'tc'))}${cin('hc','ホバー',it.hc||navV({nav:n},'hv.tc')||navV({nav:n},'tc'))}${cin('bg','背景',it.bg&&it.bg!=='none'?it.bg:'#FFFFFF')}<label class="btnChk"><input type="checkbox" data-nbgoff="1"${it.bg?'':' checked'}>背景なし</label></div>`:''}
+    </div>`;
+  }).join('')+`<div class="segRow"><button class="seg" id="navAddItem">＋ 項目を足す</button><button class="seg" id="navFit">大きさを中身に合わせる</button></div>
+    <p class="btnHint">リンクは、ページ(例: about.html)・区画(例: #about)・ほかのサイトのURL。区画やページは候補から選べます。</p>`;
+}
+function renderNavPart(){
+  const ss=selShapes().filter(s=>s.type==='nav');
+  $('#navPart').style.display=ss.length===1?'block':'none';
+  if(ss.length!==1)return;
+  const s=ss[0],n=s.nav;
+  document.querySelectorAll('#navTabs .seg').forEach(x=>x.classList.toggle('active',x.dataset.nt===navTab));
+  const pm=navPrev&&navPrev.id===s.id?navPrev.m:'';
+  document.querySelectorAll('#navPrevRow .seg').forEach(x=>x.classList.toggle('active',x.dataset.np===pm));
+  /* リンクの候補: ページと区画 */
+  const c=siteCfg(),opts=[...(c.pages||[]).map(p=>[p.file,p.title||'']),...siteSectionNames().map(x=>['#'+x,'区画'])];
+  $('#navLinkList').innerHTML=opts.map(([v,l])=>`<option value="${escXml(v)}">${escXml(l)}</option>`).join('');
+  if(panelTyping('#navFields'))return;
+  if(navTab==='i'){$('#navFields').innerHTML=navItemsHtml(n);return;}
+  if(!NAV_FIELDS[navTab])navTab='t';
+  let h=NAV_FIELDS[navTab].map(f=>btnFieldHtml(f,n)).join('');
+  if(navTab==='b'){
+    const bu={...NAV_DEF.bu,...(n.bu||{})};
+    h=`<div class="menu-label">アイコンを選ぶ(下で自分好みに作れます)</div><div class="navIco">${NAV_ICON_PRESETS.map((p,i)=>`<button type="button" data-nip="${i}" title="この形にする"><svg viewBox="-16 -16 32 32">${navIconSvg({...bu,...p,iw:22,th:2,ig:7},false,'currentColor')}</svg></button>`).join('')}</div>`+h;
+    if(!isBurger(n))h=`<p class="btnHint">いまは項目を並べて出しています。ハンバーガーにするには「文字・並び」の「表示のしかた」を変えます。</p>`+h;
+  }
+  $('#navFields').innerHTML=h;
+}
+const navSel=()=>selShapes().find(s=>s.type==='nav');
+let navRaf=0;
+const navRedraw=()=>{if(navRaf)return;navRaf=requestAnimationFrame(()=>{navRaf=0;const s=navSel();if(s)navGrow(s);renderWire();});};
+$('#navTabs').addEventListener('click',e=>{const x=e.target.closest('.seg');if(!x)return;navTab=x.dataset.nt;renderNavPart();});
+$('#navPrevRow').addEventListener('click',e=>{const x=e.target.closest('.seg'),s=navSel();if(!x||!s)return;navPrev=x.dataset.np?{id:s.id,m:x.dataset.np}:null;renderWire();renderNavPart();});
+$('#navFields').addEventListener('pointerdown',e=>{e.stopPropagation();if(e.target.matches('input,select'))pushUndo();});
+$('#navFields').addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter'&&e.target.matches('input[type=text]'))e.target.blur();});
+$('#navFields').addEventListener('focusin',e=>{if(e.target.matches('input[type=text],textarea'))pushUndo();});
+$('#navFields').addEventListener('click',e=>{
+  const s=navSel();if(!s)return;
+  const n=s.nav,row=e.target.closest('.navIt'),i=row?+row.dataset.i:-1;
+  const fb=e.target.closest('[data-bfont]');
+  if(fb){openFontPop(n.ff||docFont(),k=>{pushUndo();n.ff=k;navGrow(s);save();renderWire();renderNavPart();});return;}
+  const sg=e.target.closest('[data-bseg]');
+  if(sg){
+    pushUndo();const k=sg.dataset.bseg,v=sg.dataset.v;btnSet(n,k,/^-?\d+(\.\d+)?$/.test(v)?+v:v);
+    /* 並べ方・表示のしかたを変えた時は、大きさを中身に合わせ直す */
+    if(k==='mode'||k==='dir'||/^bu\.(fr|lp|n|st)$/.test(k))navGrow(s,true);else navGrow(s);
+    save();renderWire();renderNavPart();return;
+  }
+  const ip=e.target.closest('[data-nip]');
+  if(ip){pushUndo();n.bu={...(n.bu||{}),...NAV_ICON_PRESETS[+ip.dataset.nip]};if(!NAV_ICON_PRESETS[+ip.dataset.nip].sa)delete n.bu.sa;navGrow(s);save();renderWire();renderNavPart();return;}
+  if(e.target.closest('#navAddItem')){pushUndo();(n.items=n.items||[]).push({t:'メニュー',h:''});navGrow(s);save();renderWire();renderNavPart();
+    const ins=$('#navFields').querySelectorAll('[data-ni="t"]');const last=ins[ins.length-1];if(last){last.focus();last.select();}return;}
+  if(e.target.closest('#navFit')){pushUndo();navGrow(s,true);save();renderWire();updateStyleMenu();return;}
+  const mv=e.target.closest('[data-mv]');
+  if(mv&&i>=0){const j=i+(+mv.dataset.mv);if(j<0||j>=n.items.length)return;pushUndo();const t=n.items[i];n.items[i]=n.items[j];n.items[j]=t;save();renderWire();renderNavPart();return;}
+  if(e.target.closest('[data-del]')&&i>=0){
+    if(n.items.length<=1){toast('項目は1つ以上必要です');return;}
+    pushUndo();n.items.splice(i,1);save();renderWire();renderNavPart();return;
+  }
+});
+$('#navFields').addEventListener('input',e=>{
+  const s=navSel(),t=e.target;if(!s)return;
+  const n=s.nav,row=t.closest('.navIt');
+  if(row){
+    const it=n.items[+row.dataset.i];if(!it)return;
+    if(t.dataset.ni){it[t.dataset.ni]=t.value;save();navRedraw();return;}
+    if(t.dataset.nic){it[t.dataset.nic]=t.value.toUpperCase();if(t.dataset.nic==='bg'){const off=row.querySelector('[data-nbgoff]');if(off)off.checked=false;}save();navRedraw();return;}
+    return;
+  }
+  if(t.dataset.bkn){
+    if(t.value==='')return;
+    const v=clamp(+t.value,+t.min,+t.max);if(isNaN(v))return;
+    btnSet(n,t.dataset.bkn,v);
+    const rg=t.parentElement.querySelector('input[type=range]');if(rg)rg.value=v;
+    save();navRedraw();return;
+  }
+  if(!t.dataset.bk)return;
+  const v=t.type==='range'?+t.value:t.value;
+  btnSet(n,t.dataset.bk,v);
+  if(t.type==='range'){const nn=t.parentElement.querySelector('.btnNum');if(nn)nn.value=v;}
+  save();navRedraw();
+});
+$('#navFields').addEventListener('focusout',e=>{
+  const t=e.target,s=navSel();if(!s||!t.dataset)return;
+  if(t.dataset.bkn){const v=btnGet(s.nav,t.dataset.bkn);if(v!==undefined)t.value=v;}
+});
+$('#navFields').addEventListener('change',e=>{
+  const s=navSel(),t=e.target;if(!s)return;
+  const n=s.nav,row=t.closest('.navIt');
+  if(row&&t.dataset.nown){
+    const it=n.items[+row.dataset.i];if(!it)return;
+    pushUndo();
+    if(t.checked){it.c=navV(s,'tc');}else{delete it.c;delete it.hc;delete it.bg;}
+    save();renderWire();renderNavPart();return;
+  }
+  if(row&&t.dataset.nbgoff){
+    const it=n.items[+row.dataset.i];if(!it)return;
+    pushUndo();if(t.checked)delete it.bg;else it.bg=(row.querySelector('[data-nic="bg"]')||{}).value||'#FFFFFF';
+    save();renderWire();return;
+  }
+  if(t.dataset.bon){
+    const k=t.dataset.bon,r2=t.closest('.btnRow'),inp=r2.querySelector('[data-bk]');
+    btnSet(n,k,t.checked?(inp.type==='range'?+inp.value:inp.value):undefined);
+    save();renderWire();renderNavPart();
+  }else if(t.dataset.bnone){
+    const k=t.dataset.bnone,r2=t.closest('.btnRow'),inp=r2.querySelector('[data-bk]');
+    btnSet(n,k,t.checked?'none':(/^(hv|cur)\./.test(k)?undefined:inp.value));
+    save();renderWire();renderNavPart();
+  }
+});
+$('#boxMenu').addEventListener('click',e=>{if(e.target.closest('[data-add="nav"]'))navAdd();});
 $('#boxMenu').addEventListener('click',e=>{
   if(e.target.closest('[data-add="btn"]'))btnAdd();
   else if(e.target.closest('[data-add="news"]'))addNewsBox('news');
@@ -20059,10 +20681,11 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&stEl().classList.contains('o
    「色とスタイル」(案A): 選んだ物の種類に合わせて、使う設定だけをよく使う順に上へ出す。
    ほかは「詳しい設定」に畳む。設定の中身(スイッチ・処理)はこれまでと同じで、並びとまとまりだけを変える
    ============================================================ */
-const CTX_ALL=['frameSec','sizeSec','posSec','webSec','uiPart','mapPart','btnPart','icoPart','textSec','fillSec','gradSec','strokeSec','radiusSec','shadowSec','blurSec','imgFillSec','aspectSec','imgFxSec','toPathSec','refineSec'];
+const CTX_ALL=['frameSec','sizeSec','posSec','webSec','uiPart','mapPart','btnPart','navPart','icoPart','textSec','fillSec','strokeSec','radiusSec','shadowSec','blurSec','imgFillSec','aspectSec','imgFxSec','toPathSec','refineSec'];
 /* 種類ごとに上へ出す物(よく使う順) */
 const CTX_ORDER={
   btn:['btnPart','sizeSec','posSec','webSec'],
+  nav:['navPart','sizeSec','posSec','webSec'],
   ui:['uiPart','sizeSec','posSec','webSec'],
   gmap:['mapPart','sizeSec','posSec','webSec'],
   text:['textSec','fillSec','posSec','webSec'],
@@ -20073,16 +20696,17 @@ const CTX_ORDER={
   multi:['fillSec','sizeSec','webSec']
 };
 /* その種類では効かない物は出さない(ボタン・地図は、塗りや枠線を自分の設定で決める) */
-const CTX_HIDE={ui:['fillSec','gradSec','strokeSec','radiusSec'],btn:['fillSec','gradSec','strokeSec','radiusSec'],gmap:['fillSec','gradSec','strokeSec']};
+/* グラデーション(gradSec)は色(fillSec)の中にあるので、色と一緒に出し入れされる */
+const CTX_HIDE={ui:['fillSec','strokeSec','radiusSec'],btn:['fillSec','strokeSec','radiusSec'],nav:['fillSec','strokeSec','radiusSec'],gmap:['fillSec','strokeSec']};
 /* ホームページ用の設定で、最初に開く分野 */
-const CTX_WEBCAT={ui:'link',btn:'link',frame:'layout',gmap:'layout',image:'link',text:'link',shape:'link',icon:'link'};
+const CTX_WEBCAT={ui:'link',btn:'link',nav:'anim',frame:'layout',gmap:'layout',image:'link',text:'link',shape:'link',icon:'link'};
 let ctxLastKey='',ctxHidden={};
 function ctxKind(ss){
   if(!ss.length)return null;
   const ts=[...new Set(ss.map(x=>x.type))];
   if(ss.length>1&&ts.length>1)return'multi';
   const t=ts[0];
-  if(['btn','gmap','text','icon','image','ui'].includes(t))return t;
+  if(['btn','nav','gmap','text','icon','image','ui'].includes(t))return t;
   return t==='frame'?'frame':'shape';
 }
 function ctxArrange(){
@@ -20096,7 +20720,7 @@ function ctxArrange(){
   $('#ctxIc').innerHTML=layIcon(one,lk);
   if(one.type==='ui'){$('#ctxN').textContent=(UI_KINDS[one.ui.kind]||{}).n||'UIパーツ';}
   else $('#ctxN').textContent=k==='multi'?ss.length+'個を選んでいます':(one.type==='frame'?LAY_KIND[lk]||'フレーム':SHAPE_TYPE_LABEL[one.type]||'図形')+(ss.length>1?'('+ss.length+'個)':'');
-  const nm=one.type==='btn'?'「'+((one.btn||{}).t||'')+'」':one.type==='text'?'「'+(one.text||'').replace(/\n/g,' ').slice(0,16)+'」':one.type==='gmap'?((one.gmap||{}).q||''):(one.name||'');
+  const nm=one.type==='nav'?((one.nav||{}).items||[]).length+'項目':one.type==='btn'?'「'+((one.btn||{}).t||'')+'」':one.type==='text'?'「'+(one.text||'').replace(/\n/g,' ').slice(0,16)+'」':one.type==='gmap'?((one.gmap||{}).q||''):(one.name||'');
   $('#ctxSub').textContent=k==='multi'?'共通の設定だけを出しています':[nm,par?frameLabelText(par)+' の中':''].filter(Boolean).join(' ・ ');
   /* 並べ替え: 上に出す物 → 「詳しい設定」 */
   let more=$('#moreSec');
