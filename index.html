@@ -897,8 +897,14 @@ body:not(.wire-mode) #liveBtn{display:none;}
 #pvFrame{border:0;background:#fff;width:100%;height:100%;flex:none;transition:width .25s ease}
 #pvDev{width:100%;height:100%;flex:none;position:relative;overflow:hidden}
 #pvWrap:not([data-w="pc"]) #pvStage{align-items:center}
+/* 等倍で画面より高い時は上から並べ、下はスクロールで見る */
+#pvWrap.pvTall #pvStage{align-items:flex-start;padding:56px 0 40px;box-sizing:border-box}
+#pvWrap.pvWide #pvStage{justify-content:flex-start;padding-left:20px;padding-right:20px}
+#pvWrap[data-w="pc"] .pvDevOnly{display:none}
+#pvBar #pvDevSel{max-width:220px}
 #pvWrap:not([data-w="pc"]) #pvDev{border-radius:18px;box-shadow:0 0 0 8px #0D0E12,0 0 0 9px rgba(255,255,255,.12),0 24px 70px rgba(0,0,0,.55)}
 #pvWrap:not([data-w="pc"]) #pvFrame{position:absolute;left:0;top:0;transform-origin:0 0}
+#pvWrap.pvTall #pvSize{position:fixed}
 #pvSize{position:absolute;left:50%;bottom:8px;translate:-50% 0;color:#9097A6;font:600 11px var(--ui-font);display:none}
 #pvWrap:not([data-w="pc"]) #pvSize{display:block}
 #pvBar{position:absolute;top:10px;right:10px;z-index:2;display:flex;align-items:center;gap:6px;padding:5px;border-radius:12px;background:rgba(21,23,29,.92);color:#E8EAF0;
@@ -2458,6 +2464,9 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
   <div id="pvBar">
     <select id="pvPage" aria-label="確認するページ"></select>
     <div class="pvSeg" role="group" aria-label="画面の幅"><button type="button" data-w="pc" class="on">PC</button><button type="button" data-w="tab">タブレット</button><button type="button" data-w="sp">スマホ</button></div>
+    <select id="pvDevSel" class="pvDevOnly" aria-label="端末"></select>
+    <div class="pvSeg pvDevOnly" role="group" aria-label="表示の大きさ"><button type="button" data-sc="1" title="端末と同じ大きさ(画面のpx)。下ははみ出したらスクロールで見る">等倍</button><button type="button" data-sc="fit" title="縮めて端末の画面全体を見る">全体</button></div>
+    <button type="button" class="pvDevOnly" id="pvRot" title="縦向き・横向きを切り替える">縦向き</button>
     <button type="button" class="pvBig" id="pvFull" title="ブラウザの枠も消して、画面全体に出す">全画面</button>
     <button type="button" class="pvX" id="pvClose" aria-label="確認をやめる" title="確認をやめる(Esc)">&times;</button>
   </div>
@@ -3072,7 +3081,7 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-31.1';
+const APP_VERSION='2026-10-31.2';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -19937,16 +19946,30 @@ function closePreview(){
   $('#pvFrame').src='about:blank';
   if(pvUrl){URL.revokeObjectURL(pvUrl);pvUrl=null;}
 }
-/* 端末の大きさ(CSSのpx)。ページの中の幅はこの大きさのまま、画面に収まるように見た目だけ縮める */
-const PV_DEV={tab:{w:820,h:1180,n:'タブレット'},sp:{w:390,h:844,n:'スマホ'}};
+/* 端末の大きさ(CSSのpx = 端末の画面の幅と高さ)。ページの中の幅はこの大きさのまま。
+   等倍=そのままの大きさ(はみ出した下はスクロール) / 全体=画面に収まるように見た目だけ縮める */
+const PV_DEVS={
+  sp:[{k:'se',n:'小さめ(iPhone SE)',w:375,h:667},{k:'std',n:'標準(iPhone 15)',w:393,h:852},{k:'max',n:'大きめ(iPhone 15 Pro Max)',w:430,h:932},
+    {k:'and',n:'Android 標準(Pixel)',w:412,h:915},{k:'ands',n:'Android 小さめ(Galaxy)',w:360,h:780}],
+  tab:[{k:'mini',n:'8インチ(iPad mini)',w:744,h:1133},{k:'ipad',n:'10インチ(iPad)',w:820,h:1180},{k:'andt',n:'10インチ(Android)',w:800,h:1280},{k:'pro',n:'13インチ(iPad Pro)',w:1024,h:1366}]
+};
+const pvOpt=(()=>{let o={};try{o=JSON.parse(localStorage.getItem('ntd-pvdev')||'{}');}catch(e){}return{sp:o.sp||'std',tab:o.tab||'ipad',sc:o.sc||'fit',rot:!!o.rot};})();
+const pvOptSave=()=>{try{localStorage.setItem('ntd-pvdev',JSON.stringify(pvOpt));}catch(e){}};
+/* いま見ている端末(横向きなら幅と高さを入れ替える) */
+function pvDev(w){
+  const L=PV_DEVS[w];if(!L)return null;
+  const d=L.find(x=>x.k===pvOpt[w])||L[0];
+  return pvOpt.rot?{...d,w:d.h,h:d.w}:d;
+}
 function pvSetWidth(w){
   $('#pvWrap').dataset.w=w;
   document.querySelectorAll('#pvBar [data-w]').forEach(b=>b.classList.toggle('on',b.dataset.w===w));
+  if(PV_DEVS[w])$('#pvDevSel').innerHTML=PV_DEVS[w].map(d=>`<option value="${d.k}"${d.k===pvOpt[w]?' selected':''}>${escXml(d.n)} ${d.w}×${d.h}</option>`).join('');
   pvFit();
 }
 /* タブレット・スマホのスクロールバー: 端末と同じく幅を取らない。スクロールしている間だけ、右端に細い印を重ねて出す */
 function pvScrollbar(){
-  const fr=$('#pvFrame'),dev=!!PV_DEV[$('#pvWrap').dataset.w];
+  const fr=$('#pvFrame'),dev=!!PV_DEVS[$('#pvWrap').dataset.w];
   let doc;try{doc=fr.contentDocument;}catch(e){return;}
   if(!doc||!doc.documentElement)return;
   let st=doc.getElementById('nt-pv-sb');
@@ -19978,8 +20001,11 @@ function appZoom(){
   return dd<0.025?best:1;
 }
 function pvFit(){
-  const w=$('#pvWrap').dataset.w,fr=$('#pvFrame'),box=$('#pvDev'),d=PV_DEV[w];
+  const w=$('#pvWrap').dataset.w,fr=$('#pvFrame'),box=$('#pvDev'),d=pvDev(w);
   pvScrollbar();
+  document.querySelectorAll('#pvBar [data-sc]').forEach(b=>b.classList.toggle('on',b.dataset.sc===pvOpt.sc));
+  $('#pvRot').textContent=pvOpt.rot?'横向き':'縦向き';
+  $('#pvWrap').classList.remove('pvTall','pvWide');
   if(!d){
     /* NT-D の画面の表示倍率(Ctrl+−/＋)が100%でない時は、プレビューの中だけ100%に戻して出す(書き出したページを普通に開いた時と同じ大きさに) */
     const z=appZoom();
@@ -19988,16 +20014,26 @@ function pvFit(){
     box.style.width=box.style.height='';return;
   }
   fr.style.position=fr.style.left=fr.style.top=fr.style.transformOrigin='';
-  const k=Math.min(1,(innerHeight-70)/d.h,(innerWidth-40)/d.w);
+  /* 等倍は、NT-D の画面の表示倍率(Ctrl+−/＋)を打ち消して、端末と同じpxで出す */
+  const z=appZoom();
+  const k=pvOpt.sc==='1'?1/z:Math.min(1,(innerHeight-70)/d.h,(innerWidth-40)/d.w);
   fr.style.width=d.w+'px';fr.style.height=d.h+'px';fr.style.transform=`scale(${k})`;
   box.style.width=d.w*k+'px';box.style.height=d.h*k+'px';
-  $('#pvSize').textContent=`${d.n} ${d.w}×${d.h}${k<1?'(画面に合わせて'+Math.round(k*100)+'%で表示)':''}`;
+  $('#pvWrap').classList.toggle('pvTall',d.h*k>innerHeight-70);
+  $('#pvWrap').classList.toggle('pvWide',d.w*k>innerWidth-40);
+  $('#pvSize').textContent=`${d.n} ${d.w}×${d.h}${pvOpt.rot?' 横向き':''}${pvOpt.sc==='1'?'・等倍'+(d.h*k>innerHeight-70?'(下はスクロールで見られます)':''):k<1?'(画面に合わせて'+Math.round(k*100)+'%で表示)':''}`;
 }
 addEventListener('resize',()=>{if($('#pvWrap').classList.contains('on'))pvFit();});
 $('#fsBtn').onclick=openPreview;
 $('#pvClose').onclick=closePreview;
 $('#pvPage').addEventListener('change',()=>pvShow(+$('#pvPage').value));
-$('#pvBar').addEventListener('click',e=>{const b=e.target.closest('[data-w]');if(b)pvSetWidth(b.dataset.w);});
+$('#pvBar').addEventListener('click',e=>{
+  /* #pvWrap 自身も data-w を持つので、ボタンだけを見る */
+  const b=e.target.closest('button[data-w]');if(b){pvSetWidth(b.dataset.w);return;}
+  const c=e.target.closest('[data-sc]');if(c){pvOpt.sc=c.dataset.sc;pvOptSave();pvFit();$('#pvStage').scrollTop=0;return;}
+  if(e.target.closest('#pvRot')){pvOpt.rot=!pvOpt.rot;pvOptSave();pvFit();$('#pvStage').scrollTop=0;}
+});
+$('#pvDevSel').addEventListener('change',()=>{const w=$('#pvWrap').dataset.w;if(!PV_DEVS[w])return;pvOpt[w]=$('#pvDevSel').value;pvOptSave();pvFit();$('#pvStage').scrollTop=0;});
 /* ブラウザの枠(タブ・アドレスバー)も消して、画面全体に出す */
 $('#pvFull').onclick=()=>{
   if(isFullscreen()){(document.exitFullscreen||document.webkitExitFullscreen).call(document);return;}
