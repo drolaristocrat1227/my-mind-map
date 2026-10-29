@@ -901,6 +901,17 @@ body:not(.wire-mode) #liveBtn{display:none;}
 #pvWrap.pvTall #pvStage{align-items:flex-start;padding:56px 0 40px;box-sizing:border-box}
 #pvWrap.pvWide #pvStage{justify-content:flex-start;padding-left:20px;padding-right:20px}
 #pvWrap[data-w="pc"] .pvDevOnly{display:none}
+#pvWrap:not([data-sc="real"]) #pvCalBtn{display:none}
+#pvCal{position:absolute;inset:0;z-index:5;display:none;align-items:center;justify-content:center;background:rgba(13,14,18,.82);color:#E8EAF0;font:13px/1.7 var(--ui-font)}
+#pvCal.on{display:flex}
+.pvCalBox{width:min(560px,92vw);padding:22px 24px;border-radius:16px;background:#15171D;box-shadow:0 20px 60px rgba(0,0,0,.5);text-align:center}
+.pvCalBox b{font-size:15px}
+.pvCalBox p{margin:8px 0 16px;color:#B6BCCB;text-align:left}
+.pvCard{margin:0 auto 16px;border:2px solid #FF2E5E;border-radius:12px;background:repeating-linear-gradient(45deg,rgba(255,46,94,.08) 0 10px,transparent 10px 20px);display:grid;place-items:center;color:#FF8FA9;font-weight:700;box-sizing:border-box}
+.pvCalRow{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:8px}
+.pvCalRow input{flex:1;max-width:360px}
+.pvCalRow button{border:0;border-radius:8px;padding:8px 16px;background:#2A2D36;color:#E8EAF0;font:inherit;font-weight:700;cursor:pointer}
+.pvCalRow button.on{background:#FF2E5E;color:#0D0E12}
 #pvBar #pvDevSel{max-width:220px}
 #pvWrap:not([data-w="pc"]) #pvDev{border-radius:18px;box-shadow:0 0 0 8px #0D0E12,0 0 0 9px rgba(255,255,255,.12),0 24px 70px rgba(0,0,0,.55)}
 #pvWrap:not([data-w="pc"]) #pvFrame{position:absolute;left:0;top:0;transform-origin:0 0}
@@ -2461,11 +2472,21 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
   <div id="pvStage"><div id="pvDev"><iframe id="pvFrame" title="ページの確認"></iframe></div></div>
   <div id="pvSize"></div>
   <div id="pvLoading">表示を準備しています…</div>
+  <div id="pvCal" role="dialog" aria-label="実物大の大きさを合わせる">
+    <div class="pvCalBox">
+      <b>実物大の大きさを、このモニターに合わせます</b>
+      <p>クレジットカード・キャッシュカード・ポイントカードなど、ふつうの大きさのカード(85.6×54mm)を画面に当てて、下の四角がカードと同じ大きさになるように、つまみを動かしてください。</p>
+      <div class="pvCard" id="pvCard"><span>カードを当てる</span></div>
+      <div class="pvCalRow"><button type="button" id="pvCalMinus" aria-label="小さく">−</button><input type="range" id="pvCalIn" min="2" max="9" step="0.005"><button type="button" id="pvCalPlus" aria-label="大きく">＋</button></div>
+      <div class="pvCalRow"><button type="button" id="pvCalOk" class="on">これで決める</button><button type="button" id="pvCalCancel">やめる</button></div>
+    </div>
+  </div>
   <div id="pvBar">
     <select id="pvPage" aria-label="確認するページ"></select>
     <div class="pvSeg" role="group" aria-label="画面の幅"><button type="button" data-w="pc" class="on">PC</button><button type="button" data-w="tab">タブレット</button><button type="button" data-w="sp">スマホ</button></div>
     <select id="pvDevSel" class="pvDevOnly" aria-label="端末"></select>
-    <div class="pvSeg pvDevOnly" role="group" aria-label="表示の大きさ"><button type="button" data-sc="1" title="端末と同じ大きさ(画面のpx)。下ははみ出したらスクロールで見る">等倍</button><button type="button" data-sc="fit" title="縮めて端末の画面全体を見る">全体</button></div>
+    <div class="pvSeg pvDevOnly" role="group" aria-label="表示の大きさ"><button type="button" data-sc="1" title="端末と同じ大きさ(画面のpx)。下ははみ出したらスクロールで見る">等倍</button><button type="button" data-sc="fit" title="縮めて端末の画面全体を見る">全体</button><button type="button" data-sc="real" title="手に持った端末と同じ大きさ(モニターに合わせてから)">実物大</button></div>
+    <button type="button" class="pvDevOnly" id="pvCalBtn" title="実物大の大きさを、このモニターに合わせ直す">大きさを合わせる</button>
     <button type="button" class="pvDevOnly" id="pvRot" title="縦向き・横向きを切り替える">縦向き</button>
     <button type="button" class="pvBig" id="pvFull" title="ブラウザの枠も消して、画面全体に出す">全画面</button>
     <button type="button" class="pvX" id="pvClose" aria-label="確認をやめる" title="確認をやめる(Esc)">&times;</button>
@@ -3081,7 +3102,7 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-31.2';
+const APP_VERSION='2026-10-31.3';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -19949,10 +19970,15 @@ function closePreview(){
 /* 端末の大きさ(CSSのpx = 端末の画面の幅と高さ)。ページの中の幅はこの大きさのまま。
    等倍=そのままの大きさ(はみ出した下はスクロール) / 全体=画面に収まるように見た目だけ縮める */
 const PV_DEVS={
-  sp:[{k:'se',n:'小さめ(iPhone SE)',w:375,h:667},{k:'std',n:'標準(iPhone 15)',w:393,h:852},{k:'max',n:'大きめ(iPhone 15 Pro Max)',w:430,h:932},
-    {k:'and',n:'Android 標準(Pixel)',w:412,h:915},{k:'ands',n:'Android 小さめ(Galaxy)',w:360,h:780}],
-  tab:[{k:'mini',n:'8インチ(iPad mini)',w:744,h:1133},{k:'ipad',n:'10インチ(iPad)',w:820,h:1180},{k:'andt',n:'10インチ(Android)',w:800,h:1280},{k:'pro',n:'13インチ(iPad Pro)',w:1024,h:1366}]
+  sp:[{k:'se',n:'小さめ(iPhone SE)',w:375,h:667,in:4.7},{k:'std',n:'標準(iPhone 15)',w:393,h:852,in:6.1},{k:'max',n:'大きめ(iPhone 15 Pro Max)',w:430,h:932,in:6.7},
+    {k:'and',n:'Android 標準(Pixel)',w:412,h:915,in:6.3},{k:'ands',n:'Android 小さめ(Galaxy)',w:360,h:780,in:6.1}],
+  tab:[{k:'mini',n:'8インチ(iPad mini)',w:744,h:1133,in:8.3},{k:'ipad',n:'10インチ(iPad)',w:820,h:1180,in:10.9},{k:'andt',n:'10インチ(Android)',w:800,h:1280,in:10.5},{k:'pro',n:'13インチ(iPad Pro)',w:1024,h:1366,in:13}]
 };
+/* 実物大: モニターの 1mm あたりの点の数(画面の本当の点。表示倍率が変わっても使えるよう、devicePixelRatio を掛けた値で覚える) */
+const pvCalGet=()=>{try{const v=+localStorage.getItem('ntd-pxmm');return v>0?v:0;}catch(e){return 0;}};
+const pvPxPerMm=()=>(pvCalGet()||96/25.4*(window.devicePixelRatio||1))/(window.devicePixelRatio||1);
+/* 端末の画面の幅(mm): 対角のインチと縦横の比から */
+const pvDevWmm=d=>d.in*25.4*d.w/Math.hypot(d.w,d.h);
 const pvOpt=(()=>{let o={};try{o=JSON.parse(localStorage.getItem('ntd-pvdev')||'{}');}catch(e){}return{sp:o.sp||'std',tab:o.tab||'ipad',sc:o.sc||'fit',rot:!!o.rot};})();
 const pvOptSave=()=>{try{localStorage.setItem('ntd-pvdev',JSON.stringify(pvOpt));}catch(e){}};
 /* いま見ている端末(横向きなら幅と高さを入れ替える) */
@@ -20016,12 +20042,14 @@ function pvFit(){
   fr.style.position=fr.style.left=fr.style.top=fr.style.transformOrigin='';
   /* 等倍は、NT-D の画面の表示倍率(Ctrl+−/＋)を打ち消して、端末と同じpxで出す */
   const z=appZoom();
-  const k=pvOpt.sc==='1'?1/z:Math.min(1,(innerHeight-70)/d.h,(innerWidth-40)/d.w);
+  $('#pvWrap').dataset.sc=pvOpt.sc;
+  const k=pvOpt.sc==='1'?1/z:pvOpt.sc==='real'?pvDevWmm(d)*pvPxPerMm()/d.w:Math.min(1,(innerHeight-70)/d.h,(innerWidth-40)/d.w);
   fr.style.width=d.w+'px';fr.style.height=d.h+'px';fr.style.transform=`scale(${k})`;
   box.style.width=d.w*k+'px';box.style.height=d.h*k+'px';
   $('#pvWrap').classList.toggle('pvTall',d.h*k>innerHeight-70);
   $('#pvWrap').classList.toggle('pvWide',d.w*k>innerWidth-40);
-  $('#pvSize').textContent=`${d.n} ${d.w}×${d.h}${pvOpt.rot?' 横向き':''}${pvOpt.sc==='1'?'・等倍'+(d.h*k>innerHeight-70?'(下はスクロールで見られます)':''):k<1?'(画面に合わせて'+Math.round(k*100)+'%で表示)':''}`;
+  const more=d.h*k>innerHeight-70?'(下はスクロールで見られます)':'';
+  $('#pvSize').textContent=`${d.n} ${d.w}×${d.h}${pvOpt.rot?' 横向き':''}${pvOpt.sc==='1'?'・等倍'+more:pvOpt.sc==='real'?`・実物大(画面 ${d.in}インチ${pvCalGet()?'':'・モニターに合わせていない目安'})`+more:k<1?'(画面に合わせて'+Math.round(k*100)+'%で表示)':''}`;
 }
 addEventListener('resize',()=>{if($('#pvWrap').classList.contains('on'))pvFit();});
 $('#fsBtn').onclick=openPreview;
@@ -20030,9 +20058,29 @@ $('#pvPage').addEventListener('change',()=>pvShow(+$('#pvPage').value));
 $('#pvBar').addEventListener('click',e=>{
   /* #pvWrap 自身も data-w を持つので、ボタンだけを見る */
   const b=e.target.closest('button[data-w]');if(b){pvSetWidth(b.dataset.w);return;}
-  const c=e.target.closest('[data-sc]');if(c){pvOpt.sc=c.dataset.sc;pvOptSave();pvFit();$('#pvStage').scrollTop=0;return;}
+  const c=e.target.closest('button[data-sc]');if(c){pvOpt.sc=c.dataset.sc;pvOptSave();pvFit();$('#pvStage').scrollTop=0;
+    /* 初めて実物大にした時は、モニターに合わせる */
+    if(pvOpt.sc==='real'&&!pvCalGet())pvCalOpen();
+    return;}
+  if(e.target.closest('#pvCalBtn')){pvCalOpen();return;}
   if(e.target.closest('#pvRot')){pvOpt.rot=!pvOpt.rot;pvOptSave();pvFit();$('#pvStage').scrollTop=0;}
 });
+/* 実物大の大きさを合わせる: カード(85.6×54mm)と同じ大きさになるまで四角を動かす */
+function pvCalPaint(){
+  const v=+$('#pvCalIn').value,dpr=window.devicePixelRatio||1,mm=v/dpr;
+  const c=$('#pvCard');c.style.width=85.6*mm+'px';c.style.height=54*mm+'px';c.style.borderRadius=3.2*mm+'px';
+}
+function pvCalOpen(){
+  const dpr=window.devicePixelRatio||1;
+  $('#pvCalIn').min=1.5*dpr;$('#pvCalIn').max=9*dpr;
+  $('#pvCalIn').value=pvCalGet()||96/25.4*dpr;
+  pvCalPaint();$('#pvCal').classList.add('on');
+}
+$('#pvCalIn').addEventListener('input',pvCalPaint);
+$('#pvCalMinus').onclick=()=>{$('#pvCalIn').value=+$('#pvCalIn').value*0.995;pvCalPaint();};
+$('#pvCalPlus').onclick=()=>{$('#pvCalIn').value=+$('#pvCalIn').value*1.005;pvCalPaint();};
+$('#pvCalOk').onclick=()=>{try{localStorage.setItem('ntd-pxmm',String(+$('#pvCalIn').value));}catch(e){}$('#pvCal').classList.remove('on');pvFit();toast('実物大の大きさを、このモニターに合わせました');};
+$('#pvCalCancel').onclick=()=>{$('#pvCal').classList.remove('on');pvFit();};
 $('#pvDevSel').addEventListener('change',()=>{const w=$('#pvWrap').dataset.w;if(!PV_DEVS[w])return;pvOpt[w]=$('#pvDevSel').value;pvOptSave();pvFit();$('#pvStage').scrollTop=0;});
 /* ブラウザの枠(タブ・アドレスバー)も消して、画面全体に出す */
 $('#pvFull').onclick=()=>{
