@@ -787,8 +787,9 @@ body.text-mode #docBar{display:flex;}
   }
   body.printing #printLayer img.pp:last-child{break-after:auto;page-break-after:auto;}
 }
-/* 印刷: A4用紙のみをそのまま出力 */
+/* 印刷: A4用紙のみをそのまま出力(画面用に高さを1画面分に固定しているのを外さないと、1ページ目で切れる) */
 @media print{
+  html,body{height:auto!important;overflow:visible!important;}
   body>*{display:none!important;}
   body.text-mode #docView{
     display:block!important;position:static;overflow:visible;
@@ -3104,7 +3105,7 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-31.5';
+const APP_VERSION='2026-10-31.6';
 /* ============================================================
    ユーティリティ
    ============================================================ */
