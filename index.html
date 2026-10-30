@@ -830,6 +830,8 @@ body.text-mode #docBar{display:flex;}
   opacity:.92;
 }
 #ghost .node{position:static;box-shadow:0 12px 36px rgba(0,0,0,.28);}
+#ghost.touch{transform:translate(-50%,calc(-100% - 28px)) rotate(-1.5deg) scale(1.06);}
+.node{-webkit-touch-callout:none;}
 
 /* ============================================================
    パネル共通(グラス)
@@ -3102,7 +3104,7 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-31.3';
+const APP_VERSION='2026-10-31.4';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -3914,7 +3916,9 @@ canvas.addEventListener('pointerdown',e=>{
   pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
 
   if(pointers.size===2){
-    /* ピンチ開始 */
+    /* ピンチ開始(持ち上げていたノードは元に戻す) */
+    clearTimeout(lpTimer);
+    if(dragState){if(dragState.ghost)dragState.ghost.remove();const dm=meta.get(dragState.id);if(dm)dm.el.classList.remove('dragging');meta.forEach(mm=>mm.el.classList.remove('drop-target'));}
     panState=null;dragState=null;
     const pts=[...pointers.values()];
     pinchState={d:Math.hypot(pts[0].x-pts[1].x,pts[0].y-pts[1].y),z,
@@ -3928,18 +3932,17 @@ canvas.addEventListener('pointerdown',e=>{
       pointerType:e.pointerType,
       isRoot:!findNode(id).parent};
     try{canvas.setPointerCapture(e.pointerId);}catch(err){}
-    /* 長押し → メニュー(タッチのみ) */
+    /* タッチ: 長押しでノードを持ち上げ、そのまま指を動かすと移動。動かさずに離すとメニュー。
+       長押しの前に指を動かした時は、画面の移動(パン) */
     if(e.pointerType==='touch'){
       clearTimeout(lpTimer);
-      const lx=e.clientX,ly=e.clientY;
       lpTimer=setTimeout(()=>{
         if(!dragState||dragState.moved)return;
-        const tid=dragState.id;
-        dragState=null;
+        dragState.armed=true;
         lastLongPress=Date.now();
         if(navigator.vibrate)navigator.vibrate(15);
-        openCtxMenu(tid,lx,ly);
-      },500);
+        if(!dragState.isRoot)liftNode(dragState,dragState.startX,dragState.startY);
+      },450);
     }
   }else if(!nodeEl){
     if(editingId)commitEdit();
@@ -3973,22 +3976,19 @@ canvas.addEventListener('pointermove',e=>{
     const dx=e.clientX-dragState.startX,dy=e.clientY-dragState.startY;
     const thresh=dragState.pointerType==='touch'?10:7;
     if(Math.hypot(dx,dy)>thresh)clearTimeout(lpTimer);
+    /* タッチで長押し前に動かした → 画面の移動に切り替え */
+    if(dragState.pointerType==='touch'&&!dragState.armed){
+      if(Math.hypot(dx,dy)>thresh){
+        panState={x:dragState.startX,y:dragState.startY,px,py};
+        dragState=null;
+        canvas.classList.add('panning');
+        px=panState.px+e.clientX-panState.x;py=panState.py+e.clientY-panState.y;applyView();
+      }
+      return;
+    }
     if(!dragState.moved&&Math.hypot(dx,dy)>thresh&&!dragState.isRoot){
       dragState.moved=true;
-      /* ゴースト作成 */
-      const m=meta.get(dragState.id);
-      const g=document.createElement('div');g.id='ghost';
-      const clone=m.el.cloneNode(true);
-      clone.classList.remove('selected','dragging');
-      clone.querySelector('.badge').style.display='none';
-      g.appendChild(clone);
-      document.body.appendChild(g);
-      dragState.ghost=g;
-      m.el.classList.add('dragging');
-      /* サブツリー内のIDを収集(ドロップ先から除外) */
-      const f=findNode(dragState.id);
-      dragState.subtree=new Set();
-      walk(f.node,n=>dragState.subtree.add(n.id));
+      if(!dragState.ghost)liftNode(dragState,e.clientX,e.clientY);
     }
     if(dragState.moved){
       dragState.ghost.style.left=e.clientX+'px';
@@ -4008,6 +4008,23 @@ canvas.addEventListener('pointermove',e=>{
   }
 });
 
+/* ドラッグするノードを持ち上げる(ゴーストを出し、ドロップ先から自分の子孫を外す) */
+function liftNode(ds,x,y){
+  const m=meta.get(ds.id);if(!m)return;
+  const g=document.createElement('div');g.id='ghost';
+  if(ds.pointerType==='touch')g.classList.add('touch');
+  const clone=m.el.cloneNode(true);
+  clone.classList.remove('selected','dragging');
+  const bd=clone.querySelector('.badge');if(bd)bd.style.display='none';
+  g.appendChild(clone);
+  g.style.left=x+'px';g.style.top=y+'px';
+  document.body.appendChild(g);
+  ds.ghost=g;
+  m.el.classList.add('dragging');
+  const f=findNode(ds.id);
+  ds.subtree=new Set();
+  walk(f.node,n=>ds.subtree.add(n.id));
+}
 function endPointer(e){
   pointers.delete(e.pointerId);
   clearTimeout(lpTimer);
@@ -4019,7 +4036,10 @@ function endPointer(e){
     if(m)m.el.classList.remove('dragging');
     if(ds.ghost)ds.ghost.remove();
     meta.forEach(mm=>mm.el.classList.remove('drop-target'));
-    if(!ds.moved){
+    if(!ds.moved&&ds.armed){
+      /* 長押しして動かさずに離した → メニュー */
+      if(e.type==='pointerup')openCtxMenu(ds.id,ds.startX,ds.startY);
+    }else if(!ds.moved){
       /* クリック/タップ:選択、選択済みノードならもう一度で編集 */
       if(ds.wasSelected&&!editingId)beginEdit(ds.id);
       else select(ds.id);
@@ -4096,6 +4116,7 @@ canvas.addEventListener('contextmenu',e=>{
   const nodeEl=e.target.closest('.node');
   if(!nodeEl)return;
   e.preventDefault();
+  if(dragState&&dragState.pointerType==='touch')return; /* 長押しはこちらで扱う */
   if(Date.now()-lastLongPress<800)return; /* 長押しで表示済み */
   openCtxMenu(nodeEl.dataset.id,e.clientX,e.clientY);
 });
@@ -15828,7 +15849,7 @@ function updateWebSec(ss){
     $('#webSceneNote').innerHTML=(tip?`<div class="motNote">${tip}</div>`:'')+(scSec.scene==='hscroll'||scSec.scene==='zoom'?sceneHeightRow(scSec):'');
   }
   $('#webLayoutNone').style.display=($('#webPinRow').style.display==='none'&&$('#webVhRow').style.display==='none'&&!scSec)?'block':'none';
-  const imgs=ss.filter(s=>s.type==='image');
+  const imgs=ss.filter(hasAltImg);
   $('#webAltPart').style.display=imgs.length?'block':'none';
   if(imgs.length&&document.activeElement!==$('#webAlt'))$('#webAlt').value=imgs[0].alt||'';
 }
@@ -15938,9 +15959,11 @@ $('#webCls').addEventListener('change',()=>{
   const v=cleanHtmlCls($('#webCls').value);
   setWebProp(webTargets(),s=>{if(v)s.htmlCls=v;else delete s.htmlCls;},v?`クラス名「${v}」を付けました`:'クラス名を外しました');
 });
+/* 書き出すと img になるもの(画像・中に画像を入れた図形) */
+function hasAltImg(s){return s.type==='image'||!!(s.imgFill&&s.imgFill.src);}
 $('#webAlt').addEventListener('change',()=>{
   const v=$('#webAlt').value.trim();
-  setWebProp(webTargets().filter(s=>s.type==='image'),s=>{if(v)s.alt=v;else delete s.alt;});
+  setWebProp(webTargets().filter(hasAltImg),s=>{if(v)s.alt=v;else delete s.alt;});
 });
 ['lnkUrl','webAlt','webId','webCls','webEl','lnkType','lnkSec','lnkPage','webTag'].forEach(id=>{
   $('#'+id).addEventListener('pointerdown',e=>e.stopPropagation());
