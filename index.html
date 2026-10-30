@@ -3104,7 +3104,7 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-31.4';
+const APP_VERSION='2026-10-31.5';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -17859,8 +17859,41 @@ function setCaretOffset(el,off){
   const r=document.createRange();r.selectNodeContents(el);r.collapse(false);
   const s=getSelection();s.removeAllRanges();s.addRange(r);
 }
+/* 段落の中身を行(<br> や div の区切り)ごとの HTML に分ける */
+function splitBlockLines(html){
+  const box=document.createElement('div');box.innerHTML=html||'';
+  const out=[];let cur='';
+  const flush=()=>{out.push(cur);cur='';};
+  box.childNodes.forEach(n=>{
+    if(n.nodeName==='BR')flush();
+    else if(n.nodeType===1&&/^(DIV|P|LI|H[1-6])$/.test(n.nodeName)){
+      if(cur)flush();
+      splitBlockLines(n.innerHTML).forEach(h=>out.push(h));
+    }else cur+=n.nodeType===1?n.outerHTML:escXml(n.textContent);
+  });
+  if(cur)out.push(cur);
+  return out;
+}
+function splitTallBlocks(){
+  const t=curDoc();let did=null;
+  t.pages.forEach(pg=>{
+    const inner=docPagesEl.querySelector(`.dpage[data-pid="${pg.id}"] .dpage-inner`);if(!inner)return;
+    for(let i=pg.blocks.length-1;i>=0;i--){
+      const b=pg.blocks[i];if(b.type==='hr'||b.type==='img'||b.type==='table')continue;
+      const el=inner.querySelector(`[data-bid="${b.id}"]`);
+      if(!el||el.offsetHeight<=inner.clientHeight)continue;
+      const lines=splitBlockLines(b.html);if(lines.length<2)continue;
+      const parts=lines.map((h,k)=>({...b,id:k?uid():b.id,html:h}));
+      pg.blocks.splice(i,1,...parts);
+      did=parts[parts.length-1].id;
+    }
+  });
+  return did;
+}
 function paginateDoc(){
   const t=curDoc();if(!t.pages||!document.body.classList.contains('text-mode'))return;
+  const tall=splitTallBlocks();
+  if(tall){save();renderDoc();return;}
   let changed=false;
   for(let i=0;i<t.pages.length;i++){
     const pg=t.pages[i];
@@ -17868,7 +17901,7 @@ function paginateDoc(){
     if(!pgEl)continue;
     const inner=pgEl.querySelector('.dpage-inner');
     let guard=0;
-    while(pg.blocks.length>1&&inner.scrollHeight>inner.clientHeight+1&&guard++<100){
+    while(pg.blocks.length>1&&inner.scrollHeight>inner.clientHeight+1&&guard++<5000){
       /* 末尾ブロックを次ページの先頭へ */
       const blk=pg.blocks.pop();
       let next=t.pages[i+1];
@@ -17985,6 +18018,31 @@ docView.addEventListener('input',e=>{
     b.rows=[...tbl.rows].map(tr=>[...tr.cells].map(td=>td.innerHTML));
   }
   save();schedulePaginate();
+});
+docView.addEventListener('paste',e=>{
+  const dt=e.target.closest&&e.target.closest('.dtext');if(!dt||!e.clipboardData)return;
+  let txt=e.clipboardData.getData('text/plain');if(!txt)return;
+  txt=txt.replace(/\r\n?/g,'\n').replace(/\n+$/,'');
+  e.preventDefault();
+  if(!txt.includes('\n')){document.execCommand('insertText',false,txt);return;}
+  const blkEl=dt.closest('.dblock'),b=blockById2(blkEl.dataset.bid),loc=b&&locateBlock(b.id);if(!loc)return;
+  pushUndo();
+  const sel=getSelection();
+  let rg=sel.rangeCount&&dt.contains(sel.anchorNode)?sel.getRangeAt(0):null;
+  if(!rg){rg=document.createRange();rg.selectNodeContents(dt);rg.collapse(false);}
+  rg.deleteContents();
+  /* カーソルより後ろの文は、貼り付けた最後の行のあとへ */
+  const tail=document.createRange();tail.setStart(rg.startContainer,rg.startOffset);tail.setEnd(dt,dt.childNodes.length);
+  const box=document.createElement('div');box.appendChild(tail.extractContents());
+  const lines=txt.split('\n');
+  b.html=dt.innerHTML+escXml(lines[0]);
+  const add=lines.slice(1).map(l=>{const nb={id:uid(),type:'p',html:escXml(l)};if(b.align)nb.align=b.align;return nb;});
+  const last=add[add.length-1];last.html+=box.innerHTML;
+  curDoc().pages[loc.pi].blocks.splice(loc.i+1,0,...add);
+  curBlockId=last.id;
+  save();renderDoc();
+  const el=docPagesEl.querySelector(`[data-bid="${last.id}"] .dtext`);
+  if(el)setCaretOffset(el,lines[lines.length-1].length);
 });
 docView.addEventListener('focusin',e=>{
   const blkEl=e.target.closest('.dblock');
