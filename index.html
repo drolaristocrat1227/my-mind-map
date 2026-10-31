@@ -2165,6 +2165,7 @@ kbd{
     <hr>
     <div class="menu-label">モーフィズム(押すと質感をまとめて設定)</div>
     <div class="segRow lookGrid" id="morphRow">
+      <button class="seg" data-morph="" title="モーフィズムを外して、かける前の見た目に戻す">なし</button>
       <button class="seg" data-morph="glass" title="すりガラス: 半透明の白・後ろをぼかす・明るい縁・やわらかい影">グラス</button>
       <button class="seg" data-morph="dglass" title="暗いすりガラス">ダークグラス</button>
       <button class="seg" data-morph="liquid" title="うすいガラスに光の縁(リキッドグラス風)">リキッドグラス</button>
@@ -2172,7 +2173,7 @@ kbd{
       <button class="seg" data-morph="neuin" title="背景と同じ色で、へこんで見える(ニューモーフィズム)">ニューモ(凹)</button>
       <button class="seg" data-morph="clay" title="ぷっくりした粘土のような立体(クレイモーフィズム)">クレイ</button>
     </div>
-    <div class="motNote" id="morphNote">ガラスは、後ろに写真や色の濃い図形がある時に映えます。ニューモーフィズムは、置いた区画の色に合わせます。</div>
+    <div class="motNote" id="morphNote">ガラスは、後ろに写真や色の濃い図形がある時に映えます。ニューモーフィズムは、置いた区画の色に合わせます。「なし」で、かける前の見た目に戻ります。横幅いっぱいの区画・図形は角を丸めません(画面の端まで伸ばせるように)。</div>
   </div>
   <div id="texSec">
     <hr>
@@ -3160,7 +3161,7 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-31.7';
+const APP_VERSION='2026-10-31.8';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -7870,7 +7871,7 @@ function siteJs(){
       var o=offTo(e,sec),fh=+(e.dataset.fh||0),h0=fh||e.offsetHeight;
       items.push({el:e,x1:o.x,x2:o.x+e.offsetWidth,y1:o.y,y2:o.y+h0,fh:fh,h0:h0,
         box:!fh&&e.tagName==='DIV'&&!e.querySelector('img,svg,video,iframe,canvas,.nt-e'),
-        img:e.children.length===1&&e.firstElementChild.tagName==='IMG'&&e.firstElementChild.style.width==='100%'?e.firstElementChild:null});
+        img:(function(k){return k.length===1&&k[0].tagName==='IMG'&&k[0].style.width==='100%'?k[0]:null;})([].filter.call(e.children,function(c){return!c.classList.contains('nt-lk');}))});
     });
     items.sort(function(a,b){return a.y1-b.y1;});
     var bottom=0;
@@ -7912,7 +7913,7 @@ function siteJs(){
     var page=v.firstElementChild,w=+v.dataset.w,list=[],clips=[v,page];
     [].forEach.call(page.querySelectorAll('.nt-e'),function(e){
       if(e.tagName!=='DIV'||e.classList.contains('nt-pagebg')||/rotate/.test(e.style.transform))return;
-      var ks=e.children,img=ks.length===1&&ks[0].tagName==='IMG'?ks[0]:null;
+      var ks=[].filter.call(e.children,function(c){return!c.classList.contains('nt-lk');}),img=ks.length===1&&ks[0].tagName==='IMG'?ks[0]:null;
       if(ks.length&&!img)return;
       if(img&&img.style.width!=='100%')return;   /* トリミングした画像は伸ばさない */
       if(e.closest('.nt-stage,.nt-cl'))return;
@@ -11549,6 +11550,7 @@ function cloneShape(s){
   if(s.ol2g)c.ol2g=JSON.parse(JSON.stringify(s.ol2g));
   if(s.smemo)c.smemo={...s.smemo};
   if(s.tex)c.tex={...s.tex};
+  if(s.morph)c.morph=JSON.parse(JSON.stringify(s.morph));
   if(s.ov)c.ov={...s.ov};
   return c;
 }
@@ -16115,10 +16117,28 @@ function morphBg(sh,s){
   }
   return'#E6E9EF';
 }
+const MORPH_KEYS=['fill','alpha','glass','sc','sa','sw','noStroke','shadows','sh','r','rs','grad'];
+/* 横幅いっぱい(入っている区画・ページと同じ幅)か。角を丸めると、書き出したページで画面の端まで伸ばせなくなる */
+function morphFullW(sh,s){
+  const p=parentFrameAt(sh,sh.indexOf(s));
+  if(isFrame(s)&&(s.role==='section'||s.role==='page'))return true;
+  return!!(p&&s.w>=p.w-1&&!(s.rot%360));
+}
 function applyMorph(k){
   const sh=curShapes();
   const ok=setLook(glassOk,s=>{
-    const rad=v=>{if(isRectish(s)){delete s.rs;s.r=Math.min(v,Math.min(s.w,s.h)/2);}};
+    if(!k){
+      /* 前の版でかけた物(元の見た目を覚えていない)は、効果だけを外す */
+      if(!s.morph){delete s.glass;delete s.shadows;delete s.sh;delete s.alpha;return;}
+      const pv=s.morph.prev||{};
+      MORPH_KEYS.forEach(key=>{if(key in pv)s[key]=JSON.parse(JSON.stringify(pv[key]));else delete s[key];});
+      delete s.morph;
+      return;
+    }
+    if(!s.morph){const pv={};MORPH_KEYS.forEach(key=>{if(s[key]!==undefined)pv[key]=JSON.parse(JSON.stringify(s[key]));});s.morph={prev:pv};}
+    s.morph.k=k;
+    const fullW=morphFullW(sh,s);
+    const rad=v=>{if(isRectish(s)&&!fullW){delete s.rs;s.r=Math.min(v,Math.min(s.w,s.h)/2);}else if(isRectish(s)){const pv=s.morph.prev;if('r' in pv)s.r=pv.r;else delete s.r;if(pv.rs)s.rs=pv.rs.slice();else delete s.rs;}};
     delete s.grad;delete s.glass;s.noStroke=false;
     if(k==='glass'||k==='dglass'||k==='liquid'){
       const dark=k==='dglass';
@@ -16135,7 +16155,7 @@ function applyMorph(k){
       s.shadows=[{ang:45,dist:inner?8:10,b:inner?14:20,c:dk,a:1,...(inner?{inner:true}:{})},{ang:225,dist:inner?8:10,b:inner?14:20,c:lt,a:1,...(inner?{inner:true}:{})}];
       rad(20);
     }else if(k==='clay'){
-      const f=/^#[0-9a-f]{6}$/i.test(s.fill||'')&&!/^#(ffffff|000000)$/i.test(s.fill)?s.fill:'#9EC5FF';
+      const f0=s.morph.prev.fill||'',f=/^#[0-9a-f]{6}$/i.test(f0)&&!/^#(ffffff|000000)$/i.test(f0)?f0:'#9EC5FF';
       s.fill=f;delete s.alpha;s.noStroke=true;
       s.shadows=[{ang:90,dist:18,b:36,c:mixHex(f,'#000000',0.45),a:0.35},{ang:225,dist:10,b:18,c:mixHex(f,'#000000',0.25),a:0.6,inner:true},{ang:45,dist:10,b:18,c:'#FFFFFF',a:0.6,inner:true}];
       rad(32);
@@ -16174,7 +16194,9 @@ $('#bmSel').addEventListener('change',e=>{const v=e.target.value;setLook(()=>tru
 function lookSync(ss){
   const act=(row,attr,v)=>document.querySelectorAll(`#${row} [${attr}]`).forEach(b=>b.classList.toggle('active',b.getAttribute(attr)===v));
   const setV=(id,v)=>{if(document.activeElement!==$('#'+id))$('#'+id).value=v;};
-  $('#morphSec').style.display=ss.some(glassOk)?'block':'none';
+  const mg=ss.filter(glassOk);
+  $('#morphSec').style.display=mg.length?'block':'none';
+  if(mg.length)act('morphRow','data-morph',mg[0].morph&&mg[0].morph.k||'');
   const tx=ss.filter(texOk);
   $('#texSec').style.display=tx.length?'block':'none';
   if(tx.length){
