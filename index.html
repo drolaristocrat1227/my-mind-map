@@ -297,6 +297,8 @@ body.wire-mode .menu .map-only{display:none;}
 #fillMenu .radLbl{font-size:12.5px;width:48px}
 #fillMenu .radRow,#fillMenu .numRow{padding:4px 14px;gap:10px}
 #fillMenu .segRow{padding:6px 14px}
+#fillMenu .lookGrid{flex-wrap:wrap}
+#fillMenu .lookGrid .seg{flex:1 1 30%;min-width:0;font-size:12px;padding-left:4px;padding-right:4px;white-space:nowrap}
 #fillMenu .seg{font-size:13px;padding:8px 8px}
 #fillMenu .radNum,#fillMenu input.radNum{font-size:12.5px}
 #fillMenu .numRow input[type=number],#fillMenu .numRow input[type=text],#fillMenu select{height:32px;font-size:14px}
@@ -2149,14 +2151,67 @@ kbd{
     <div class="menu-label">ぼかし</div>
     <div class="radRow"><span class="radLbl">強さ</span><input type="range" id="blurAmt" min="0" max="40" step="1" value="0"><input type="number" class="radNum" id="blurAmtV" min="0" max="200" value="0"></div>
     <div id="glassPart">
-      <div class="menu-label">後ろをぼかす(すりガラス・書き出したページで効きます)</div>
+      <div class="menu-label">後ろをぼかす(すりガラス)</div>
       <div class="segRow" id="glassRow" role="radiogroup">
         <button class="seg" data-glass="0" role="radio">なし</button>
         <button class="seg" data-glass="8" role="radio">弱め</button>
         <button class="seg" data-glass="16" role="radio">ふつう</button>
         <button class="seg" data-glass="28" role="radio">強め</button>
       </div>
+      <div class="radRow"><span class="radLbl">強さ</span><input type="range" id="glassAmt" min="0" max="60" step="1" value="0"><input type="number" class="radNum" id="glassAmtV" min="0" max="200" value="0"></div>
     </div>
+  </div>
+  <div id="morphSec">
+    <hr>
+    <div class="menu-label">モーフィズム(押すと質感をまとめて設定)</div>
+    <div class="segRow lookGrid" id="morphRow">
+      <button class="seg" data-morph="glass" title="すりガラス: 半透明の白・後ろをぼかす・明るい縁・やわらかい影">グラス</button>
+      <button class="seg" data-morph="dglass" title="暗いすりガラス">ダークグラス</button>
+      <button class="seg" data-morph="liquid" title="うすいガラスに光の縁(リキッドグラス風)">リキッドグラス</button>
+      <button class="seg" data-morph="neu" title="背景と同じ色で、ふくらんで見える(ニューモーフィズム)">ニューモ(凸)</button>
+      <button class="seg" data-morph="neuin" title="背景と同じ色で、へこんで見える(ニューモーフィズム)">ニューモ(凹)</button>
+      <button class="seg" data-morph="clay" title="ぷっくりした粘土のような立体(クレイモーフィズム)">クレイ</button>
+    </div>
+    <div class="motNote" id="morphNote">ガラスは、後ろに写真や色の濃い図形がある時に映えます。ニューモーフィズムは、置いた区画の色に合わせます。</div>
+  </div>
+  <div id="texSec">
+    <hr>
+    <div class="menu-label">テクスチャー(色に質感を足す)</div>
+    <div class="segRow lookGrid" id="texRow">
+      <button class="seg" data-tex="">なし</button>
+      <button class="seg" data-tex="grain">ざらざら</button>
+      <button class="seg" data-tex="paper">紙</button>
+      <button class="seg" data-tex="linen">布</button>
+      <button class="seg" data-tex="dots">ドット</button>
+      <button class="seg" data-tex="stripes">ストライプ</button>
+      <button class="seg" data-tex="grid">方眼</button>
+    </div>
+    <div id="texEdit">
+      <div class="radRow"><span class="radLbl">濃さ</span><input type="range" id="texA" min="0" max="100" step="1" value="35"><input type="number" class="radNum" id="texAV" min="0" max="100" value="35"></div>
+      <div class="radRow"><span class="radLbl">大きさ</span><input type="range" id="texSc" min="25" max="400" step="5" value="100"><input type="number" class="radNum" id="texScV" min="25" max="400" value="100"></div>
+      <div class="segRow" id="texLtRow"><button class="seg" data-lt="0">模様を暗く</button><button class="seg" data-lt="1">模様を明るく</button></div>
+    </div>
+  </div>
+  <div id="ovSec">
+    <hr>
+    <div class="menu-label">画像のオーバーレイ(色を重ねる)</div>
+    <div class="segRow lookGrid" id="ovRow">
+      <button class="seg" data-ov="">なし</button>
+      <button class="seg" data-ov="solid">ベタ塗り</button>
+      <button class="seg" data-ov="grad">グラデーション</button>
+    </div>
+    <div id="ovEdit">
+      <div class="colRow"><span class="radLbl">色</span><input type="color" id="ovC" value="#000000"><input type="text" id="ovCHex" spellcheck="false" autocomplete="off" maxlength="7" value="#000000"></div>
+      <div class="radRow"><span class="radLbl">濃さ</span><input type="range" id="ovA" min="0" max="100" step="1" value="40"><input type="number" class="radNum" id="ovAV" min="0" max="100" value="40"></div>
+      <div class="segRow" id="ovDirRow"><button class="seg" data-ovd="b">下から</button><button class="seg" data-ovd="t">上から</button><button class="seg" data-ovd="l">左から</button><button class="seg" data-ovd="r">右から</button></div>
+      <div class="numRow"><span class="radLbl">重ね方</span><select id="ovBm"></select></div>
+    </div>
+  </div>
+  <div id="blendSec">
+    <hr>
+    <div class="menu-label">重ね方(ブレンドモード)</div>
+    <div class="numRow"><select id="bmSel"></select></div>
+    <div class="motNote">下にある図形や画像と、色を混ぜて見せます(乗算・スクリーン・オーバーレイなど)。</div>
   </div>
   <div id="imgFillSec">
     <hr>
@@ -3105,7 +3160,7 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-31.6';
+const APP_VERSION='2026-10-31.7';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -5633,12 +5688,16 @@ function makeWireSvg(shapes,box,pad,bgMode,measures,measureBg){
     if(isFrame(sp))defs+=frameClipDefs(sp);
     if(hasSh(sp))defs+=shadowDefs(sp);
     if(sp.blur)defs+=blurDefs(sp);
+    defs+=lookDefs(sp);
   });
+  const below=[];
   shapes.forEach((sp,i)=>{
     if(sp.hidden)return;
     const f=clipFrameAt(shapes,i);
-    const one=withShadow(sp,shapeSvg(sp));
-    body+=f?`<g clip-path="url(#fc_${f.id})">${one}</g>`:one;
+    let one=withShadow(sp,shapeSvg(sp));
+    if(glassOn(sp)&&below.length)one=glassBackdropSvg(sp,below.join(''))+one;
+    const piece=f?`<g clip-path="url(#fc_${f.id})"${bmStyle(sp)}>${one}</g>`:one;
+    body+=piece;below.push(piece);
   });
   /* メジャー(残っていれば書き出しにも含める) */
   if(measures&&measures.length)measures.forEach(m=>{body+=measureSvg(m,1,measureBg);});
@@ -5703,6 +5762,19 @@ function siteBox(s,o,w,h){
     +(r?`;transform:rotate(${cssNum(r)}deg)`:'');
 }
 /* 四角・丸 → div。CSSで再現できなければnull */
+/* テクスチャー・オーバーレイの重ね(HTML)。親の .nt-e の角丸に合わせる */
+function siteLookHtml(s){
+  let h='';
+  if(texOn(s)){const tt=texTile(s.tex);h+=`<span class="nt-lk" aria-hidden="true" style="background:url('${tt.uri}') 0 0/${tt.T}px ${tt.T}px repeat;opacity:${cssNum(texA(s))}"></span>`;}
+  if(ovOn(s)){
+    const o=s.ov,c=o.c||'#000000';
+    const to={b:'to top',t:'to bottom',l:'to right',r:'to left'}[o.dir||'b'];
+    const bg=o.t==='grad'?`linear-gradient(${to}, ${cssCol(c,1)} 0%, ${cssCol(c,0)} 100%)`:c;
+    h+=`<span class="nt-lk" aria-hidden="true" style="background:${bg};opacity:${cssNum(o.a===undefined?0.4:o.a)}${o.bm&&o.bm!=='normal'?';mix-blend-mode:'+o.bm:''}"></span>`;
+  }
+  return h;
+}
+const siteBm=s=>bmOn(s)?';mix-blend-mode:'+s.bm:'';
 function siteCssBox(s,o){
   if(!(isRectish(s)||s.type==='ellipse')||s.imgFill||s.sgrad)return null;
   const fa=alphaOf(s,'fill'),sa=alphaOf(s,'stroke');
@@ -5722,7 +5794,7 @@ function siteCssBox(s,o){
   if(s.blur)st.push(`filter:blur(${cssNum(s.blur/2)}px)`);
   /* すりガラス: 後ろをぼかす */
   if(s.glass)st.push(`-webkit-backdrop-filter:blur(${cssNum(s.glass)}px) saturate(1.4);backdrop-filter:blur(${cssNum(s.glass)}px) saturate(1.4)`);
-  return`<div class="nt-e" style="${st.join(';')}"></div>`;
+  return`<div class="nt-e" style="${st.join(';')}${siteBm(s)}">${siteLookHtml(s)}</div>`;
 }
 /* 中に画像を入れた四角・丸・フレーム(ダミー画像やセクションに入れた画像など) → div の中の img。
    SVGで出すと、広い画面で画面の端まで伸ばす対象(img)にならず、書き出しの画像の軽量化も効かないため。
@@ -5747,7 +5819,7 @@ function siteImgFill(s,o){
     ?`left:0;top:0;width:100%;height:100%;object-fit:cover;object-position:calc(50% + ${cssNum((f.ox||0)*s.w)}px) calc(50% + ${cssNum((f.oy||0)*s.h)}px)`
     :`left:${cssNum(s.w/2+q.x)}px;top:${cssNum(s.h/2+q.y)}px;width:${cssNum(q.w)}px;height:${cssNum(q.h)}px`;
   const lazy=(s.y-s.h/2-o.y)>1200?' loading="lazy"':'';
-  return`<div class="nt-e" style="${st.join(';')}"><img src="${imgHref(f.src)}" alt="${escXml(s.alt||'')}"${lazy}${cover?' data-fit="cover"':''} style="position:absolute;${pos}${fa<1?';opacity:'+cssNum(fa):''}"></div>`;
+  return`<div class="nt-e" style="${st.join(';')}${siteBm(s)}"><img src="${imgHref(f.src)}" alt="${escXml(s.alt||'')}"${lazy}${cover?' data-fit="cover"':''} style="position:absolute;${pos}${fa<1?';opacity:'+cssNum(fa):''}">${siteLookHtml(s)}</div>`;
 }
 /* 画像 → img(トリミング・補正・枠線・影にも対応) */
 function siteImage(s,o){
@@ -5766,7 +5838,7 @@ function siteImage(s,o){
   const pos=ib?`left:${cssNum(ib.x-s.x+s.w/2)}px;top:${cssNum(ib.y-s.y+s.h/2)}px;width:${cssNum(ib.w)}px;height:${cssNum(ib.h)}px`
     :'left:0;top:0;width:100%;height:100%';
   const lazy=(s.y-s.h/2-o.y)>1200?' loading="lazy"':'';   /* 最初の画面より下の画像は後から読む */
-  return`<div class="nt-e" style="${st.join(';')}"><img src="${imgHref(s.src)}" alt="${escXml(s.alt||'')}"${lazy} style="position:absolute;${pos}"></div>`;
+  return`<div class="nt-e" style="${st.join(';')}${siteBm(s)}"><img src="${imgHref(s.src)}" alt="${escXml(s.alt||'')}"${lazy} style="position:absolute;${pos}">${siteLookHtml(s)}</div>`;
 }
 /* テキストのうち、HTMLの文字で同じ見た目にできるものか */
 function siteTextOk(s){
@@ -5795,6 +5867,7 @@ function siteText(s,o,tag,attrs,cls){
   }).join('');
   if(hasSh(s))st.push('text-shadow:'+cssShadows(s,true));
   if(s.blur)st.push(`filter:blur(${cssNum(s.blur/2)}px)`);
+  if(bmOn(s))st.push('mix-blend-mode:'+s.bm);
   const align=s.align||'center';
   const va=s.va==='top'?'top':s.va==='middle'?'middle':'baseline';
   const same=(a,b)=>a.fs===b.fs&&a.fw===b.fw&&a.ff===b.ff&&a.ls===b.ls;
@@ -5851,13 +5924,13 @@ function siteText(s,o,tag,attrs,cls){
 }
 /* CSSで再現できない図形は、画面と同じSVGをそのまま置く(はみ出しは見せる) */
 function siteSvg(s,o){
-  let defs=gradDefs(s);
+  let defs=gradDefs(s)+lookDefs(s);
   if(hasSh(s))defs+=shadowDefs(s);
   if(s.blur)defs+=blurDefs(s);
   const b=shapeWorldBox(s);
   const m=strokeW(s)+(olW1(s)+olW2(s))*2+2;
   const x=b.x-m,y=b.y-m,w=b.w+m*2,h=b.h+m*2;
-  let svg=`<svg class="nt-e nt-svg" aria-hidden="true" style="left:${cssNum(x-o.x)}px;top:${cssNum(y-o.y)}px" width="${cssNum(w)}" height="${cssNum(h)}" viewBox="${x} ${y} ${w} ${h}">`
+  let svg=`<svg class="nt-e nt-svg" aria-hidden="true" style="left:${cssNum(x-o.x)}px;top:${cssNum(y-o.y)}px${siteBm(s)}" width="${cssNum(w)}" height="${cssNum(h)}" viewBox="${x} ${y} ${w} ${h}">`
     +(defs?`<defs>${defs}</defs>`:'')+withShadow(s,shapeSvg(s))+'</svg>';
   return svg.replaceAll('var(--ink)',THEME_COLORS.light.ink).replace(/ data-id="[^"]*"/g,'');
 }
@@ -7317,6 +7390,7 @@ img{display:block;max-width:none}
 .nt-view{position:relative;margin:0 auto;overflow:hidden}
 .nt-page{position:absolute;left:0;top:0;transform-origin:0 0}
 .nt-e{position:absolute}
+.nt-lk{position:absolute;inset:0;border-radius:inherit;pointer-events:none}
 .nt-t{white-space:pre;font-style:normal}
 .nt-l{display:block;position:absolute;left:0;white-space:pre}
 .nt-svg{overflow:visible}
@@ -10305,8 +10379,10 @@ async function makeWireCanvas(w,opt){
      composePage()側で用紙合成時に決める(白 or 透明)ため、現在のUIテーマに左右されない */
   const tc=THEME_COLORS.light;
   /* 画像を先に読み込む */
-  const imgs=new Map(),fillImgs=new Map();
+  const imgs=new Map(),fillImgs=new Map(),texImgs=new Map();
+  const loadUri=u=>new Promise((ok,ng)=>{const im=new Image();im.onload=()=>ok(im);im.onerror=ng;im.src=u;});
   await Promise.all([
+    ...shapes.filter(texOn).map(s=>loadUri(texTile(s.tex,scale).uri).then(im=>texImgs.set(s.id,im)).catch(()=>{})),
     ...shapes.filter(s=>s.type==='image').map(s=>
       loadImg(s.src).then(im=>imgs.set(s.id,im)).catch(()=>{})),
     ...shapes.filter(s=>s.imgFill).map(s=>
@@ -10349,6 +10425,15 @@ async function makeWireCanvas(w,opt){
     }
     ctx.translate(s.x,s.y);
     ctx.rotate((s.rot||0)*Math.PI/180);
+    /* すりガラス: ここまでに描いた物を、図形の形で切り抜いてぼかして敷く */
+    if(glassOn(s)){
+      const tmp=document.createElement('canvas');tmp.width=cv.width;tmp.height=cv.height;
+      tmp.getContext('2d').drawImage(cv,0,0);
+      ctx.save();ctx.clip(shapeLocalPath2D(s));ctx.setTransform(1,0,0,1,0,0);
+      ctx.filter=`blur(${s.glass*scale}px) saturate(1.4)`;ctx.drawImage(tmp,0,0);
+      ctx.restore();
+    }
+    if(bmOn(s))ctx.globalCompositeOperation=s.bm;
     if(s.blur)ctx.filter=`blur(${s.blur*scale}px)`;   /* 図形全体のぼかし(書き出し倍率ぶん自分で掛ける) */
     /* シャドウ(複数・内側対応。Canvasの影は変形の影響を受けないので、書き出し倍率を自分で掛ける)
        対応図形(MULTI_SHADOW_TYPES)以外は従来どおり最初の1つだけを外側シャドウとして扱う */
@@ -10538,6 +10623,27 @@ async function makeWireCanvas(w,opt){
       }
       ctx.globalAlpha=base;
     }
+    /* テクスチャー・画像のオーバーレイ(図形の形の中だけ) */
+    if(texOn(s)&&texImgs.get(s.id)){
+      ctx.save();ctx.clip(shapeLocalPath2D(s));ctx.filter='none';
+      const pat=ctx.createPattern(texImgs.get(s.id),'repeat');
+      pat.setTransform(new DOMMatrix().translateSelf(-s.w/2,-s.h/2).scaleSelf(1/scale));
+      ctx.globalAlpha=texA(s);ctx.fillStyle=pat;ctx.fillRect(-s.w/2,-s.h/2,s.w,s.h);
+      ctx.restore();
+    }
+    if(ovOn(s)){
+      const o=s.ov,c=o.c||'#000000';
+      ctx.save();ctx.clip(shapeLocalPath2D(s));ctx.filter='none';
+      if(o.bm&&o.bm!=='normal')ctx.globalCompositeOperation=o.bm;
+      ctx.globalAlpha=o.a===undefined?0.4:o.a;
+      if(o.t==='grad'){
+        const g=OV_GRAD[o.dir||'b'],X=v=>-s.w/2+v*s.w,Y=v=>-s.h/2+v*s.h;
+        const lg=ctx.createLinearGradient(X(g[0]),Y(g[1]),X(g[2]),Y(g[3]));
+        lg.addColorStop(0,rgba(c,1));lg.addColorStop(1,rgba(c,0));ctx.fillStyle=lg;
+      }else ctx.fillStyle=c;
+      ctx.fillRect(-s.w/2,-s.h/2,s.w,s.h);
+      ctx.restore();
+    }
     /* 内側シャドウ(あれば、通常描画の上に重ねる)。「図形の輪郭 + 大きな外枠」を
        逆方向にずらして穴として塗ることで、影が内側からしか見えないようにする定番の手法 */
     if(shInnerAll.length){
@@ -10549,7 +10655,10 @@ async function makeWireCanvas(w,opt){
         const off2=shOffset(sh2);
         ctx.shadowColor=rgba(sh2.c,sh2.a);
         ctx.shadowBlur=sh2.b*scale;
-        ctx.shadowOffsetX=off2.x*scale;ctx.shadowOffsetY=off2.y*scale;
+        /* 黒い形そのものは図形から遠くへずらして描き、影だけを元の位置に戻す(縁に黒い線がにじまないように) */
+        const FAR=BIG*4,m0=ctx.getTransform();
+        ctx.shadowOffsetX=off2.x*scale+m0.a*FAR;ctx.shadowOffsetY=off2.y*scale+m0.b*FAR;
+        ctx.translate(-FAR,0);
         /* 「大きな外枠 - 図形そのものの穴」を塗ると、その影(shadowOffsetぶんずれた
            コピー)は図形の内側では穴の反対側にしか映らない=内側シャドウになる */
         const composite=new Path2D();
@@ -11439,6 +11548,8 @@ function cloneShape(s){
   if(s.olg)c.olg=JSON.parse(JSON.stringify(s.olg));
   if(s.ol2g)c.ol2g=JSON.parse(JSON.stringify(s.ol2g));
   if(s.smemo)c.smemo={...s.smemo};
+  if(s.tex)c.tex={...s.tex};
+  if(s.ov)c.ov={...s.ov};
   return c;
 }
 /* ---------- シャドウ(複数・内側対応) ----------
@@ -11519,6 +11630,85 @@ function shadowDefs(s){
   });
   return`<filter id="wsh_${s.id}" filterUnits="userSpaceOnUse" x="${-R}" y="${-R}" width="${R*2}" height="${R*2}">${defs}</filter>`;
 }
+/* ---------- 質感: モーフィズム(すりガラス)・テクスチャー・画像のオーバーレイ・ブレンドモード ----------
+   s.glass=後ろをぼかす強さ(px) / s.tex={t,a,sc,lt}=色の上に重ねる模様 / s.ov={t:'solid'|'grad',c,a,dir,bm}=画像に重ねる色 / s.bm=重ね方。
+   テクスチャーは小さなSVGのタイルを敷き詰める(画面・画像の書き出し・HTMLで同じタイルを使うので見た目がそろう) */
+const BLEND_MODES=[['normal','通常'],['multiply','乗算'],['screen','スクリーン'],['overlay','オーバーレイ'],['soft-light','ソフトライト'],['hard-light','ハードライト'],
+  ['darken','比較(暗)'],['lighten','比較(明)'],['color-dodge','覆い焼き'],['color-burn','焼き込み'],['difference','差の絶対値'],['exclusion','除外'],
+  ['hue','色相'],['saturation','彩度'],['color','カラー'],['luminosity','輝度']];
+const glassOk=s=>isRectish(s)||s.type==='ellipse';
+const glassOn=s=>s.glass>0&&glassOk(s);
+const texOk=s=>isRectish(s)||s.type==='ellipse'||(s.type==='path'&&s.closed);
+const texOn=s=>!!(s.tex&&s.tex.t&&texOk(s));
+const ovOk=s=>s.type==='image'||!!(s.imgFill&&s.imgFill.src&&s.type!=='text');
+const ovOn=s=>!!(s.ov&&s.ov.t&&ovOk(s));
+const bmOn=s=>!!(s.bm&&s.bm!=='normal');
+const TEX_NOISE=['grain','paper','linen'];
+const texCache=new Map();
+/* タイル1枚(T=タイルの大きさ。mul=書き出しで細かく描く倍率) */
+function texTile(t,mul){
+  mul=mul||1;
+  const key=[t.t,t.sc||1,t.lt?1:0,mul].join('|');
+  if(texCache.has(key))return texCache.get(key);
+  const sc=clamp(t.sc||1,0.25,4),col=t.lt?'#FFFFFF':'#000000';
+  const T=Math.max(4,Math.round(({grain:128,paper:256,linen:96,dots:16,stripes:14,grid:24}[t.t]||128)*sc));
+  /* ノイズ → 暗い粒(黒)と明るい粒(白)。どんな色の上でも見えるように両方を出す */
+  const noise=(bf,oct,k,sd)=>`<feTurbulence type="fractalNoise" baseFrequency="${bf}" numOctaves="${oct}" seed="${sd}" stitchTiles="stitch" result="n${sd}"/>`
+    +`<feColorMatrix in="n${sd}" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 ${k} 0 0 0 ${-k/2}" result="d${sd}"/>`
+    +`<feColorMatrix in="n${sd}" type="matrix" values="0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 ${-k} 0 0 0 ${k/2}" result="l${sd}"/>`;
+  const merge=ids=>`<feMerge>${ids.map(i=>`<feMergeNode in="d${i}"/><feMergeNode in="l${i}"/>`).join('')}</feMerge>`;
+  const f=v=>cssNum(v/sc*1000)/1000;
+  let body='';
+  if(TEX_NOISE.includes(t.t)){
+    const fl=t.t==='grain'?noise(f(0.8),2,3,1)+merge([1])
+      :t.t==='paper'?noise(f(0.02),3,1.1,2)+noise(f(0.6),1,1.8,3)+merge([2,3])
+      :noise(`${f(0.9)} ${f(0.025)}`,2,2.4,4)+noise(`${f(0.025)} ${f(0.9)}`,2,2.4,5)+merge([4,5]);
+    body=`<filter id="f" filterUnits="userSpaceOnUse" x="0" y="0" width="${T}" height="${T}" color-interpolation-filters="sRGB">${fl}</filter><rect width="${T}" height="${T}" filter="url(#f)"/>`;
+  }else if(t.t==='dots')body=`<circle cx="${T/2}" cy="${T/2}" r="${T*0.2}" fill="${col}"/>`;
+  else if(t.t==='stripes')body=`<path d="M${-T/2} ${T/2}L${T/2} ${-T/2}M0 ${T}L${T} 0M${T/2} ${T*1.5}L${T*1.5} ${T/2}" stroke="${col}" stroke-width="${cssNum(T*0.22)}"/>`;
+  else{const w=Math.max(0.6,T/24);body=`<path d="M0 ${w/2}H${T}M${w/2} 0V${T}" stroke="${col}" stroke-width="${cssNum(w)}" fill="none"/>`;}
+  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${T*mul}" height="${T*mul}" viewBox="0 0 ${T} ${T}">${body}</svg>`;
+  const out={T,uri:'data:image/svg+xml,'+encodeURIComponent(svg).replace(/'/g,'%27')};
+  texCache.set(key,out);
+  return out;
+}
+const texA=s=>s.tex.a===undefined?(TEX_NOISE.includes(s.tex.t)?0.35:0.15):s.tex.a;
+/* 図形の輪郭(局所座標)。続けて属性を足して '/>' で閉じる */
+function lookOutline(s){
+  if(s.type==='ellipse')return`<ellipse rx="${s.w/2}" ry="${s.h/2}"`;
+  if(s.type==='path')return`<path d="${pathD(s)}" fill-rule="evenodd"`;
+  if(isRectish(s))return`<path d="${roundRectPath(s.w,s.h,rectRadii(s))}"`;
+  return`<rect x="${-s.w/2}" y="${-s.h/2}" width="${s.w}" height="${s.h}"`;
+}
+const OV_GRAD={b:[0,1,0,0],t:[0,0,0,1],l:[0,0,1,0],r:[1,0,0,0]};
+function lookDefs(s){
+  let d='';
+  if(texOn(s)){const tt=texTile(s.tex);d+=`<pattern id="wtx_${s.id}" patternUnits="userSpaceOnUse" x="${-s.w/2}" y="${-s.h/2}" width="${tt.T}" height="${tt.T}"><image href="${tt.uri}" width="${tt.T}" height="${tt.T}"/></pattern>`;}
+  if(ovOn(s)&&s.ov.t==='grad'){
+    const g=OV_GRAD[s.ov.dir||'b'],c=s.ov.c||'#000000';
+    d+=`<linearGradient id="wov_${s.id}" x1="${g[0]}" y1="${g[1]}" x2="${g[2]}" y2="${g[3]}"><stop offset="0" stop-color="${c}"/><stop offset="1" stop-color="${c}" stop-opacity="0"/></linearGradient>`;
+  }
+  return d;
+}
+/* 図形の上に重ねる物(テクスチャー・画像のオーバーレイ)。局所座標 */
+function lookExtraSvg(s){
+  let h='';
+  if(texOn(s))h+=lookOutline(s)+` fill="url(#wtx_${s.id})" opacity="${texA(s)}" pointer-events="none"/>`;
+  if(ovOn(s)){
+    const o=s.ov,bm=o.bm&&o.bm!=='normal'?` style="mix-blend-mode:${o.bm}"`:'';
+    h+=lookOutline(s)+` fill="${o.t==='grad'?`url(#wov_${s.id})`:(o.c||'#000000')}" opacity="${o.a===undefined?0.4:o.a}" pointer-events="none"${bm}/>`;
+  }
+  return h;
+}
+const bmStyle=s=>bmOn(s)?` style="mix-blend-mode:${s.bm}"`:'';
+/* すりガラス(画面・SVG): 後ろにある物をもう一度描き、図形の形で切り抜いてぼかす */
+function glassBackdropSvg(s,below){
+  const b=shapeWorldBox(s),m=s.glass*3;
+  const tr=`transform="translate(${s.x} ${s.y}) rotate(${s.rot||0})"`;
+  return`<clipPath id="wgc_${s.id}">${lookOutline(s)} ${tr}/></clipPath>`
+    +`<filter id="wgf_${s.id}" filterUnits="userSpaceOnUse" x="${b.x-m}" y="${b.y-m}" width="${b.w+m*2}" height="${b.h+m*2}" color-interpolation-filters="sRGB"><feGaussianBlur stdDeviation="${s.glass}"/><feColorMatrix type="saturate" values="1.4"/></filter>`
+    +`<g clip-path="url(#wgc_${s.id})" pointer-events="none"><g filter="url(#wgf_${s.id})">${below.replace(/ data-id="[^"]*"/g,'')}</g></g>`;
+}
 /* ぼかしフィルター(s.blur=px)。シャドウとは独立した、図形全体への単純なガウスぼかし */
 function blurDefs(s){
   if(!s.blur)return'';
@@ -11529,10 +11719,12 @@ function blurDefs(s){
    フィルターは変形を持たない内側のgに付ける(外側だと座標系の解釈が紛れるため)。
    ぼかし→シャドウの順に重ねる(ぼかした形にシャドウが付く自然な見え方) */
 function withShadow(s,svg){
-  if(!s.blur&&!hasSh(s))return svg;
+  const extra=lookExtraSvg(s);
+  if(!s.blur&&!hasSh(s)&&!extra&&!bmOn(s))return svg;
   const i=svg.indexOf('>');
-  const head=svg.slice(0,i+1);
-  let content=svg.slice(i+1,svg.length-4);
+  let head=svg.slice(0,i+1);
+  let content=svg.slice(i+1,svg.length-4)+extra;
+  if(bmOn(s))head=head.replace(/^<g/,'<g'+bmStyle(s));
   if(s.blur)content=`<g filter="url(#wbl_${s.id})">${content}</g>`;
   if(hasSh(s))content=`<g filter="url(#wsh_${s.id})">${content}</g>`;
   return head+content+'</g>';
@@ -11954,16 +12146,19 @@ function renderWire(){
   wireSel=wireSel.filter(id=>{const s=d.shapes.find(x=>x.id===id);return s&&!s.hidden;});
   let html='';
   let defs='';
-  d.shapes.forEach(s=>{if(s.hidden)return;defs+=gradDefs(s);if(isFrame(s))defs+=frameClipDefs(s);if(hasSh(s))defs+=shadowDefs(s);if(s.blur)defs+=blurDefs(s);});
+  d.shapes.forEach(s=>{if(s.hidden)return;defs+=gradDefs(s);if(isFrame(s))defs+=frameClipDefs(s);if(hasSh(s))defs+=shadowDefs(s);if(s.blur)defs+=blurDefs(s);defs+=lookDefs(s);});
   if(defs)html+=`<defs>${defs}</defs>`;
   /* フレームの中の図形は、変形を持たないgで包んでから切り取る
      (clip-pathは要素自身のtransformの影響を受けるため、直接付けるとずれる)。
      非表示(レイヤーパネル)の図形は画面にも書き出しにも出さない */
+  const below=[];   /* すりガラスの後ろに映す物(ここまでに描いた物) */
   d.shapes.forEach((s,i)=>{
     if(s.hidden)return;
     const f=clipFrameAt(d.shapes,i);
-    const one=withShadow(s,shapeSvg(s));
-    html+=f?`<g clip-path="url(#fc_${f.id})">${one}</g>`:one;
+    let one=withShadow(s,shapeSvg(s));
+    if(glassOn(s)&&below.length)one=glassBackdropSvg(s,below.join(''))+one;
+    const piece=f?`<g clip-path="url(#fc_${f.id})"${bmStyle(s)}>${one}</g>`:one;
+    html+=piece;below.push(piece);
   });
   /* デバイスの外装で画面の上に載る部分(ノッチ・ホームバー・ブラウザボタン等)。
      中身の図形より手前に描く(ノッチが内容に重なる本物の見え方) */
@@ -15899,9 +16094,117 @@ $('#lnkSec').addEventListener('change',()=>{
 $('#glassRow').addEventListener('click',e=>{
   const b=e.target.closest('.seg');if(!b)return;
   const v=+b.dataset.glass;
-  setWebProp(selShapes().filter(x=>!x.locked&&(isRectish(x)||x.type==='ellipse')),x=>{if(v)x.glass=v;else delete x.glass;},
-    v?'書き出したページで、この図形の後ろがぼけて見えます(塗りの濃さを下げると透けて見えます)':'すりガラスをやめました');
+  setWebProp(selShapes().filter(x=>!x.locked&&glassOk(x)),x=>{if(v)x.glass=v;else delete x.glass;},
+    v?'この図形の後ろがぼけて見えます(塗りの濃さを下げると透けて見えます)':'すりガラスをやめました');
+  renderWire();
 });
+/* ---------- 質感(モーフィズム・テクスチャー・オーバーレイ・ブレンド) ---------- */
+function setLook(ok,fn,noUndo){
+  const ss=selShapes().filter(x=>!x.locked&&ok(x));if(!ss.length)return false;
+  if(!noUndo)pushUndo();
+  ss.forEach(fn);save();renderWire();updateStyleMenu();
+  return true;
+}
+bindSlider('glassAmt','glassAmtV',v=>setLook(glassOk,x=>{if(v>0)x.glass=Math.round(v);else delete x.glass;},true));
+/* 置いた区画(フレーム)の色。ニューモーフィズムは背景と同じ色で作る */
+function morphBg(sh,s){
+  let p=parentFrameAt(sh,sh.indexOf(s)),k=0;
+  while(p&&k++<20){
+    if(p.fill&&!p.grad&&!p.imgFill&&alphaOf(p,'fill')>=0.5&&/^#[0-9a-f]{6}$/i.test(p.fill))return p.fill;
+    p=parentFrameAt(sh,sh.indexOf(p));
+  }
+  return'#E6E9EF';
+}
+function applyMorph(k){
+  const sh=curShapes();
+  const ok=setLook(glassOk,s=>{
+    const rad=v=>{if(isRectish(s)){delete s.rs;s.r=Math.min(v,Math.min(s.w,s.h)/2);}};
+    delete s.grad;delete s.glass;s.noStroke=false;
+    if(k==='glass'||k==='dglass'||k==='liquid'){
+      const dark=k==='dglass';
+      s.fill=dark?'#111827':'#FFFFFF';s.alpha=dark?0.35:k==='liquid'?0.1:0.18;
+      s.glass=k==='liquid'?8:dark?20:16;
+      s.sc='#FFFFFF';s.sa=dark?0.15:k==='liquid'?0.7:0.5;s.sw=k==='liquid'?1.5:1;
+      s.shadows=k==='liquid'
+        ?[{ang:90,dist:6,b:24,c:'#000000',a:0.18},{ang:45,dist:3,b:6,c:'#FFFFFF',a:0.8,inner:true},{ang:225,dist:3,b:8,c:'#000000',a:0.12,inner:true}]
+        :[{ang:90,dist:dark?10:8,b:dark?30:32,c:dark?'#000000':'#1F2687',a:dark?0.35:0.2}];
+      rad(k==='liquid'?28:20);
+    }else if(k==='neu'||k==='neuin'){
+      const bg=morphBg(sh,s),dk=mixHex(bg,'#000000',0.18),lt=mixHex(bg,'#FFFFFF',0.7),inner=k==='neuin';
+      s.fill=bg;delete s.alpha;s.noStroke=true;
+      s.shadows=[{ang:45,dist:inner?8:10,b:inner?14:20,c:dk,a:1,...(inner?{inner:true}:{})},{ang:225,dist:inner?8:10,b:inner?14:20,c:lt,a:1,...(inner?{inner:true}:{})}];
+      rad(20);
+    }else if(k==='clay'){
+      const f=/^#[0-9a-f]{6}$/i.test(s.fill||'')&&!/^#(ffffff|000000)$/i.test(s.fill)?s.fill:'#9EC5FF';
+      s.fill=f;delete s.alpha;s.noStroke=true;
+      s.shadows=[{ang:90,dist:18,b:36,c:mixHex(f,'#000000',0.45),a:0.35},{ang:225,dist:10,b:18,c:mixHex(f,'#000000',0.25),a:0.6,inner:true},{ang:45,dist:10,b:18,c:'#FFFFFF',a:0.6,inner:true}];
+      rad(32);
+    }
+    delete s.sh;
+  });
+  if(!ok)toast('四角・丸・区画を選んでください');
+}
+$('#morphRow').addEventListener('click',e=>{const b=e.target.closest('[data-morph]');if(b)applyMorph(b.dataset.morph);});
+$('#texRow').addEventListener('click',e=>{
+  const b=e.target.closest('[data-tex]');if(!b)return;
+  const t=b.dataset.tex;
+  if(!setLook(texOk,x=>{if(!t)delete x.tex;else{const o=x.tex||{};x.tex={t,...(o.sc?{sc:o.sc}:{}),...(o.lt?{lt:1}:{})};}}))toast('四角・丸・区画・閉じたパスを選んでください');
+});
+bindSlider('texA','texAV',v=>setLook(texOn,x=>{x.tex.a=clamp(v,0,100)/100;},true));
+bindSlider('texSc','texScV',v=>setLook(texOn,x=>{x.tex.sc=clamp(v,25,400)/100;},true));
+$('#texLtRow').addEventListener('click',e=>{const b=e.target.closest('[data-lt]');if(b)setLook(texOn,x=>{if(+b.dataset.lt)x.tex.lt=1;else delete x.tex.lt;});});
+$('#ovRow').addEventListener('click',e=>{
+  const b=e.target.closest('[data-ov]');if(!b)return;
+  const t=b.dataset.ov;
+  if(!setLook(ovOk,x=>{if(!t)delete x.ov;else x.ov={c:'#000000',a:t==='grad'?0.6:0.4,dir:'b',...(x.ov||{}),t};}))toast('画像か、画像を入れた図形を選んでください');
+});
+const ovSetC=v=>{if(/^#[0-9a-f]{6}$/i.test(v))setLook(ovOn,x=>{x.ov.c=v.toUpperCase();},true);};
+$('#ovC').addEventListener('pointerdown',e=>{e.stopPropagation();pushUndo();});
+$('#ovC').addEventListener('input',e=>ovSetC(e.target.value));
+$('#ovCHex').addEventListener('pointerdown',e=>e.stopPropagation());
+$('#ovCHex').addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter')e.target.blur();});
+$('#ovCHex').addEventListener('change',e=>{let v=e.target.value.trim();if(!v.startsWith('#'))v='#'+v;pushUndo();ovSetC(v);});
+bindSlider('ovA','ovAV',v=>setLook(ovOn,x=>{x.ov.a=clamp(v,0,100)/100;},true));
+$('#ovDirRow').addEventListener('click',e=>{const b=e.target.closest('[data-ovd]');if(b)setLook(ovOn,x=>{x.ov.dir=b.dataset.ovd;});});
+const bmOpts=BLEND_MODES.map(([k,n])=>`<option value="${k}">${n}</option>`).join('');
+$('#ovBm').innerHTML=bmOpts;$('#bmSel').innerHTML=bmOpts;
+['ovBm','bmSel'].forEach(id=>{$('#'+id).addEventListener('pointerdown',e=>e.stopPropagation());});
+$('#ovBm').addEventListener('change',e=>{const v=e.target.value;setLook(ovOn,x=>{if(v==='normal')delete x.ov.bm;else x.ov.bm=v;});});
+$('#bmSel').addEventListener('change',e=>{const v=e.target.value;setLook(()=>true,x=>{if(v==='normal')delete x.bm;else x.bm=v;});});
+function lookSync(ss){
+  const act=(row,attr,v)=>document.querySelectorAll(`#${row} [${attr}]`).forEach(b=>b.classList.toggle('active',b.getAttribute(attr)===v));
+  const setV=(id,v)=>{if(document.activeElement!==$('#'+id))$('#'+id).value=v;};
+  $('#morphSec').style.display=ss.some(glassOk)?'block':'none';
+  const tx=ss.filter(texOk);
+  $('#texSec').style.display=tx.length?'block':'none';
+  if(tx.length){
+    const t=tx[0].tex&&tx[0].tex.t?tx[0].tex:null;
+    act('texRow','data-tex',t?t.t:'');
+    $('#texEdit').style.display=t?'block':'none';
+    if(t){
+      const a=Math.round(texA(tx[0])*100),sc=Math.round((t.sc||1)*100);
+      setV('texA',a);setV('texAV',a);setV('texSc',sc);setV('texScV',sc);
+      $('#texLtRow').style.display=TEX_NOISE.includes(t.t)?'none':'flex';
+      act('texLtRow','data-lt',t.lt?'1':'0');
+    }
+  }
+  const ov=ss.filter(ovOk);
+  $('#ovSec').style.display=ov.length?'block':'none';
+  if(ov.length){
+    const o=ov[0].ov&&ov[0].ov.t?ov[0].ov:null;
+    act('ovRow','data-ov',o?o.t:'');
+    $('#ovEdit').style.display=o?'block':'none';
+    if(o){
+      const c=(o.c||'#000000').toUpperCase(),a=Math.round((o.a===undefined?0.4:o.a)*100);
+      setV('ovC',c.toLowerCase());setV('ovCHex',c);setV('ovA',a);setV('ovAV',a);
+      $('#ovDirRow').style.display=o.t==='grad'?'flex':'none';
+      act('ovDirRow','data-ovd',o.dir||'b');
+      setV('ovBm',o.bm||'normal');
+    }
+  }
+  $('#blendSec').style.display=ss.length?'block':'none';
+  if(ss.length)setV('bmSel',ss[0].bm||'normal');
+}
 $('#webTag').addEventListener('change',()=>{
   const v=$('#webTag').value;
   setWebProp(webTargets().filter(s=>s.type==='text'),s=>{if(v)s.tag=v;else delete s.tag;});
@@ -17140,6 +17443,12 @@ function updateStyleMenu(){
     const g0=glassable[0].glass||0,sameG=glassable.every(x=>(x.glass||0)===g0);
     document.querySelectorAll('#glassRow .seg').forEach(b=>{const on=sameG&&+b.dataset.glass===g0;b.classList.toggle('active',on);b.setAttribute('aria-checked',on?'true':'false');});
   }
+  if(glassable.length){
+    const g0=glassable[0].glass||0;
+    if(document.activeElement!==$('#glassAmt'))$('#glassAmt').value=g0;
+    if(document.activeElement!==$('#glassAmtV'))$('#glassAmtV').value=g0;
+  }
+  lookSync(ss);
   if(ss.length){
     const b0=ss[0].blur||0;
     if(document.activeElement!==$('#blurAmt'))$('#blurAmt').value=b0;
@@ -17544,6 +17853,10 @@ function initColl(){
    ['radiusSec','角の丸み',true],
    ['shadowSec','シャドウ',false],
    ['blurSec','ぼかし',false],
+   ['morphSec','モーフィズム(ガラスなど)',false],
+   ['texSec','テクスチャー',false],
+   ['ovSec','画像のオーバーレイ',false],
+   ['blendSec','重ね方(ブレンドモード)',false],
    ['imgFillSec','図形の中の画像',false],
    ['aspectSec','元の縦横比に戻す',false],
    ['imgFxSec','画像の補正',false],
@@ -20847,7 +21160,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&stEl().classList.contains('o
    「色とスタイル」(案A): 選んだ物の種類に合わせて、使う設定だけをよく使う順に上へ出す。
    ほかは「詳しい設定」に畳む。設定の中身(スイッチ・処理)はこれまでと同じで、並びとまとまりだけを変える
    ============================================================ */
-const CTX_ALL=['frameSec','sizeSec','posSec','webSec','uiPart','mapPart','btnPart','navPart','icoPart','textSec','fillSec','strokeSec','radiusSec','shadowSec','blurSec','imgFillSec','aspectSec','imgFxSec','toPathSec','refineSec'];
+const CTX_ALL=['frameSec','sizeSec','posSec','webSec','uiPart','mapPart','btnPart','navPart','icoPart','textSec','fillSec','strokeSec','radiusSec','shadowSec','blurSec','morphSec','texSec','ovSec','blendSec','imgFillSec','aspectSec','imgFxSec','toPathSec','refineSec'];
 /* 種類ごとに上へ出す物(よく使う順) */
 const CTX_ORDER={
   btn:['btnPart','sizeSec','posSec','webSec'],
@@ -20856,7 +21169,7 @@ const CTX_ORDER={
   gmap:['mapPart','sizeSec','posSec','webSec'],
   text:['textSec','fillSec','posSec','webSec'],
   frame:['frameSec','webSec','fillSec'],
-  image:['sizeSec','posSec','imgFillSec','aspectSec','imgFxSec','webSec'],
+  image:['sizeSec','posSec','imgFillSec','aspectSec','imgFxSec','ovSec','webSec'],
   icon:['icoPart','fillSec','sizeSec','posSec','webSec'],
   shape:['fillSec','sizeSec','posSec','radiusSec','strokeSec','webSec'],
   multi:['fillSec','sizeSec','webSec']
