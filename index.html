@@ -2180,6 +2180,8 @@ kbd{
     <div class="menu-label">テクスチャー(色に質感を足す)</div>
     <div class="segRow lookGrid" id="texRow">
       <button class="seg" data-tex="">なし</button>
+      <button class="seg" data-tex="fine" title="フィルムのような、ごく細かい粒。単色の背景ののっぺり感を消す">さりげない粒</button>
+      <button class="seg" data-tex="mura" title="紙や漆喰のような、ゆるい濃淡と細かい粒">さりげないムラ</button>
       <button class="seg" data-tex="grain">ざらざら</button>
       <button class="seg" data-tex="paper">紙</button>
       <button class="seg" data-tex="linen">布</button>
@@ -3161,7 +3163,7 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-31.8';
+const APP_VERSION='2026-10-31.9';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -11645,7 +11647,9 @@ const texOn=s=>!!(s.tex&&s.tex.t&&texOk(s));
 const ovOk=s=>s.type==='image'||!!(s.imgFill&&s.imgFill.src&&s.type!=='text');
 const ovOn=s=>!!(s.ov&&s.ov.t&&ovOk(s));
 const bmOn=s=>!!(s.bm&&s.bm!=='normal');
-const TEX_NOISE=['grain','paper','linen'];
+const TEX_NOISE=['fine','mura','grain','paper','linen'];
+/* 最初の濃さ。さりげない2種は、目で見てわかるかどうかくらい(明るさの揺れが数％) */
+const TEX_DEF_A={fine:0.5,mura:0.5,grain:0.2,paper:0.25,linen:0.2,dots:0.1,stripes:0.1,grid:0.1};
 const texCache=new Map();
 /* タイル1枚(T=タイルの大きさ。mul=書き出しで細かく描く倍率) */
 function texTile(t,mul){
@@ -11653,7 +11657,7 @@ function texTile(t,mul){
   const key=[t.t,t.sc||1,t.lt?1:0,mul].join('|');
   if(texCache.has(key))return texCache.get(key);
   const sc=clamp(t.sc||1,0.25,4),col=t.lt?'#FFFFFF':'#000000';
-  const T=Math.max(4,Math.round(({grain:128,paper:256,linen:96,dots:16,stripes:14,grid:24}[t.t]||128)*sc));
+  const T=Math.max(4,Math.round(({fine:160,mura:512,grain:128,paper:256,linen:96,dots:16,stripes:14,grid:24}[t.t]||128)*sc));
   /* ノイズ → 暗い粒(黒)と明るい粒(白)。どんな色の上でも見えるように両方を出す */
   const noise=(bf,oct,k,sd)=>`<feTurbulence type="fractalNoise" baseFrequency="${bf}" numOctaves="${oct}" seed="${sd}" stitchTiles="stitch" result="n${sd}"/>`
     +`<feColorMatrix in="n${sd}" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 ${k} 0 0 0 ${-k/2}" result="d${sd}"/>`
@@ -11662,7 +11666,10 @@ function texTile(t,mul){
   const f=v=>cssNum(v/sc*1000)/1000;
   let body='';
   if(TEX_NOISE.includes(t.t)){
-    const fl=t.t==='grain'?noise(f(0.8),2,3,1)+merge([1])
+    /* さりげない2種は、粒を細かく・やわらかくし(k を小さく)、白黒の点ではなく明るさのわずかな揺れにする */
+    const fl=t.t==='fine'?noise(f(1.1),3,0.34,6)+merge([6])
+      :t.t==='mura'?noise(f(0.006),2,0.28,7)+noise(f(1.0),2,0.25,8)+merge([7,8])
+      :t.t==='grain'?noise(f(0.8),2,3,1)+merge([1])
       :t.t==='paper'?noise(f(0.02),3,1.1,2)+noise(f(0.6),1,1.8,3)+merge([2,3])
       :noise(`${f(0.9)} ${f(0.025)}`,2,2.4,4)+noise(`${f(0.025)} ${f(0.9)}`,2,2.4,5)+merge([4,5]);
     body=`<filter id="f" filterUnits="userSpaceOnUse" x="0" y="0" width="${T}" height="${T}" color-interpolation-filters="sRGB">${fl}</filter><rect width="${T}" height="${T}" filter="url(#f)"/>`;
@@ -11674,7 +11681,7 @@ function texTile(t,mul){
   texCache.set(key,out);
   return out;
 }
-const texA=s=>s.tex.a===undefined?(TEX_NOISE.includes(s.tex.t)?0.35:0.15):s.tex.a;
+const texA=s=>s.tex.a===undefined?(TEX_DEF_A[s.tex.t]||0.2):s.tex.a;
 /* 図形の輪郭(局所座標)。続けて属性を足して '/>' で閉じる */
 function lookOutline(s){
   if(s.type==='ellipse')return`<ellipse rx="${s.w/2}" ry="${s.h/2}"`;
