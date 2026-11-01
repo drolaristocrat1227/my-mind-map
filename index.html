@@ -208,6 +208,19 @@ body.wire-mode .menu .map-only{display:none;}
   #menuGrip span{display:none}
 }
 #fillMenu input[type=range].scrubbed{display:none}
+/* スマホ: 色とスタイルは画面の下から出す(シート)。見出しを上下にドラッグ・タップで大きさを変える。
+   畳むと見出しの1行だけになり、図形を見ながら操作できる */
+#menuGrip .shName,#menuGrip .shTgl{display:none}
+body.sheetUI #fillMenu{left:6px!important;right:6px!important;width:auto!important;min-width:0;top:auto!important;bottom:var(--shB,84px)!important;height:var(--shH,40vh);max-height:none!important;cursor:default;overscroll-behavior:contain;padding-top:0;animation:none;border-radius:16px;transition:height .18s ease}
+body.sheetUI #fillMenu.sh-drag{transition:none}
+body.sheetUI #fillMenu.sh-mini{overflow:hidden}
+body.sheetUI #menuGrip{position:sticky;top:0;z-index:3;background:var(--panel);margin:0 -6px 4px;padding:16px 14px 10px;align-items:center;touch-action:none;cursor:grab;border-radius:16px 16px 0 0;font-size:14px!important}
+body.sheetUI #menuGrip::before{content:'';position:absolute;left:50%;top:6px;width:40px;height:4px;margin-left:-20px;border-radius:2px;background:var(--ink-soft);opacity:.45}
+body.sheetUI #menuGrip>span{display:none}
+body.sheetUI #menuGrip .shName{display:block;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;font-weight:500;color:var(--ink-soft)}
+body.sheetUI #menuGrip .shTgl{display:flex;align-items:center;gap:4px;flex:none;height:32px;padding:0 12px;border:1px solid var(--panel-border);border-radius:9px;background:var(--node-bg);color:var(--ink);font:inherit;font-size:13px;font-weight:600}
+body.sheetUI #menuGrip .shTgl svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+body.sheetUI #fillMenu:not(.sh-mini) .shTgl svg{transform:rotate(180deg)}
 #fillMenu .scrub{cursor:ew-resize;user-select:none;-webkit-user-select:none;touch-action:none;border-radius:5px;padding:2px 4px;margin:-2px -4px}
 #fillMenu .scrub:hover{background:var(--btn-hover);color:var(--ink)}
 #fillMenu .scrub.on{background:color-mix(in srgb,var(--accent) 18%,transparent);color:var(--accent)}
@@ -1729,7 +1742,7 @@ kbd{
   </button>
 </div>
 <div id="fillMenu" class="menu glass">
-  <div id="menuGrip">色とスタイル<span>ここをドラッグで移動</span></div>
+  <div id="menuGrip">色とスタイル<span>ここをドラッグで移動</span><b class="shName" id="shName"></b><button class="shTgl" id="shTgl" type="button"><svg viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></svg><i id="shTglT" style="font-style:normal">開く</i></button></div>
   <div class="segRow" id="fmTabs"><button class="seg" data-tab="design">デザイン</button><button class="seg" data-tab="web">ホームページ</button></div>
   <div id="ctxHead"><div class="ctxIc" id="ctxIc"></div><div style="min-width:0"><div class="ctxN" id="ctxN"></div><div class="ctxSub" id="ctxSub"></div></div></div>
   <div id="frameSec">
@@ -3163,7 +3176,7 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-10-31.9';
+const APP_VERSION='2026-11-01.1';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -10813,7 +10826,7 @@ let selAnchor=null;               /* 選択中のパスの点 {sid,i} */
 let wDrag=null,wLpTimer=null;
 let smartGuideV=null,smartGuideH=null;   /* 移動中に他の図形へ吸着した位置(表示用の補助線) */
 let layerPanelOpen=false;
-let stylePanelHidden=false,lastSelKey='';   /* 色とスタイルを手動で隠しているか(選択が変われば解除) */
+let stylePanelHidden=false,lastSelKey='',sheetRevealPending=false;   /* 色とスタイルを手動で隠しているか(選択が変われば解除) */
 let lastTap={t:0,x:0,y:0};        /* 独自のダブルクリック判定 */
 const wirePointers=new Map();
 
@@ -12271,11 +12284,12 @@ function updateWireBtns(){
      選択が無くなったら(空クリック・Escapeなど)自動で閉じる。
      ただし色とスタイルボタンで手動で隠している間は開かない(選択が変われば解除) */
   const selKey=ss.map(s=>s.id).join(',');
-  if(selKey!==lastSelKey){lastSelKey=selKey;stylePanelHidden=false;}
+  if(selKey!==lastSelKey){lastSelKey=selKey;stylePanelHidden=false;if(any)sheetRevealPending=true;}
   $('#wireFillBtn').classList.toggle('active',any&&!stylePanelHidden);
   if(any&&!stylePanelHidden){
     if(!$('#fillMenu').classList.contains('on')){$('#fillMenu').classList.add('on');placeFillMenu();}
     updateStyleMenu();
+    if(document.body.classList.contains('sheetUI'))$('#shName').textContent=$('#ctxN').textContent||'';
   }else if($('#fillMenu').classList.contains('on'))$('#fillMenu').classList.remove('on');
 }
 /* 図形の四隅(回転後のワールド座標)。外接円で概算すると大きな図形ほど
@@ -14598,6 +14612,7 @@ wireView.addEventListener('pointerdown',e=>{
 });
 /* ドラッグ中かどうかに関わらず、貼り付け先に使うためカーソル位置を常に覚えておく */
 wireView.addEventListener('pointermove',e=>{lastWireMouse=s2w(e.clientX,e.clientY);},{passive:true});
+addEventListener('pointerup',()=>{if(sheetRevealPending){sheetRevealPending=false;setTimeout(sheetReveal,30);}});
 wireView.addEventListener('pointermove',e=>{
   if(!wirePointers.has(e.pointerId))return;
   wirePointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
@@ -17850,7 +17865,79 @@ function placeFillMenu(){
   x=clamp(x,8,Math.max(8,innerWidth-mr.width-8));
   y=clamp(y,8,Math.max(8,innerHeight-80));
   menu.style.left=x+'px';menu.style.top=y+'px';
+  sheetLayout();
 }
+/* ---------- スマホ: 色とスタイルを画面の下から出す(シート) ----------
+   mini=見出しだけ / half=画面の4割ほど / full=上のバーの下まで。最後に選んだ大きさを覚える */
+let shState=(()=>{try{const v=localStorage.getItem('ntd-sheet');return v==='mini'||v==='full'?v:'half';}catch(e){return'half';}})();
+function sheetUI(){return innerWidth<=700||(innerWidth<900&&matchMedia('(pointer:coarse)').matches);}
+function sheetHeights(){
+  const bar=$('#wireBar'),br=bar&&bar.getClientRects().length?bar.getBoundingClientRect():null;
+  const B=br&&br.height?Math.round(innerHeight-br.top+6):10;
+  const tb=$('#topbar'),tr=tb&&tb.getClientRects().length?tb.getBoundingClientRect():null;
+  const top=tr?Math.round(tr.bottom+6):10;
+  const avail=Math.max(120,innerHeight-B-top);
+  const g=$('#menuGrip').offsetHeight||56;
+  return{B,top,mini:g,half:Math.min(avail,Math.max(g+160,Math.round(innerHeight*0.4))),full:avail};
+}
+function sheetLayout(){
+  const on=sheetUI(),m=$('#fillMenu');
+  document.body.classList.toggle('sheetUI',on);
+  if(!on){m.classList.remove('sh-mini');return;}
+  const H=sheetHeights();
+  m.style.setProperty('--shB',H.B+'px');
+  m.style.setProperty('--shH',H[shState]+'px');
+  m.classList.toggle('sh-mini',shState==='mini');
+  if(shState==='mini')m.scrollTop=0;
+  $('#shTglT').textContent=shState==='mini'?'開く':'畳む';
+  $('#shName').textContent=$('#ctxN').textContent||'';
+}
+function setSheet(st){
+  shState=st;
+  try{localStorage.setItem('ntd-sheet',st);}catch(e){}
+  sheetLayout();
+  if(st!=='mini')sheetReveal();
+}
+/* シートを開いた時、選んだ物がシートの後ろに隠れていたら、見える所まで画面をずらす */
+function sheetReveal(){
+  const m=$('#fillMenu');
+  if(!document.body.classList.contains('sheetUI')||!m.classList.contains('on')||shState==='mini')return;
+  const ss=selShapes();if(!ss.length)return;
+  let y1=Infinity,y2=-Infinity;
+  ss.forEach(s=>shapeCorners(s).forEach(p=>{y1=Math.min(y1,p.y);y2=Math.max(y2,p.y);}));
+  const H=sheetHeights(),top=H.top,bot=innerHeight-H.B-H[shState]-8;
+  if(bot-top<40)return;
+  const sy1=y1*wz+wpy,sy2=y2*wz+wpy;
+  if(sy1>=top&&sy2<=bot)return;
+  const dy=sy2-sy1>bot-top?top-sy1:(top+bot)/2-(sy1+sy2)/2;
+  const y0=wpy,t0=performance.now();
+  const step=t=>{const k=Math.min(1,(t-t0)/200);wpy=y0+dy*(1-Math.pow(1-k,3));wireViewApply();if(k<1)requestAnimationFrame(step);else renderWire();};
+  requestAnimationFrame(step);
+}
+addEventListener('resize',()=>{if($('#fillMenu').classList.contains('on'))sheetLayout();else document.body.classList.toggle('sheetUI',sheetUI());});
+/* 見出し: タップで 畳む⇔開く、上下ドラッグで大きさを変える(離した所に近い大きさにそろえる) */
+$('#menuGrip').addEventListener('pointerdown',e=>{
+  if(!document.body.classList.contains('sheetUI'))return;
+  e.stopPropagation();
+  const m=$('#fillMenu'),H=sheetHeights(),h0=m.getBoundingClientRect().height,y0=e.clientY;
+  let moved=false;
+  const move=ev=>{
+    const dy=ev.clientY-y0;
+    if(!moved&&Math.abs(dy)<6)return;
+    if(!moved){moved=true;m.classList.add('sh-drag');m.classList.remove('sh-mini');}
+    m.style.setProperty('--shH',clamp(h0-dy,H.mini,H.full)+'px');
+  };
+  const up=ev=>{
+    removeEventListener('pointermove',move);removeEventListener('pointerup',up);removeEventListener('pointercancel',up);
+    m.classList.remove('sh-drag');
+    if(!moved){if(!ev.target.closest||!ev.target.closest('#shTgl'))setSheet(shState==='mini'?'half':'mini');return;}
+    const h=m.getBoundingClientRect().height;
+    const st=['mini','half','full'].reduce((a,k)=>Math.abs(H[k]-h)<Math.abs(H[a]-h)?k:a,'half');
+    setSheet(st);
+  };
+  addEventListener('pointermove',move);addEventListener('pointerup',up);addEventListener('pointercancel',up);
+});
+$('#shTgl').addEventListener('click',e=>{e.stopPropagation();setSheet(shState==='mini'?'half':'mini');});
 /* ---------- 色とスタイルの折りたたみ(縦に長いのを整理) ---------- */
 const collState={};   /* 開閉状態を覚える(セッション内) */
 function makeColl(id,title,open){
@@ -17903,6 +17990,7 @@ initColl();
 $('#fillMenu').addEventListener('pointerdown',e=>{
   /* 操作部品・折りたたみ見出しの上では動かさない */
   if(e.target.closest('button,input,select,.sw,.gstop,#gradBar,.collHead,.gadd,#hsvBox'))return;
+  if(document.body.classList.contains('sheetUI'))return;
   const menu=$('#fillMenu');
   const r=menu.getBoundingClientRect();
   const ox=e.clientX-r.left,oy=e.clientY-r.top;
