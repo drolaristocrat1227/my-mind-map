@@ -2246,6 +2246,10 @@ kbd{
       </div>
     </div>
   </div>
+  <div id="cropSec">
+    <div class="segRow"><button class="seg" id="cropModeBtn" title="つまみで範囲を狭める(引き伸ばさない)">トリミング</button><button class="seg" id="cropResetBtn">切る前に戻す</button></div>
+    <div class="motNote" id="cropNote">オンの間は、四隅・辺のつまみを動かすと、引き伸ばさずに見える範囲だけが変わります(薄く見えているのが元の画像全体)。</div>
+  </div>
   <div id="aspectSec">
     <hr>
     <div class="menu-label">元の縦横比に戻す</div>
@@ -3176,7 +3180,7 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-11-01.1';
+const APP_VERSION='2026-11-02.1';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -10821,6 +10825,7 @@ function updateWireHint(){
   el.innerHTML=txt;
   el.classList.toggle('on',!!txt);
 }
+let cropMode=false;     /* トリミングモード: つまみのドラッグが拡縮ではなくトリミングになる(スマホ用。PCは Ctrl+ドラッグでも同じ) */
 let cropPreview=null;   /* Ctrl+ハンドルドラッグ中のトリミング/型抜きプレビュー(四隅の配列) */
 let selAnchor=null;               /* 選択中のパスの点 {sid,i} */
 let wDrag=null,wLpTimer=null;
@@ -12212,6 +12217,14 @@ function renderWire(){
     if(smartGuideV!==null)html+=`<line x1="${smartGuideV}" x2="${smartGuideV}" y1="${-E}" y2="${E}" stroke="#E858C8" stroke-width="${gw}" pointer-events="none"/>`;
     if(smartGuideH!==null)html+=`<line y1="${smartGuideH}" y2="${smartGuideH}" x1="${-E}" x2="${E}" stroke="#E858C8" stroke-width="${gw}" pointer-events="none"/>`;
   }
+  /* トリミングモード中: 元の画像全体を薄く見せる(どこまで広げられるか分かるように) */
+  if(cropMode||(wDrag&&wDrag.mode==='imgcrop')){
+    const cs=wDrag&&wDrag.mode==='imgcrop'?wDrag.s:oneSel();
+    if(cs&&cs.type==='image'){
+      const B=cs.imgBox||{x:cs.x-cs.w/2,y:cs.y-cs.h/2,w:cs.w,h:cs.h};
+      html+=`<g transform="translate(${cs.x} ${cs.y}) rotate(${cs.rot||0})" pointer-events="none"><image href="${imgHref(cs.src)}" x="${B.x-cs.x}" y="${B.y-cs.y}" width="${B.w}" height="${B.h}" preserveAspectRatio="none" opacity="0.3"/><rect x="${B.x-cs.x}" y="${B.y-cs.y}" width="${B.w}" height="${B.h}" fill="none" stroke="var(--accent)" stroke-width="${1/wz}" stroke-dasharray="${4/wz} ${3/wz}"/></g>`;
+    }
+  }
   /* Ctrl+ハンドルドラッグ中のトリミング/型抜きプレビュー */
   if(cropPreview){
     const d2=cropPreview.map(p=>`${p.x},${p.y}`).join(' ');
@@ -12284,7 +12297,7 @@ function updateWireBtns(){
      選択が無くなったら(空クリック・Escapeなど)自動で閉じる。
      ただし色とスタイルボタンで手動で隠している間は開かない(選択が変われば解除) */
   const selKey=ss.map(s=>s.id).join(',');
-  if(selKey!==lastSelKey){lastSelKey=selKey;stylePanelHidden=false;if(any)sheetRevealPending=true;}
+  if(selKey!==lastSelKey){lastSelKey=selKey;stylePanelHidden=false;cropMode=false;if(any)sheetRevealPending=true;}
   $('#wireFillBtn').classList.toggle('active',any&&!stylePanelHidden);
   if(any&&!stylePanelHidden){
     if(!$('#fillMenu').classList.contains('on')){$('#fillMenu').classList.add('on');placeFillMenu();}
@@ -14541,7 +14554,7 @@ wireView.addEventListener('pointerdown',e=>{
     if(hv==='rot'){pushUndo();wDrag={mode:'rotate',s};return;}
     const[sx,sy]=hv.split(',').map(Number);
     /* Ctrl+ハンドルドラッグ: 拡縮ではなく型抜き(画像はトリミング、図形は前面図形と同じ切り取り) */
-    if(e.ctrlKey&&(s.type==='image'||CUT_OK(s))){
+    if((e.ctrlKey&&(s.type==='image'||CUT_OK(s)))||(cropMode&&s.type==='image')){
       const al=rotV({x:-sx*s.w/2,y:-sy*s.h/2},s.rot||0);
       wDrag={mode:s.type==='image'?'imgcrop':'shapecrop',s,sx,sy,ax:s.x+al.x,ay:s.y+al.y,w0:s.w,h0:s.h,rot0:s.rot||0};
       return;
@@ -14929,9 +14942,16 @@ wireView.addEventListener('pointermove',e=>{
   if(wDrag.mode==='imgcrop'){
     const{s,sx,sy,ax,ay,w0,h0,rot0}=wDrag;
     const dl=rotV({x:p.x-ax,y:p.y-ay},-rot0);
-    const nw=sx?Math.max(10,dl.x*sx):w0,nh=sy?Math.max(10,dl.y*sy):h0;
+    let nw=sx?Math.max(10,dl.x*sx):w0,nh=sy?Math.max(10,dl.y*sy):h0;
     const off=rotV({x:sx*nw/2,y:sy*nh/2},rot0);
     wDrag.nw=nw;wDrag.nh=nh;wDrag.ncx=ax+off.x;wDrag.ncy=ay+off.y;
+    if(!(rot0%360)){
+      const B=s.imgBox||{x:s.x-w0/2,y:s.y-h0/2,w:w0,h:h0};
+      const x1=Math.max(B.x,wDrag.ncx-nw/2),x2=Math.min(B.x+B.w,wDrag.ncx+nw/2);
+      const y1=Math.max(B.y,wDrag.ncy-nh/2),y2=Math.min(B.y+B.h,wDrag.ncy+nh/2);
+      nw=Math.max(10,x2-x1);nh=Math.max(10,y2-y1);
+      wDrag.nw=nw;wDrag.nh=nh;wDrag.ncx=(x1+x2)/2;wDrag.ncy=(y1+y2)/2;
+    }
     const c=[[-nw/2,-nh/2],[nw/2,-nh/2],[nw/2,nh/2],[-nw/2,nh/2]].map(([lx,ly])=>{
       const v=rotV({x:lx,y:ly},rot0);return{x:wDrag.ncx+v.x,y:wDrag.ncy+v.y};
     });
@@ -17617,6 +17637,13 @@ function updateStyleMenu(){
     $('#ifShow').classList.toggle('active',!!f.show);
     $('#ifDrag').classList.toggle('active',imgAdjust);
   }
+  /* トリミング(画像を1つ選んだ時) */
+  {const one=ss.length===1&&ss[0].type==='image'?ss[0]:null;
+   if(!one&&cropMode){cropMode=false;}
+   $('#cropSec').style.display=one?'block':'none';
+   $('#cropModeBtn').classList.toggle('active',cropMode);
+   $('#cropResetBtn').disabled=!(one&&one.imgBox);
+   $('#cropNote').style.display=cropMode?'block':'none';}
   /* 元の縦横比に戻す(図形の中の画像・通常の画像どちらでも) */
   $('#aspectSec').style.display=ss.some(s=>s.type==='image'||s.imgFill)?'block':'none';
   /* 画像の補正 */
@@ -17938,6 +17965,23 @@ $('#menuGrip').addEventListener('pointerdown',e=>{
   addEventListener('pointermove',move);addEventListener('pointerup',up);addEventListener('pointercancel',up);
 });
 $('#shTgl').addEventListener('click',e=>{e.stopPropagation();setSheet(shState==='mini'?'half':'mini');});
+/* トリミング: オンの間はつまみのドラッグで見える範囲だけを変える */
+$('#cropModeBtn').addEventListener('click',e=>{
+  e.stopPropagation();
+  const s=oneSel();if(!s||s.type!=='image')return;
+  cropMode=!cropMode;
+  renderWire();updateStyleMenu();
+  toast(cropMode?'トリミング: つまみを動かすと範囲だけが変わります(もう一度押すと終了)':'トリミングを終えました');
+});
+$('#cropResetBtn').addEventListener('click',e=>{
+  e.stopPropagation();
+  const s=oneSel();if(!s||s.type!=='image'||!s.imgBox)return;
+  pushUndo();
+  const B=s.imgBox;
+  s.x=B.x+B.w/2;s.y=B.y+B.h/2;s.w=B.w;s.h=B.h;delete s.imgBox;
+  save();renderWire();updateStyleMenu();
+  toast('切る前の画像に戻しました');
+});
 /* ---------- 色とスタイルの折りたたみ(縦に長いのを整理) ---------- */
 const collState={};   /* 開閉状態を覚える(セッション内) */
 function makeColl(id,title,open){
@@ -21277,7 +21321,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&stEl().classList.contains('o
    「色とスタイル」(案A): 選んだ物の種類に合わせて、使う設定だけをよく使う順に上へ出す。
    ほかは「詳しい設定」に畳む。設定の中身(スイッチ・処理)はこれまでと同じで、並びとまとまりだけを変える
    ============================================================ */
-const CTX_ALL=['frameSec','sizeSec','posSec','webSec','uiPart','mapPart','btnPart','navPart','icoPart','textSec','fillSec','strokeSec','radiusSec','shadowSec','blurSec','morphSec','texSec','ovSec','blendSec','imgFillSec','aspectSec','imgFxSec','toPathSec','refineSec'];
+const CTX_ALL=['frameSec','sizeSec','posSec','webSec','uiPart','mapPart','btnPart','navPart','icoPart','textSec','fillSec','strokeSec','radiusSec','shadowSec','blurSec','morphSec','texSec','ovSec','blendSec','imgFillSec','cropSec','aspectSec','imgFxSec','toPathSec','refineSec'];
 /* 種類ごとに上へ出す物(よく使う順) */
 const CTX_ORDER={
   btn:['btnPart','sizeSec','posSec','webSec'],
@@ -21286,7 +21330,7 @@ const CTX_ORDER={
   gmap:['mapPart','sizeSec','posSec','webSec'],
   text:['textSec','fillSec','posSec','webSec'],
   frame:['frameSec','webSec','fillSec'],
-  image:['sizeSec','posSec','imgFillSec','aspectSec','imgFxSec','ovSec','webSec'],
+  image:['sizeSec','cropSec','posSec','imgFillSec','aspectSec','imgFxSec','ovSec','webSec'],
   icon:['icoPart','fillSec','sizeSec','posSec','webSec'],
   shape:['fillSec','sizeSec','posSec','radiusSec','strokeSec','webSec'],
   multi:['fillSec','sizeSec','webSec']
