@@ -3236,7 +3236,7 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-11-02.3';
+const APP_VERSION='2026-11-02.4';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -5071,6 +5071,17 @@ function expFrame(){
   const d=curDoc();
   return d.shapes?d.shapes.find(s=>s.id===expFrameId&&isFrame(s)):null;
 }
+/* 書き出しの最初の倍率: 範囲にPDFから取り込んだページがあれば、取り込んだ細かさ(最大3倍)まで上げる。
+   ただし書き出す画像の長い辺が 8000px を超えない倍率にする */
+function expAutoScale(){
+  const ss=rangeShapes();
+  if(!ss||!ss.some(s=>s.type==='image'&&s.pdf))return 1;
+  let k=1;
+  ss.forEach(s=>{if(s.type==='image'&&s.pdf){const B=s.imgBox||s;k=Math.max(k,Math.min(PDF_RES,Math.round((s.iw||B.w)/B.w)));}});
+  const{box}=rangeBox(ss),L=Math.max(box.x2-box.x1||1,box.y2-box.y1||1);
+  while(k>1&&L*k>8000)k--;
+  return k;
+}
 function rangeShapes(){
   const d=curDoc();
   if(!d.shapes)return null;
@@ -5227,7 +5238,7 @@ async function openExportDlg(){
   }else if(expFmt==='html')expFmt='png';
   /* 図形・フレーム単位は実寸が既定、全体は今までどおり用紙に合わせる */
   expPaper=expRange==='all'?'landscape':'fit';
-  expScale=1;
+  expScale=expAutoScale();
   expSplit=false;expWirePage=0;
   await rebuildExpContent();
   if(!expContent){toast('書き出すものがありません');return;}
@@ -17222,6 +17233,7 @@ function loadImageBlob(blob,cb){
 /* ---------- PDF を画像として取り込む ----------
    PDF.js(cdnjs)を初めて使う時だけ読み込む(Service Worker が保存するので2回目からはオフラインでも動く)。
    各ページは元の2倍の細かさで画像にする(拡大しても粗くならないように)。PDFの文字は画像になる */
+const PDF_RES=3;   /* PDFのページを何倍の細かさで画像にするか(実寸で置き、×3で書き出してもくっきり) */
 const PDFJS_URL='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
 let pdfjsP=null;
 function loadPdfJs(){
@@ -17248,12 +17260,14 @@ async function pdfPageCanvas(pdf,n,scale){
   const x=cv.getContext('2d');x.fillStyle='#FFFFFF';x.fillRect(0,0,cv.width,cv.height);
   await pg.render({canvasContext:x,viewport:vp}).promise;
   pg.cleanup();
+  cv.__pt=vp.scale;
   return cv;
 }
 function canvasBlob(cv){
   return new Promise(ok=>cv.toBlob(b=>{
+    const done=x=>{if(x)x.__pt=cv.__pt;ok(x);};
     /* 写真の多いページはPNGだと重いので、大きい時はJPEGにする */
-    if(b&&b.size>1.5e6)cv.toBlob(j=>ok(j||b),'image/jpeg',0.92);else ok(b);
+    if(b&&b.size>3e6)cv.toBlob(j=>done(j||b),'image/jpeg',0.95);else done(b);
   },'image/png'));
 }
 let pdfPickCb=null;
@@ -17322,7 +17336,7 @@ async function pdfToImageBlobs(file,single){
   toast(pages.length>1?`PDFの${pages.length}ページを画像にしています…`:'PDFを画像にしています…');
   const out=[];
   for(const n of pages){
-    try{out.push(await canvasBlob(await pdfPageCanvas(pdf,n,2)));}catch(e){}
+    try{out.push(await canvasBlob(await pdfPageCanvas(pdf,n,PDF_RES)));}catch(e){}
   }
   pdf.destroy();
   if(!out.length){toast('PDFを画像にできませんでした');return null;}
@@ -17346,8 +17360,8 @@ function addImagesFromBlobs(blobs,at){
     const c=at||{x:0,y:0},news=[];
     let x=0;
     rs.forEach(r=>{
-      const dk=Math.min(1,280/Math.max(r.w,r.h)),w=r.w*dk,h=r.h*dk;
-      news.push({id:uid(),type:'image',x:c.x+x+w/2,y:c.y,w,h,rot:0,fill:null,src:r.url,iw:r.w,ih:r.h});
+      const b=blobs[news.length],dk=b&&b.__pt?1/b.__pt:Math.min(1,280/Math.max(r.w,r.h)),w=r.w*dk,h=r.h*dk;
+      news.push({id:uid(),type:'image',x:c.x+x+w/2,y:c.y,w,h,rot:0,fill:null,src:r.url,iw:r.w,ih:r.h,...(b&&b.__pt?{pdf:1}:{})});
       x+=w+24;
     });
     news.forEach(s=>{s.x-=(x-24)/2;});
@@ -17369,8 +17383,9 @@ function addImageFromBlob(blob,at){
     const d=curDoc();if(!d.shapes)return;
     pushUndo();
     const c=at||{x:0,y:0};
-    const dk=Math.min(1,280/Math.max(r.w,r.h));
+    const dk=blob.__pt?1/blob.__pt:Math.min(1,280/Math.max(r.w,r.h));
     const s={id:uid(),type:'image',x:c.x,y:c.y,w:r.w*dk,h:r.h*dk,rot:0,fill:null,src:r.url,iw:r.w,ih:r.h};
+    if(blob.__pt)s.pdf=1;
     d.shapes.push(s);if(!at)placeNew([s],sel0);
     wireSel=[s.id];
     save();renderWire();
