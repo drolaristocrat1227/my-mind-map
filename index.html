@@ -822,6 +822,26 @@ body.text-mode #docBar{display:flex;}
 }
 
 /* 削除確認ダイアログ */
+/* PDFのページを選ぶ */
+#pdfWrap{position:fixed;inset:0;z-index:140;display:none;align-items:center;justify-content:center;padding:16px;}
+#pdfWrap.on{display:flex;}
+#pdfBack{position:absolute;inset:0;background:rgba(0,0,0,.35);}
+#pdfDlg{position:relative;width:min(640px,100%);max-height:calc(100vh - 32px);max-height:calc(100dvh - 32px);display:flex;flex-direction:column;border-radius:18px;padding:18px 16px 14px;}
+#pdfTitle{font-size:15px;font-weight:700;}
+#pdfSub{font-size:12px;color:var(--ink-soft);margin-top:4px;line-height:1.6;}
+#pdfTools{display:flex;gap:8px;margin-top:10px;}
+#pdfTools button{padding:6px 12px;border-radius:9px;font-size:12.5px;background:var(--btn-hover);color:var(--ink);}
+#pdfGrid{flex:1;min-height:120px;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:12px;margin-top:12px;padding:2px;overscroll-behavior:contain;}
+.pdfPg{position:relative;border:2px solid transparent;border-radius:10px;padding:4px;background:var(--btn-hover);cursor:pointer;text-align:center;}
+.pdfPg canvas{width:100%;height:auto;display:block;background:#fff;border-radius:4px;box-shadow:0 1px 4px rgba(0,0,0,.2);}
+.pdfPg span{display:block;font-size:11.5px;color:var(--ink-soft);margin-top:4px;}
+.pdfPg.on{border-color:var(--accent);}
+.pdfPg.on::after{content:'✓';position:absolute;top:8px;right:8px;width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;font-size:13px;font-weight:700;line-height:22px;}
+#pdfBtns{display:flex;gap:10px;margin-top:14px;}
+#pdfBtns button{flex:1;padding:11px;border-radius:11px;font-size:13.5px;font-weight:650;}
+#pdfCancel{background:var(--btn-hover);color:var(--ink-soft);}
+#pdfOk{background:var(--accent);color:#fff;}
+#pdfOk:disabled{opacity:.4;}
 /* 保存するファイル名 */
 #fnWrap{position:fixed;inset:0;z-index:140;display:none;align-items:center;justify-content:center;padding:20px;}
 #fnWrap.on{display:flex;}
@@ -2382,9 +2402,9 @@ kbd{
 <!-- 右クリックのメニュー(ツールバーと同じ操作) -->
 <div id="wireCtxMenu" class="menu glass"></div>
 <textarea id="wireTextInput" spellcheck="false" autocomplete="off" rows="1"></textarea>
-<input type="file" id="wireImgInput" accept="image/*" hidden>
+<input type="file" id="wireImgInput" accept="image/*,application/pdf,.pdf" hidden>
 <input type="file" id="mediaFileInput" hidden>
-<input type="file" id="imgFillInput" accept="image/*" hidden>
+<input type="file" id="imgFillInput" accept="image/*,application/pdf,.pdf" hidden>
 
 <!-- クライアント(制作の工程): クライアント一覧と、7つの工程の画面。ライト/ダークを切り替えられる -->
 <style>
@@ -2720,7 +2740,7 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
     <button class="seg" data-flow="h">横並び</button>
   </div>
 </div>
-<input type="file" id="docImgInput" accept="image/*" hidden>
+<input type="file" id="docImgInput" accept="image/*,application/pdf,.pdf" hidden>
 
 <!-- マルチモード 2画面目 -->
 <div id="pane2">
@@ -3042,6 +3062,17 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
   </div>
 </div>
 
+<!-- PDFのページを選ぶ -->
+<div id="pdfWrap">
+  <div id="pdfBack"></div>
+  <div id="pdfDlg" class="glass">
+    <div id="pdfTitle">PDFのページを選ぶ</div>
+    <div id="pdfSub"></div>
+    <div id="pdfTools"><button id="pdfAll">すべて選ぶ</button><button id="pdfNone">すべて外す</button></div>
+    <div id="pdfGrid"></div>
+    <div id="pdfBtns"><button id="pdfCancel">キャンセル</button><button id="pdfOk">追加</button></div>
+  </div>
+</div>
 <!-- 保存するファイル名 -->
 <div id="fnWrap">
   <div id="fnBack"></div>
@@ -3205,7 +3236,7 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-11-02.2';
+const APP_VERSION='2026-11-02.3';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -17113,12 +17144,15 @@ function fillShapeFromBlob(s,blob){
 $('#wireImgInput').addEventListener('change',e=>{
   const f=e.target.files[0],t=imgPickFor&&shapeById(imgPickFor);
   imgPickFor=null;
-  if(f){if(t)fillShapeFromBlob(t,f);else addImageFromBlob(f);}
   e.target.value='';
+  if(f){
+    if(t)oneImageBlob(f).then(b=>{if(b)fillShapeFromBlob(t,b);});
+    else addImageFile(f);
+  }
 });
 $('#wireImgInput').addEventListener('cancel',()=>{imgPickFor=null;});
 /* 画像のファイルをキャンバスへドラッグして落とす: ダミー画像(または中に画像の入った図形)の上ならその中へ、それ以外は落とした位置に画像として追加 */
-const dropImgFile=e=>[...((e.dataTransfer&&e.dataTransfer.files)||[])].find(f=>/^image\//.test(f.type));
+const dropImgFile=e=>[...((e.dataTransfer&&e.dataTransfer.files)||[])].find(f=>/^image\//.test(f.type)||isPdfFile(f));
 const dropHasFile=e=>e.dataTransfer&&[...e.dataTransfer.types].includes('Files');
 function dropTarget(x,y){
   for(const el of document.elementsFromPoint(x,y)){
@@ -17146,10 +17180,10 @@ wireView.addEventListener('drop',e=>{
   e.preventDefault();
   setDropHi(null);
   const f=dropImgFile(e);
-  if(!f){toast('画像のファイル(JPEG・PNG など)を落としてください');return;}
+  if(!f){toast('画像のファイル(JPEG・PNG など)かPDFを落としてください');return;}
   const t=dropTarget(e.clientX,e.clientY);
-  if(t){wireSel=[t.id];fillShapeFromBlob(t,f);}
-  else addImageFromBlob(f,s2w(e.clientX-wireView.getBoundingClientRect().left,e.clientY-wireView.getBoundingClientRect().top));
+  if(t){wireSel=[t.id];oneImageBlob(f).then(b=>{if(b)fillShapeFromBlob(t,b);});}
+  else addImageFile(f,s2w(e.clientX-wireView.getBoundingClientRect().left,e.clientY-wireView.getBoundingClientRect().top));
 });
 addEventListener('paste',e=>{
   if(!isWire())return;
@@ -17184,6 +17218,150 @@ function loadImageBlob(blob,cb){
     img.src=reader.result;
   };
   reader.readAsDataURL(blob);
+}
+/* ---------- PDF を画像として取り込む ----------
+   PDF.js(cdnjs)を初めて使う時だけ読み込む(Service Worker が保存するので2回目からはオフラインでも動く)。
+   各ページは元の2倍の細かさで画像にする(拡大しても粗くならないように)。PDFの文字は画像になる */
+const PDFJS_URL='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
+let pdfjsP=null;
+function loadPdfJs(){
+  if(window.pdfjsLib)return Promise.resolve(window.pdfjsLib);
+  if(!pdfjsP)pdfjsP=new Promise((ok,ng)=>{
+    const sc=document.createElement('script');
+    sc.src=PDFJS_URL+'pdf.min.js';
+    sc.onload=()=>{window.pdfjsLib.GlobalWorkerOptions.workerSrc=PDFJS_URL+'pdf.worker.min.js';ok(window.pdfjsLib);};
+    sc.onerror=()=>{pdfjsP=null;sc.remove();ng(new Error('PDFを読む部品を読み込めませんでした(初回はネットにつないでください)'));};
+    document.head.appendChild(sc);
+  });
+  return pdfjsP;
+}
+const isPdfFile=f=>!!f&&(f.type==='application/pdf'||/\.pdf$/i.test(f.name||''));
+/* 1ページを canvas に描く(白い紙の上に) */
+async function pdfPageCanvas(pdf,n,scale){
+  const pg=await pdf.getPage(n);
+  let vp=pg.getViewport({scale});
+  /* 大きすぎるページは長い辺 4000px までにする */
+  const k=Math.min(1,4000/Math.max(vp.width,vp.height));
+  if(k<1)vp=pg.getViewport({scale:scale*k});
+  const cv=document.createElement('canvas');
+  cv.width=Math.max(1,Math.floor(vp.width));cv.height=Math.max(1,Math.floor(vp.height));
+  const x=cv.getContext('2d');x.fillStyle='#FFFFFF';x.fillRect(0,0,cv.width,cv.height);
+  await pg.render({canvasContext:x,viewport:vp}).promise;
+  pg.cleanup();
+  return cv;
+}
+function canvasBlob(cv){
+  return new Promise(ok=>cv.toBlob(b=>{
+    /* 写真の多いページはPNGだと重いので、大きい時はJPEGにする */
+    if(b&&b.size>1.5e6)cv.toBlob(j=>ok(j||b),'image/jpeg',0.92);else ok(b);
+  },'image/png'));
+}
+let pdfPickCb=null;
+function closePdfPick(){
+  $('#pdfWrap').classList.remove('on');
+  const cb=pdfPickCb;pdfPickCb=null;
+  $('#pdfGrid').innerHTML='';
+  if(cb)cb(null);
+}
+/* PDF を読み、使うページを選んでもらって画像(Blob)の配列を返す。single=1ページだけ選ぶ。キャンセルは null */
+async function pdfToImageBlobs(file,single){
+  let lib,pdf;
+  toast('PDFを読み込んでいます…');
+  try{
+    lib=await loadPdfJs();
+    pdf=await lib.getDocument({data:new Uint8Array(await file.arrayBuffer())}).promise;
+  }catch(e){
+    toast(/password/i.test(e&&e.name||'')?'パスワード付きのPDFは読み込めません':(e&&e.message&&/部品/.test(e.message)?e.message:'PDFを読み込めませんでした'));
+    return null;
+  }
+  const N=pdf.numPages;
+  let pages=[1];
+  if(N>1){
+    pages=await new Promise(done=>{
+      const grid=$('#pdfGrid');grid.innerHTML='';
+      const sel=new Set(single?[]:Array.from({length:N},(_,i)=>i+1));
+      const sync=()=>{
+        grid.querySelectorAll('.pdfPg').forEach(el=>el.classList.toggle('on',sel.has(+el.dataset.n)));
+        $('#pdfOk').disabled=!sel.size;
+        $('#pdfOk').textContent=single?'追加':`${sel.size}ページを追加`;
+      };
+      $('#pdfSub').textContent=single
+        ?`全${N}ページ。図形の中に入れるページを1つ選んでください。`
+        :`全${N}ページ。追加するページを選んでください(タップで選ぶ・外す)。`;
+      $('#pdfTools').style.display=single?'none':'flex';
+      for(let n=1;n<=N;n++){
+        const el=document.createElement('div');el.className='pdfPg';el.dataset.n=n;
+        el.innerHTML=`<span>${n}</span>`;
+        el.onclick=()=>{
+          if(single){sel.clear();sel.add(n);}
+          else if(sel.has(n))sel.delete(n);else sel.add(n);
+          sync();
+        };
+        grid.appendChild(el);
+      }
+      $('#pdfAll').onclick=()=>{for(let n=1;n<=N;n++)sel.add(n);sync();};
+      $('#pdfNone').onclick=()=>{sel.clear();sync();};
+      pdfPickCb=done;
+      $('#pdfOk').onclick=()=>{pdfPickCb=null;$('#pdfWrap').classList.remove('on');$('#pdfGrid').innerHTML='';done([...sel].sort((a,b)=>a-b));};
+      sync();
+      $('#pdfWrap').classList.add('on');
+      /* 見本は順に小さく描く(閉じたら止める) */
+      (async()=>{
+        for(let n=1;n<=N;n++){
+          if(pdfPickCb!==done)return;
+          try{
+            const cv=await pdfPageCanvas(pdf,n,0.35);
+            const el=grid.querySelector(`.pdfPg[data-n="${n}"]`);
+            if(el)el.insertBefore(cv,el.firstChild);
+          }catch(e){}
+        }
+      })();
+    });
+    if(!pages||!pages.length){pdf.destroy();return null;}
+  }
+  toast(pages.length>1?`PDFの${pages.length}ページを画像にしています…`:'PDFを画像にしています…');
+  const out=[];
+  for(const n of pages){
+    try{out.push(await canvasBlob(await pdfPageCanvas(pdf,n,2)));}catch(e){}
+  }
+  pdf.destroy();
+  if(!out.length){toast('PDFを画像にできませんでした');return null;}
+  return out;
+}
+$('#pdfCancel').onclick=closePdfPick;
+$('#pdfBack').onclick=closePdfPick;
+/* 画像ファイル(PDFなら選んだページ)を1つの Blob にして渡す(図形の中に入れる時など) */
+async function oneImageBlob(f){
+  if(!isPdfFile(f))return f;
+  const bs=await pdfToImageBlobs(f,true);
+  return bs&&bs[0];
+}
+/* 複数の画像を横に並べて追加(PDFの複数ページ) */
+function addImagesFromBlobs(blobs,at){
+  if(blobs.length===1)return addImageFromBlob(blobs[0],at);
+  const sel0=selShapes();
+  Promise.all(blobs.map(b=>new Promise(ok=>loadImageBlob(b,ok)))).then(rs=>{
+    const d=curDoc();if(!d.shapes)return;
+    pushUndo();
+    const c=at||{x:0,y:0},news=[];
+    let x=0;
+    rs.forEach(r=>{
+      const dk=Math.min(1,280/Math.max(r.w,r.h)),w=r.w*dk,h=r.h*dk;
+      news.push({id:uid(),type:'image',x:c.x+x+w/2,y:c.y,w,h,rot:0,fill:null,src:r.url,iw:r.w,ih:r.h});
+      x+=w+24;
+    });
+    news.forEach(s=>{s.x-=(x-24)/2;});
+    d.shapes.push(...news);if(!at)placeNew(news,sel0);
+    wireSel=news.map(s=>s.id);
+    save();renderWire();
+    toast(`PDFの${news.length}ページを画像として追加しました`);
+  });
+}
+/* 画像ファイルを追加(PDFならページを選んで画像に) */
+async function addImageFile(f,at){
+  if(!isPdfFile(f))return addImageFromBlob(f,at);
+  const bs=await pdfToImageBlobs(f,false);
+  if(bs)addImagesFromBlobs(bs,at);
 }
 function addImageFromBlob(blob,at){
   const sel0=selShapes();
@@ -17912,7 +18090,7 @@ bindColor('shC','shCHex',v=>setShProp('c',v,true));
 $('#imgFillAdd').addEventListener('click',()=>$('#imgFillInput').click());
 $('#imgFillInput').addEventListener('change',e=>{
   const f=e.target.files[0];e.target.value='';
-  if(f)setImgFillFromBlob(f);
+  if(f)oneImageBlob(f).then(b=>{if(b)setImgFillFromBlob(b);});
 });
 $('#imgFillDel').addEventListener('click',()=>{
   const ss=selShapes().filter(s=>!s.locked&&s.imgFill);
@@ -18670,9 +18848,18 @@ $('#dAddMenu').addEventListener('click',e=>{
   if(bt==='img')$('#docImgInput').click();
   else insertBlock(bt);
 });
-$('#docImgInput').addEventListener('change',e=>{
+$('#docImgInput').addEventListener('change',async e=>{
   const f=e.target.files[0];e.target.value='';
   if(!f)return;
+  /* PDF は選んだページを順に画像のブロックとして入れる */
+  if(isPdfFile(f)){
+    const bs=await pdfToImageBlobs(f,false);
+    if(bs)for(const b of bs)await new Promise(ok=>docImgFromFile(b,ok));
+    return;
+  }
+  docImgFromFile(f);
+});
+function docImgFromFile(f,done){
   const reader=new FileReader();
   reader.onload=()=>{
     const img=new Image();
@@ -18686,12 +18873,13 @@ $('#docImgInput').addEventListener('change',e=>{
       let url=cv.toDataURL('image/png');
       if(url.length>700000)url=cv.toDataURL('image/jpeg',0.85);
       insertBlock('img',url);
+      if(done)done();
     };
-    img.onerror=()=>toast('画像を読み込めませんでした');
+    img.onerror=()=>{toast('画像を読み込めませんでした');if(done)done();};
     img.src=reader.result;
   };
   reader.readAsDataURL(f);
-});
+}
 
 /* 整列(ブロック単位) */
 function setAlign(v){
