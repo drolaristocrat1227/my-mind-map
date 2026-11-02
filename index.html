@@ -822,6 +822,21 @@ body.text-mode #docBar{display:flex;}
 }
 
 /* 削除確認ダイアログ */
+/* 保存するファイル名 */
+#fnWrap{position:fixed;inset:0;z-index:140;display:none;align-items:center;justify-content:center;padding:20px;}
+#fnWrap.on{display:flex;}
+#fnBack{position:absolute;inset:0;background:rgba(0,0,0,.3);}
+#fnDlg{position:relative;width:min(420px,100%);border-radius:18px;padding:22px 20px 18px;}
+#fnTitle{font-size:15px;font-weight:700;}
+#fnSub{font-size:12px;color:var(--ink-soft);margin-top:6px;line-height:1.6;}
+#fnRow{display:flex;align-items:center;gap:6px;margin-top:14px;}
+#fnInput{flex:1;min-width:0;height:42px;padding:0 12px;border:1px solid var(--panel-border);border-radius:10px;background:var(--node-bg);color:var(--ink);font:inherit;font-size:16px;}
+#fnInput:focus{outline:none;border-color:var(--accent);}
+#fnExt{font-size:14px;color:var(--ink-soft);flex:none;}
+#fnBtns{display:flex;gap:10px;margin-top:18px;}
+#fnBtns button{flex:1;padding:11px;border-radius:11px;font-size:13.5px;font-weight:650;}
+#fnCancel{background:var(--btn-hover);color:var(--ink-soft);}
+#fnOk{background:var(--accent);color:#fff;}
 #confirmWrap{position:fixed;inset:0;z-index:95;display:none;align-items:center;justify-content:center;padding:20px;}
 #confirmWrap.on{display:flex;}
 #confirmBack{position:absolute;inset:0;background:rgba(0,0,0,.3);}
@@ -3027,6 +3042,16 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
   </div>
 </div>
 
+<!-- 保存するファイル名 -->
+<div id="fnWrap">
+  <div id="fnBack"></div>
+  <div id="fnDlg" class="glass">
+    <div id="fnTitle">ファイル名を付けて保存</div>
+    <div id="fnSub"></div>
+    <div id="fnRow"><input type="text" id="fnInput" spellcheck="false" autocomplete="off" enterkeyhint="done"><span id="fnExt"></span></div>
+    <div id="fnBtns"><button id="fnCancel">キャンセル</button><button id="fnOk">保存</button></div>
+  </div>
+</div>
 <!-- 削除確認ダイアログ -->
 <div id="confirmWrap">
   <div id="confirmBack"></div>
@@ -3180,7 +3205,7 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-11-02.1';
+const APP_VERSION='2026-11-02.2';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -4817,8 +4842,55 @@ $('#exportMenu').addEventListener('click',e=>{
   else if(act==='text')exportText();
   else if(act==='import')$('#fileInput').click();
 });
-function download(name,url){
+function downloadNow(name,url){
   const a=document.createElement('a');a.href=url;a.download=name;a.click();
+}
+/* ファイル名に使えない文字を除く */
+function safeFileBase(t){return String(t||'').replace(/[\\\/:*?"<>|\r\n\t]+/g,'_').replace(/^[\s.]+|[\s.]+$/g,'').slice(0,120);}
+let fnCb=null;
+/* ファイル名を聞く。cb(名前) は OK を押した時だけ(拡張子は付けずに渡す) */
+function askFileName(base,ext,cb,sub){
+  $('#fnInput').value=base;
+  $('#fnExt').textContent=ext?'.'+ext:'';
+  $('#fnSub').textContent=sub||'';
+  $('#fnSub').style.display=sub?'block':'none';
+  fnCb=cb;
+  $('#fnWrap').classList.add('on');
+  setTimeout(()=>{const i=$('#fnInput');i.focus();try{i.setSelectionRange(0,i.value.length);}catch(e){}},30);
+}
+function closeFileName(){$('#fnWrap').classList.remove('on');fnCb=null;}
+function okFileName(){
+  const v=safeFileBase($('#fnInput').value);
+  if(!v){$('#fnInput').focus();toast('ファイル名を入れてください');return;}
+  const cb=fnCb;closeFileName();if(cb)cb(v);
+}
+$('#fnCancel').onclick=closeFileName;
+$('#fnBack').onclick=closeFileName;
+$('#fnOk').onclick=okFileName;
+$('#fnInput').addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&!e.isComposing){e.preventDefault();okFileName();}
+  else if(e.key==='Escape'){e.preventDefault();closeFileName();}
+});
+let dlQueue=null;
+function download(name,url){
+  if(dlQueue){dlQueue.push({name,url});return;}
+  dlQueue=[{name,url}];
+  setTimeout(()=>{
+    const q=dlQueue;dlQueue=null;
+    const m=q[0].name.match(/^(.*?)(\.[^.]+)?$/),ext=(m[2]||'').slice(1);
+    /* 連番(名前_1.png, 名前_2.png …)は「名前」の部分だけを聞く */
+    const ser=q.length>1&&q.every(f=>/^(.*)_(\d+)\.([^.]+)$/.test(f.name))?q[0].name.match(/^(.*)_(\d+)\.([^.]+)$/)[1]:null;
+    const base=ser!==null?ser:m[1];
+    askFileName(base,ext,v=>{
+      q.forEach((f,i)=>{
+        let nm;
+        if(ser!==null){const k=f.name.match(/^(.*)_(\d+)\.([^.]+)$/);nm=`${v}_${k[2]}.${k[3]}`;}
+        else if(q.length===1)nm=v+(ext?'.'+ext:'');
+        else nm=f.name;
+        downloadNow(nm,f.url);
+      });
+    },q.length>1?`${q.length}個のファイルに分けて保存します(名前の後ろに番号が付きます)`:'');
+  },0);
 }
 function exportJSON(){
   const m=cur();
@@ -10126,7 +10198,7 @@ function expName(){
 $('#expSave').onclick=()=>{
   if(expMode==='text'){
     closeExportDlg();
-    setTimeout(()=>window.print(),150);
+    askFileName(safeFileBase(expName())||'文書','pdf',v=>printAsName(v),'印刷の画面で「PDFに保存」を選ぶと、この名前のPDFになります');
     return;
   }
   const name=expName();
@@ -10214,6 +10286,14 @@ $('#expPrint').onclick=()=>{
   printCanvas(pages,ori);
   closeExportDlg();
 };
+/* 印刷の間だけページの題名を変える(PDFに保存する時の名前になる) */
+function printAsName(name,run){
+  const t0=document.title;
+  document.title=name;
+  const back=()=>{document.title=t0;removeEventListener('afterprint',back);};
+  addEventListener('afterprint',back);
+  setTimeout(()=>{(run||(()=>window.print()))();setTimeout(back,60000);},150);
+}
 function printCanvas(pages,ori){
   if(!Array.isArray(pages))pages=[pages];
   $('#printStyle').textContent=`@media print{@page{size:A4 ${ori};margin:0;}}`;
