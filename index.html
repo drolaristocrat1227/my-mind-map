@@ -2967,6 +2967,31 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
         <button class="seg" data-ld="dots" role="radio">3つの点</button>
         <button class="seg" data-ld="bar" role="radio">横に伸びる線</button>
         <button class="seg" data-ld="panels" role="radio">パネルが開く</button>
+        <button class="seg" data-ld="frame" role="radio">自分で作る(フレーム)</button>
+      </div>
+      <div id="expLdFrameEdit">
+        <div class="numRow"><span class="radLbl expHl">フレーム</span><select id="expLdFrame"></select></div>
+        <div class="expCssHint">ロゴなどを置いたフレームを、そのままローディング画面にします。画面に収まる大きさに合わせ、まわりはフレームの色で埋めます。中の物に付けた動き(登場・線が描かれる・文字の動きなど)もそのまま動きます。ロゴを真ん中に置いた 600×600 くらいのフレームがおすすめです。</div>
+        <div class="menu-label">消え方</div>
+        <div class="segRow mWrap" id="expLdOutRow" role="radiogroup">
+          <button class="seg" data-o="fade" role="radio">ふわっと消える</button>
+          <button class="seg" data-o="up" role="radio">上へスライド</button>
+          <button class="seg" data-o="panels" role="radio">パネルが開く</button>
+        </div>
+      </div>
+      <div id="expLdCommon">
+        <div class="menu-label">出す時</div>
+        <div class="segRow mWrap" id="expLdWhenRow" role="radiogroup">
+          <button class="seg" data-w="first" role="radio">初回だけ(おすすめ)</button>
+          <button class="seg" data-w="every" role="radio">ページを開くたび</button>
+        </div>
+        <div class="menu-label">最低限見せる時間(読み込みが早くても、この時間は見せる)</div>
+        <div class="segRow mWrap" id="expLdMinRow" role="radiogroup">
+          <button class="seg" data-m="0.5" role="radio">0.5秒</button>
+          <button class="seg" data-m="1" role="radio">1秒</button>
+          <button class="seg" data-m="1.5" role="radio">1.5秒</button>
+          <button class="seg" data-m="2.5" role="radio">2.5秒</button>
+        </div>
       </div>
       <div id="expLoaderEdit">
         <div class="numRow"><span class="radLbl expHl">背景色</span><input type="color" id="expLdBg"><span class="radLbl">色</span><input type="color" id="expLdFg"></div>
@@ -3237,7 +3262,7 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-11-04.2';
+const APP_VERSION='2026-11-04.3';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -5513,7 +5538,17 @@ function updateSiteDlg(){
   /* ローディング画面・カスタムカーソル */
   const ld=c.loader||{},cu=c.cursor||{};
   document.querySelectorAll('#expLoaderRow .seg').forEach(b=>{const on=b.dataset.ld===(ld.t||'');b.classList.toggle('active',on);b.setAttribute('aria-checked',on?'true':'false');});
-  $('#expLoaderEdit').style.display=ld.t?'block':'none';
+  $('#expLoaderEdit').style.display=ld.t&&ld.t!=='frame'?'block':'none';
+  $('#expLdFrameEdit').style.display=ld.t==='frame'?'block':'none';
+  $('#expLdCommon').style.display=ld.t?'block':'none';
+  if(ld.t==='frame'){
+    const sel=$('#expLdFrame'),fr=ldFrames(d);
+    sel.innerHTML='<option value="">(フレームを選んでください)</option>'+fr.map(f=>`<option value="${f.id}">${escXml(frameLabelText(f))}(${Math.round(f.w)}×${Math.round(f.h)})</option>`).join('');
+    sel.value=fr.some(f=>f.id===ld.f)?ld.f:'';
+    document.querySelectorAll('#expLdOutRow .seg').forEach(b=>{const on=b.dataset.o===(ld.out||'fade');b.classList.toggle('active',on);b.setAttribute('aria-checked',on?'true':'false');});
+  }
+  document.querySelectorAll('#expLdWhenRow .seg').forEach(b=>{const on=b.dataset.w===ldWhen(ld);b.classList.toggle('active',on);b.setAttribute('aria-checked',on?'true':'false');});
+  document.querySelectorAll('#expLdMinRow .seg').forEach(b=>{const on=+b.dataset.m===ldMin(ld);b.classList.toggle('active',on);b.setAttribute('aria-checked',on?'true':'false');});
   $('#expLdBg').value=hex6(ld.bg||'#FFFFFF');$('#expLdFg').value=hex6(ld.fg||'#FF2E5E');
   if(document.activeElement!==$('#expLdTxt'))$('#expLdTxt').value=ld.txt||'';
   document.querySelectorAll('#expCursorRow .seg').forEach(b=>{const on=b.dataset.cur===(cu.t||'');b.classList.toggle('active',on);b.setAttribute('aria-checked',on?'true':'false');});
@@ -5648,9 +5683,17 @@ $('#expSiteCss').addEventListener('pointerdown',e=>e.stopPropagation());
 $('#expLoaderRow').addEventListener('click',e=>{
   const b=e.target.closest('.seg');if(!b)return;
   const c=siteCfg();
-  if(b.dataset.ld)c.loader={bg:'#FFFFFF',fg:'#FF2E5E',...(c.loader||{}),t:b.dataset.ld};else delete c.loader;
+  if(b.dataset.ld){
+    c.loader={bg:'#FFFFFF',fg:'#FF2E5E',...(c.loader||{}),t:b.dataset.ld};
+    /* 自分で作る: 「ローディング」という名前のフレームがあれば選んでおく */
+    if(b.dataset.ld==='frame'&&!c.loader.f){const f=ldFrames(curDoc()).find(x=>/ロード|ローディング|loading|loader/i.test(x.name||''));if(f)c.loader.f=f.id;}
+  }else delete c.loader;
   save();updateExportDlg();
 });
+$('#expLdFrame').addEventListener('change',()=>{const c=siteCfg();if(c.loader){c.loader.f=$('#expLdFrame').value||undefined;save();updateExportDlg();}});
+$('#expLdOutRow').addEventListener('click',e=>{const b=e.target.closest('.seg');const c=siteCfg();if(!b||!c.loader)return;c.loader.out=b.dataset.o;save();updateExportDlg();});
+$('#expLdWhenRow').addEventListener('click',e=>{const b=e.target.closest('.seg');const c=siteCfg();if(!b||!c.loader)return;c.loader.when=b.dataset.w;save();updateExportDlg();});
+$('#expLdMinRow').addEventListener('click',e=>{const b=e.target.closest('.seg');const c=siteCfg();if(!b||!c.loader)return;c.loader.min=+b.dataset.m;save();updateExportDlg();});
 $('#expLdBg').addEventListener('input',()=>{const c=siteCfg();if(c.loader){c.loader.bg=$('#expLdBg').value;save();}});
 $('#expLdFg').addEventListener('input',()=>{const c=siteCfg();if(c.loader){c.loader.fg=$('#expLdFg').value;save();}});
 $('#expLdTxt').addEventListener('input',()=>{const c=siteCfg();if(c.loader){c.loader.txt=$('#expLdTxt').value;save();}});
@@ -7755,6 +7798,11 @@ ${SITE_RANGES.map(({r,mq})=>`@media ${mq}{.nt-view:not(.nt-r-${r}){display:none}
 .nt-loader{display:none}
 .nt-js .nt-loader{position:fixed;inset:0;z-index:2000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:var(--lb);color:var(--lf);font:700 15px/1.5 system-ui,-apple-system,"Hiragino Sans","Yu Gothic UI","Meiryo",sans-serif;letter-spacing:.08em;transition:opacity .5s ease,visibility .5s}
 .nt-loader.nt-done{opacity:0;visibility:hidden}
+.nt-ldskip .nt-loader{display:none!important}
+.nt-ld-frame .nt-ldv{position:absolute;left:50%;top:50%;flex:none;margin:0;z-index:1;transform-origin:50% 50%;translate:-50% -50%;transition:opacity .35s ease}
+.nt-loader.nt-ldo-up.nt-done{opacity:1;visibility:hidden;transform:translateY(-100%);transition:transform .8s cubic-bezier(.7,0,.2,1),visibility 0s .8s}
+.nt-js .nt-ld-frame.nt-ld-panels{background:transparent}
+.nt-ld-frame.nt-ld-panels.nt-done .nt-ldv{opacity:0}
 .nt-ld-in i{display:none}
 .nt-ld-spin .nt-ld-in{width:44px;height:44px;border-radius:50%;border:4px solid color-mix(in srgb,var(--lf) 20%,transparent);border-top-color:var(--lf);animation:nt-spin .8s linear infinite}
 .nt-ld-dots .nt-ld-in{display:flex;gap:9px}
@@ -8579,9 +8627,15 @@ function siteJs(){
   addEventListener('pageshow',function(e){if(e.persisted&&ld)ld.classList.add('nt-done');});
   /* ローディング画面: 読み込みが終わったら消す(最低0.5秒は見せる。6秒で必ず消す) */
   var ld=document.querySelector('.nt-loader');
-  if(ld&&navBF){ld.style.transition='none';ld.classList.add('nt-done');ld=null;}
+  if(ld&&(navBF||document.documentElement.classList.contains('nt-ldskip'))){ld.style.transition='none';ld.classList.add('nt-done');ld=null;}
+  /* 初回だけ: このタブで一度見せたら、ほかのページでは出さない */
+  if(ld&&ld.dataset.once){try{sessionStorage.setItem('nt-ld-seen','1');}catch(er){}}
   if(ld){
-    var t0=Date.now(),ldHide=function(){setTimeout(function(){ld.classList.add('nt-done');},Math.max(0,500-(Date.now()-t0)));};
+    /* 自分で作ったローディング: フレームを画面に収まる大きさにする */
+    var ldv=ld.querySelector('.nt-ldv');
+    if(ldv){var ldFit=function(){var w=+ldv.dataset.w||1,h=+ldv.dataset.h||1,k=Math.min(innerWidth/w,innerHeight/h,1);ldv.style.scale=String(k);};ldFit();addEventListener('resize',ldFit);}
+    var ldMin=matchMedia('(prefers-reduced-motion:reduce)').matches?0:(+ld.dataset.min||500);
+    var t0=Date.now(),ldHide=function(){setTimeout(function(){ld.classList.add('nt-done');},Math.max(0,ldMin-(Date.now()-t0)));};
     if(document.readyState==='complete')ldHide();else addEventListener('load',ldHide);
     setTimeout(function(){ld.classList.add('nt-done');},6000);
   }
@@ -8903,17 +8957,33 @@ function siteCustomCss(c,files){
   /* CSSの中に </style> があっても途中で閉じないように */
   return'\n<style>\n/* 追加のCSS */\n'+css.replace(/<\/(style)/gi,'<\\/$1')+'\n</style>';
 }
+/* ローディング画面に使えるフレーム(一番外のフレーム) */
+function ldFrames(d){const sh=d.shapes||[];return sh.filter((s,i)=>isFrame(s)&&!parentFrameAt(sh,i));}
+/* 出す時(初回だけが既定)・最低限見せる時間(秒。自分で作る時は1秒、それ以外は0.5秒が既定) */
+const ldWhen=l=>l.when==='every'?'every':'first';
+const ldMin=l=>l.min!==undefined?+l.min:(l.t==='frame'?1:0.5);
+const ldFrameOf=(d,l)=>l&&l.t==='frame'&&l.f?(d.shapes||[]).find(s=>s.id===l.f&&isFrame(s)):null;
 /* ローディング画面(JavaScriptが無い時は出さない) */
-function siteLoaderHtml(c){
+function siteLoaderHtml(c,d){
   const l=c.loader;if(!l||!l.t)return'';
-  return`<div class="nt-loader nt-ld-${l.t}" style="--lb:${cssCol(l.bg||'#FFFFFF')};--lf:${cssCol(l.fg||'#FF2E5E')}" aria-hidden="true"><div class="nt-ld-in"><i></i><i></i><i></i></div>${(l.txt||'').trim()?`<p>${escXml(l.txt.trim())}</p>`:''}</div>
+  const at=` aria-hidden="true" data-min="${Math.round(ldMin(l)*1000)}"${ldWhen(l)==='first'?' data-once="1"':''}`;
+  if(l.t==='frame'){
+    const f=d&&ldFrameOf(d,l);if(!f)return'';
+    const out=l.out==='up'||l.out==='panels'?l.out:'fade';
+    const bg=(!f.grad&&f.fill)?cssCol(f.fill,alphaOf(f,'fill')):'#FFFFFF';
+    /* ページと同じ仕組みで書き出し、クラスだけ変える(ページの幅合わせの対象にしない) */
+    const v=sitePageHtml(f,[],false).replace('<div class="nt-view ','<div class="nt-ldv ');
+    return`<div class="nt-loader nt-ld-frame nt-ldo-${out}${out==='panels'?' nt-ld-panels':''}" style="--lb:${bg}"${at}>${out==='panels'?'<div class="nt-ld-in"><i></i><i></i><i></i></div>':''}${v}</div>
+`;
+  }
+  return`<div class="nt-loader nt-ld-${l.t}"${at} style="--lb:${cssCol(l.bg||'#FFFFFF')};--lf:${cssCol(l.fg||'#FF2E5E')}"><div class="nt-ld-in"><i></i><i></i><i></i></div>${(l.txt||'').trim()?`<p>${escXml(l.txt.trim())}</p>`:''}</div>
 `;
 }
 /* Webフォントを読み込むタグ(このデザインで使っているWebフォントだけ。display=swap で、読み込むまでは端末の文字で出す) */
 function siteFontLinks(d,page){
   /* そのページ(スマホ・タブレット・PC用のフレーム)で使っているフォントだけを読み込む */
   let shapes=null;
-  if(page){const fr=siteViews(d,page).map(v=>v.f).filter(Boolean);shapes=fr.flatMap(f=>[f,...frameDescendants(d.shapes,f)]);}
+  if(page){const fr=siteViews(d,page).map(v=>v.f).filter(Boolean);const lf=ldFrameOf(d,siteCfg(d).loader);if(lf&&!fr.includes(lf))fr.push(lf);shapes=fr.flatMap(f=>[f,...frameDescendants(d.shapes,f)]);}
   const url=webFontCssUrl(docFontKeys(d,shapes));
   if(!url)return[];
   return['<link rel="preconnect" href="https://fonts.googleapis.com">','<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>',`<link rel="stylesheet" href="${escXml(url)}">`];
@@ -8993,13 +9063,13 @@ function sitePageDoc(d,page,opt){
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 ${head}
-<script>document.documentElement.classList.add('nt-js');<\/script>
+<script>document.documentElement.classList.add('nt-js');${c.loader&&c.loader.t?"(function(){try{var n=performance.getEntriesByType('navigation')[0];if((n&&n.type==='back_forward')||sessionStorage.getItem('nt-ld-seen'))document.documentElement.classList.add('nt-ldskip');}catch(e){}})();":''}<\/script>
 ${opt.files?'<link rel="stylesheet" href="css/style.css">\n':''}<style>
 ${opt.files?'':siteCss(c)}${pageCss}
 </style>${siteCustomCss(c,opt.files)}
 </head>
 <body${siteTapAttr(c)}${siteWideAttr(c)}>
-${siteLoaderHtml(c)}${body}
+${siteLoaderHtml(c,d)}${body}
 ${menu.html}${siteCursorHtml(c)}${sitePfxHtml(c)}${body.includes('nt-h-wave')?'\n<svg width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="nt-wavef"><feTurbulence type="fractalNoise" baseFrequency="0.012 0.03" numOctaves="2" seed="3"><animate attributeName="baseFrequency" dur="6s" values="0.012 0.03;0.02 0.05;0.012 0.03" repeatCount="indefinite"/></feTurbulence><feDisplacementMap in="SourceGraphic" scale="18"/></filter></svg>':''}${newsData?'\n'+newsData:''}
 ${opt.files?'<script src="js/main.js"><\/script>':`<script>\n${siteJs()}<\/script>`}
 </body>
