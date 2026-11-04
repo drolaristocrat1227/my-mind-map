@@ -1789,6 +1789,7 @@ kbd{
     <div class="numRow"><span class="radLbl">外観</span><select id="frDevice"></select></div>
     <div class="segRow"><button class="seg" id="frSwap">縦横を入れ替え</button></div>
     <div class="segRow" id="frSpRow"><button class="seg" id="frToSp">スマホ版を自動で下書き(右に作ります)</button></div>
+    <div class="segRow" id="frTabRow"><button class="seg" id="frToTab">タブレット版を自動で下書き(右に作ります)</button></div>
     <div class="menu-label">大きさ</div>
     <div class="segRow" id="frLockRow">
       <button class="seg" data-frlock="1">ピクセルを固定</button>
@@ -3236,7 +3237,7 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-11-04.1';
+const APP_VERSION='2026-11-04.2';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -6604,8 +6605,10 @@ $('#nwApply').onclick=()=>{
    ・ヘッダーのメニュー(横に並んだリンク)はハンバーガーメニューへ移す
    あくまで下書き。仕上げは手で整える前提。
    ============================================================ */
-const SPW=390,SPM=20,SP_GAP=20;
-const spFs=fs=>fs<=16?fs:Math.round(16+(fs-16)*0.55);
+const SPW=390,TABW=820,SP_GAP=20;
+/* タブレット版の下書き中か(SP_TAB)。左右の余白(SPM)と文字の縮め方が変わり、横並びは縮めて保つか2〜3列に組む */
+let SPM=20,SP_TAB=false;
+const spFs=fs=>SP_TAB?(fs<=18?fs:Math.round(18+(fs-18)*0.8)):(fs<=16?fs:Math.round(16+(fs-16)*0.55));
 const bx=s=>{const b=cornersBox([s],0);return{x1:b.x1,y1:b.y1,x2:b.x2,y2:b.y2,w:b.x2-b.x1,h:b.y2-b.y1};};
 const bxAll=ss=>{const b=cornersBox(ss,0);return{x1:b.x1,y1:b.y1,x2:b.x2,y2:b.y2,w:b.x2-b.x1,h:b.y2-b.y1};};
 const spClamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -6682,7 +6685,8 @@ function spLayout(ctx,items,pb,ox,oy,W,opt){
   /* ヘッダー: ページの一番上の帯に小さな物が3つ以上横に並んでいたら、左端をロゴとして残し、残りをメニューへ */
   if(opt.header){
     const row=tops.filter(u=>u.b.y1<pb.y1+Math.min(160,pb.h)&&u.b.y2<=pb.y1+180);
-    if(row.length>=3){
+    const rowFits=()=>{const x1=Math.min(...row.map(u=>u.b.x1)),x2=Math.max(...row.map(u=>u.b.x2));return(W-SPM*2)/(x2-x1)>=0.75;};
+    if(row.length>=3&&!(SP_TAB&&rowFits())){
       row.sort((a,b)=>a.b.x1-b.b.x1);
       const nav=row.slice(1);
       nav.forEach(u=>{
@@ -6754,6 +6758,39 @@ function spRows(ctx,tops,pb,ox,oy,W,opt){
     else y+=spClamp(gap*0.6,12,56);
     r.u.sort((a,b)=>a.b.x1-b.b.x1);
     const x1=Math.min(...r.u.map(u=>u.b.x1)),span=Math.max(...r.u.map(u=>u.b.x2))-x1;
+    /* タブレット: 少し縮めるだけ(8割以上)で収まる横並びはそのまま。3つ以上並ぶカードなどは2〜3列に組む */
+    if(SP_TAB&&r.u.length>1&&!r.u.some(u=>u.kind==='section')){
+      const k0=inner/span;
+      if(k0>=0.8){
+        const k=Math.min(1,k0),left=spAnchorX(pb,{x1,x2:x1+span,w:span},ox,W,span*k);
+        r.u.forEach(u=>spPlaceUnit(ctx,u,left+(u.b.x1-x1)*k,y+(u.b.y1-r.y1)*k,k));
+        y+=(r.y2-r.y1)*k;prev=r.y2;return;
+      }
+      /* カードのように、同じくらいの大きさの物が重ならずに横へ並ぶ時だけ */
+      const sepX=r.u.every((u,i)=>!i||u.b.x1>=r.u[i-1].b.x2-2);
+      const ws=r.u.map(u=>u.b.w),hs=r.u.map(u=>u.b.h);
+      const alike=Math.min(...ws)>=Math.max(...ws)*0.7&&Math.min(...hs)>=Math.max(...hs)*0.6;
+      if(r.u.length>=3&&sepX&&alike){
+        const G=24,mw=Math.max(...r.u.map(u=>u.b.w));
+        let n=r.u.length%3===0||r.u.length===5?3:2;
+        let cw=(inner-G*(n-1))/n;
+        if(n===3&&cw/mw<0.8){n=2;cw=(inner-G)/2;}
+        const k=Math.min(1,cw/mw);
+        for(let i=0;i<r.u.length;i+=n){
+          const line=r.u.slice(i,i+n);
+          const lw=line.length*cw+G*(line.length-1);
+          const lx=ox+(W-lw)/2;
+          let lh=0;
+          line.forEach((u,j)=>{
+            const w=u.b.w*k;
+            spPlaceUnit(ctx,u,lx+j*(cw+G)+(cw-w)/2,y,k);
+            lh=Math.max(lh,u.b.h*k);
+          });
+          y+=lh+(i+n<r.u.length?G:0);
+        }
+        prev=r.y2;return;
+      }
+    }
     const small=r.u.every(u=>u.kind!=='section'&&u.b.w<=inner*0.45);
     if(r.u.length>1&&small&&inner/span>=(r.u.length>=5?0.5:0.6)){   /* 表のように小さな物が5つ以上並ぶ行は、少し縮めてでも横並びを保つ */
       /* 小さな物の横並び: そのまま横に(はみ出す時は全体を縮める) */
@@ -6781,6 +6818,29 @@ function spRows(ctx,tops,pb,ox,oy,W,opt){
         r.u.forEach(u=>spPlaceUnit(ctx,u,left+(u.b.x1-x1)*k,y+(u.b.y1-r.y1)*k,k));
         y+=(r.y2-r.y1)*k;
         prev=r.y2;return;
+      }
+      /* タブレット: 2列(画像と文章など)は、元の幅の割合のまま左右に並べる。各列の中身は列の幅で並べ直し、高さの違いは上下中央にそろえる */
+      if(SP_TAB&&cols.length===2){
+        const G=40,ws=cols.map(c=>c.x2-c.x1),tot=ws[0]+ws[1];
+        const cws=ws.map(w=>(inner-G)*w/tot);
+        if(Math.min(...cws)>=260){
+          const m0=SPM;SPM=0;
+          let cx=ox+m0;const res=[];
+          try{
+            cols.forEach((c,i)=>{
+              const at=ctx.out.length,cb=bxAll(c.u.flatMap(u=>u.m));
+              const yy=c.u.length===1?y+spLayoutUnit(ctx,c.u[0],cb,cx,y,cws[i]):spRows(ctx,c.u,cb,cx,y,cws[i],{noPad:true});
+              res.push({at,end:ctx.out.length,h:yy-y});
+              cx+=cws[i]+G;
+            });
+          }finally{SPM=m0;}
+          const mh=Math.max(...res.map(q=>q.h));
+          res.forEach(q=>{
+            const dy=(mh-q.h)/2;if(dy<1)return;
+            ctx.out.slice(q.at,q.end).forEach(c=>{c.y+=dy;if(c.imgBox)c.imgBox={...c.imgBox,y:c.imgBox.y+dy};});
+          });
+          y+=mh;prev=r.y2;return;
+        }
       }
       /* 縦に積む時は、横並び全体の寄せ方(左・中央・右)にそろえる(1つずつの位置で決めると斜めに並ぶため) */
       const lg=x1-pb.x1,rg=pb.x2-(x1+span);
@@ -6984,24 +7044,38 @@ function spPlaceUnit(ctx,u,x,y,k){
   });
 }
 /* 選んだPC用フレームから、スマホ用フレームの下書きを作る */
-function makeSpDraft(f){
+/* 選んだPC用フレームから、タブレット用フレーム(幅820)の下書きを作る。並びはPCに近いまま、
+   文字は縮めすぎず、3つ以上並ぶカードは2〜3列に、横に収まらない2つ並び(画像と文章など)は縦に積む */
+function makeTabDraft(f){
+  const m0=SPM;
+  SP_TAB=true;SPM=40;
+  try{return makeSpDraft(f,true);}finally{SP_TAB=false;SPM=m0;}
+}
+function makeSpDraft(f,tab){
   const d=curDoc(),sh=d.shapes;
   if(!f||!isFrame(f))return;
+  const PW=tab?TABW:SPW;
   pushUndo();
   /* 置き場所: ページの右。はみ出した中身(横スクロールの帯など)とも重ならないよう、その右端より右に */
   const desc=frameDescendants(sh,f).filter(s=>!s.hidden);
   const right=Math.max(f.x+f.w/2,desc.length?cornersBox(desc,0).x2:-1e9);
-  const ox=right+200,oy=f.y-f.h/2;
+  let ox=right+200;const oy=f.y-f.h/2;
+  /* 右にすでに別のフレーム(先に作ったスマホ版など)があれば、その右へ */
+  for(let guard=0;guard<50;guard++){
+    const hit=sh.find(s=>isFrame(s)&&s!==f&&!s.hidden&&(b=>b.x2>ox-1&&b.x1<ox+PW+1&&b.y2>oy&&b.y1<oy+Math.max(f.h,2000))(bx(s)));
+    if(!hit)break;
+    ox=bx(hit).x2+200;
+  }
   const page={...spClone(f),rot:0};delete page.device;
-  page.name=(f.name||'フレーム')+'(スマホ)';
+  page.name=(f.name||'フレーム')+(tab?'(タブレット)':'(スマホ)');
   const firstSecTop=sh.filter((s,i)=>isFrame(s)&&parentFrameAt(sh,i)===f).map(s=>bx(s)).sort((a,b)=>a.y1-b.y1)[0];
   const ctx={sh,out:[page],bgAt:[],nav:[],movedNav:0,
     isTop:sec=>{const b=bx(sec),pb=bx(f);return b.y1<=pb.y1+4&&b.h<=180;}};
   const kids=sh.filter((s,i)=>!s.hidden&&parentFrameAt(sh,i)===f);
   /* ページの一番上に区画が無ければ、ページそのものの一番上の帯をヘッダーとみなす */
   const headerOnPage=!(firstSecTop&&firstSecTop.y1<=bx(f).y1+4);
-  const H=spLayout(ctx,kids,bx(f),ox,oy,SPW,{header:headerOnPage});
-  page.w=SPW;page.h=Math.max(200,Math.round(H));page.x=ox+SPW/2;page.y=oy+page.h/2;
+  const H=spLayout(ctx,kids,bx(f),ox,oy,PW,{header:headerOnPage});
+  page.w=PW;page.h=Math.max(200,Math.round(H));page.x=ox+PW/2;page.y=oy+page.h/2;
   page.sizeLock=true;
   /* 背景は、その入れ物の中身より後ろ(入れ物の直後)に差し込む */
   ctx.bgAt.sort((a,b)=>b.at-a.at).forEach(({c,at})=>{
@@ -7011,18 +7085,20 @@ function makeSpDraft(f){
   /* サイトの設定: このフレームをPC用に使っているページで、スマホが空いていれば入れる */
   const c=siteCfg(d);
   let linked=0;
-  c.pages.forEach(p=>{if((p.pc===f.id||p.tab===f.id)&&!p.sp){p.sp=page.id;linked++;}});
+  if(tab)c.pages.forEach(p=>{if(p.pc===f.id&&!p.tab){p.tab=page.id;linked++;}});
+  else c.pages.forEach(p=>{if((p.pc===f.id||p.tab===f.id)&&!p.sp){p.sp=page.id;linked++;}});
   /* ヘッダーのメニュー → ハンバーガーメニュー(まだ項目が無い時だけ) */
   let menuMsg='';
   if(ctx.nav.length){
     if(!c.menu.items.length){c.menu.items=ctx.nav;menuMsg=`、ヘッダーのリンク${ctx.nav.length}件をハンバーガーメニューへ移しました`;}
     else menuMsg=`、ヘッダーのリンク${ctx.nav.length}件は省きました(メニューは今の項目のまま)`;
-    c.menu.on.sp=true;
+    c.menu.on[tab?'tab':'sp']=true;
   }
   wireSel=[page.id];selAnchor=null;
   save();renderWire();
   focusFrame(page);
-  toast(`スマホ版の下書きを作りました${linked?'(ページのスマホ用に設定)':''}${menuMsg}。文字の大きさや並びを確かめて整えてください`);
+  const nm=tab?'タブレット':'スマホ';
+  toast(`${nm}版の下書きを作りました${linked?`(ページの${nm}用に設定)`:''}${menuMsg}。文字の大きさや並びを確かめて整えてください`);
   return page;
 }
 /* ---------- サイト全体の設定(デザインごとに保存) ----------
@@ -16510,6 +16586,10 @@ $('#frToSp').onclick=()=>{
   const f=oneSel();if(!f||!isFrame(f)){toast('PC用のフレームを選んでください');return;}
   makeSpDraft(f);
 };
+$('#frToTab').onclick=()=>{
+  const f=oneSel();if(!f||!isFrame(f)){toast('PC用のフレームを選んでください');return;}
+  makeTabDraft(f);
+};
 $('#frSwap').onclick=()=>{
   const f=oneSel();if(!f||!isFrame(f)){toast('フレームを選んでください');return;}
   setFrameSize(f,f.h,f.w);
@@ -17911,6 +17991,7 @@ function updateStyleMenu(){
     $('#frClip').classList.toggle('active',f.clip!==false);
     /* PC・タブレット用の広いフレームの時だけ、スマホ版の下書きを出す */
     $('#frSpRow').style.display=f.w>=600?'flex':'none';
+    $('#frTabRow').style.display=f.w>=SITE_PC?'flex':'none';   /* タブレットより広いPC用フレームの時だけ */
     const g=f.grid,gOn=!!(g&&g.on);
     document.querySelectorAll('#gridOnRow .seg').forEach(b=>
       b.classList.toggle('active',(b.dataset.grid==='on')===gOn));
