@@ -3236,7 +3236,7 @@ body.wire-gray #wireWorld>[data-id]:not([data-ui]),body.wire-gray #wireWorld>g[c
    手元の版と比べる(⚠️sw.jsがキャッシュ優先なので、比較用の取得は
    必ず cache:'no-store' + クエリ付きでキャッシュを回避すること)
    ============================================================ */
-const APP_VERSION='2026-11-02.4';
+const APP_VERSION='2026-11-04.1';
 /* ============================================================
    ユーティリティ
    ============================================================ */
@@ -8476,8 +8476,34 @@ function siteJs(){
       if(busy)requestAnimationFrame(step);
     })(t0);
   }
+  /* 戻る・進むで来た時は、前に見ていた位置から始める。
+     ブラウザも覚えているが、ページを保存しておけなかった時(スマホのメモリ不足など)や、
+     画像の読み込みでページの高さが後から伸びる時は上に戻ってしまうので、離れる時の位置を覚えておき、
+     ページの高さが足りた所でそこへ戻す。読み手が自分でスクロールし始めたらやめる。ローディング画面も出さない */
+  var navE=performance.getEntriesByType&&performance.getEntriesByType('navigation')[0],navBF=!!(navE&&navE.type==='back_forward');
+  var syKey='nt-sy:'+location.pathname+location.search;
+  var sySave=function(){try{sessionStorage.setItem(syKey,String(Math.round(scrollY)));}catch(er){}};
+  addEventListener('pagehide',sySave);
+  document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden')sySave();});
+  if(navBF&&!location.hash){
+    var syT=0;try{syT=+sessionStorage.getItem(syKey)||0;}catch(er){}
+    if(syT>0){
+      var syMine=false,syN=0,syStop=function(){syMine=true;};
+      ['wheel','touchstart','keydown','mousedown'].forEach(function(t){addEventListener(t,syStop,{passive:true,once:true});});
+      var syGo=function(){
+        if(syMine||Math.abs(scrollY-syT)<2)return;
+        var max=document.documentElement.scrollHeight-innerHeight;
+        scrollTo(0,Math.min(syT,max));
+        if(max<syT-1&&++syN<80)setTimeout(syGo,50);
+      };
+      syGo();
+      addEventListener('load',function(){setTimeout(syGo,0);});
+    }
+  }
+  addEventListener('pageshow',function(e){if(e.persisted&&ld)ld.classList.add('nt-done');});
   /* ローディング画面: 読み込みが終わったら消す(最低0.5秒は見せる。6秒で必ず消す) */
   var ld=document.querySelector('.nt-loader');
+  if(ld&&navBF){ld.style.transition='none';ld.classList.add('nt-done');ld=null;}
   if(ld){
     var t0=Date.now(),ldHide=function(){setTimeout(function(){ld.classList.add('nt-done');},Math.max(0,500-(Date.now()-t0)));};
     if(document.readyState==='complete')ldHide();else addEventListener('load',ldHide);
